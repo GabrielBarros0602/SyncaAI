@@ -1,0 +1,8 @@
+# Runtime dependencies. Compile with:
+#   pip-compile requirements.in
+fastapi
+uvicorn[standard]
+pydantic-settings
+sqlalchemy
+alembic
+psycopg[binary]

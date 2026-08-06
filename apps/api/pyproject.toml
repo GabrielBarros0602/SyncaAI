@@ -1,0 +1,45 @@
+# Tool configuration only.
+#
+# Dependencies live in requirements.in / requirements-dev.in and are pinned into
+# requirements.txt / requirements-dev.txt by pip-compile. This project uses pip +
+# pip-tools rather than declaring dependencies here, so pyproject.toml exists purely
+# as the standard location for tool settings.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "ARG",  # unused arguments
+    "PTH",  # use pathlib
+    "RUF",  # ruff-specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]  # fixtures are passed as unused-looking arguments
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["syncaai"]
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false

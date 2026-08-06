@@ -1,0 +1,10 @@
+# Development and CI dependencies. Compile with:
+#   pip-compile requirements-dev.in
+-c requirements.txt
+
+pip-tools
+pytest
+pytest-cov
+httpx
+ruff
+mypy
