@@ -24,7 +24,8 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 - [x] `Dockerfile` e `docker-compose.yml` com PostgreSQL
 - [x] Workflow de CI: ruff, ruff format, mypy, pytest
 - [x] `CONTRIBUTING.md` com a convenção de commits ampliada
-- [ ] `requirements.in` compilado para `requirements.txt` com pip-compile
+- [x] `requirements.in` compilado para `requirements.txt` com `uv pip compile --universal`,
+      alvo 3.12 — resolvedor uv, instalação pip, motivo no `CONTRIBUTING.md`
 - [ ] `config.py`: `Settings` via pydantic-settings, injetado com `get_settings`
 - [ ] `db.py`: engine, sessionmaker e dependência `get_session`
 - [ ] `GET /health` — liveness, sem dependência nenhuma

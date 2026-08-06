@@ -112,6 +112,37 @@ fix(auth): filter tasks by owner in the repository layer
 - A commit that leaves the test suite red
 - A single commit containing a whole sprint
 
+## Dependencies
+
+Declared in `requirements.in` and `requirements-dev.in`. Never edit the `.txt` files by hand —
+they are generated.
+
+```bash
+cd apps/api
+uv pip compile --universal --python-version 3.12 requirements.in -o requirements.txt
+uv pip compile --universal --python-version 3.12 requirements-dev.in -o requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
+```
+
+**Why uv resolves but pip installs.** Development happens on Windows; Docker and CI run Linux.
+`pip-compile` resolves only for the interpreter and platform it runs on, so a lockfile
+generated on Windows pins `colorama` unconditionally and omits Linux-only transitive
+dependencies — the same file then produces a different environment in the container. That is
+precisely the divergence a lockfile exists to prevent.
+
+`uv pip compile --universal` emits environment markers instead, so one file is correct on both
+platforms:
+
+```
+colorama==0.4.6 ; sys_platform == 'win32'
+```
+
+`--python-version 3.12` targets the version declared in `pyproject.toml` and the Dockerfile,
+independently of which interpreter runs the resolver.
+
+Installation is unchanged: plain `pip install -r`. `uv` is pinned in `requirements-dev.in`, so
+it arrives with the dev dependencies and no global install is needed.
+
 ## Sprint discipline
 
 Development is governed by [`docs/ROADMAP.md`](docs/ROADMAP.md).
@@ -155,6 +186,17 @@ inteiro depois.
 pronto quando o ADR está escrito e commitado, não quando o código funciona. Sprint fecha com
 um commit próprio virando os checkboxes — `docs(roadmap): close S1` — e assim o log narra a
 progressão sozinho. Nenhum sprint começa antes do anterior estar no origin e verde no CI.
+
+**Dependências:** declaradas em `requirements.in` e `requirements-dev.in`; os `.txt` são
+gerados e nunca editados à mão. O resolvedor é o `uv` em modo universal com alvo 3.12, e a
+instalação continua `pip install -r`.
+
+Por quê: você desenvolve em Windows e o runtime é Linux. O `pip-compile` resolve só para o
+interpretador e o sistema em que roda, então um lockfile gerado no Windows pina `colorama` sem
+condição e omite dependências transitivas que só existem no Linux — o mesmo arquivo produz
+ambiente diferente no container, que é exatamente a divergência que lockfile existe para
+evitar. O modo universal emite marcadores de ambiente e um arquivo só serve às duas
+plataformas.
 
 Mensagens de commit, código e comentários em inglês; este documento e o roadmap em português
 porque são instrumentos de trabalho.

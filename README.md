@@ -85,13 +85,16 @@ Point `DATABASE_URL` at `localhost` instead of `db` when running this way.
 
 ### Changing dependencies
 
-Edit the `.in` file, never the `.txt`:
+Edit the `.in` file, never the `.txt`, then regenerate the lockfile:
 
 ```bash
 cd apps/api
-pip-compile requirements.in
-pip-compile requirements-dev.in
+uv pip compile --universal --python-version 3.12 requirements.in -o requirements.txt
+uv pip compile --universal --python-version 3.12 requirements-dev.in -o requirements-dev.txt
 ```
+
+Installation stays on pip — `uv` is used only as the resolver, because development happens on
+Windows while the runtime is Linux. See [CONTRIBUTING.md](CONTRIBUTING.md#dependencies).
 
 ### Checks
 
