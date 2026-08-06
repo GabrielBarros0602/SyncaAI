@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="_ds/modernist-78be9ac9-4b9d-4b22-880b-53e52047200c/styles.css">
+<script src="_ds/modernist-78be9ac9-4b9d-4b22-880b-53e52047200c/_ds_bundle.js"></script>
+<style>
+html,body{margin:0;height:100%;background:var(--color-bg);color:var(--color-text);font-family:"Archivo",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:var(--color-accent);text-decoration:none}
+a:hover{color:var(--color-accent-700)}
+input,textarea,button{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--color-neutral-400)}
+::-webkit-scrollbar-track{background:var(--color-neutral-200)}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;font-size:14px">
+
+  <aside style="width:236px;flex:none;border-right:2px solid var(--color-divider);display:flex;flex-direction:column;background:var(--color-bg)">
+    <div style="padding:22px 20px 18px;border-bottom:2px solid var(--color-divider)">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:14px;height:14px;background:var(--color-accent)"></div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:-0.02em;line-height:1">INDEX</div>
+      </div>
+      <div style="margin-top:7px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Personal operations</div>
+    </div>
+
+    <nav style="display:flex;flex-direction:column">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+        <button type="button" onClick="{{ n.go }}" style="display:grid;grid-template-columns:16px 1fr auto;align-items:center;gap:10px;text-align:left;padding:13px 20px;border:0;border-bottom:1px solid var(--color-neutral-300);background:transparent;cursor:pointer;color:var(--color-text)" style-hover="background:var(--color-neutral-200)">
+          <sc-if value="{{ n.active }}" hint-placeholder-val="{{ true }}">
+            <span style="width:8px;height:8px;background:var(--color-accent);display:block"></span>
+          </sc-if>
+          <sc-if value="{{ n.inactive }}" hint-placeholder-val="{{ false }}">
+            <span style="width:8px;height:8px;background:var(--color-neutral-400);display:block"></span>
+          </sc-if>
+          <sc-if value="{{ n.active }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:13px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase">{{ n.label }}</span>
+          </sc-if>
+          <sc-if value="{{ n.inactive }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:13px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;color:var(--color-neutral-700)">{{ n.label }}</span>
+          </sc-if>
+          <span style="font-size:11px;font-weight:600;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ n.count }}</span>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto;border-top:2px solid var(--color-divider);padding:18px 20px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Today</div>
+      <div style="margin-top:4px;font-size:22px;font-weight:800;letter-spacing:-0.02em;line-height:1.1">Thu 06 Aug</div>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="tag tag-outline">Week 32</span>
+        <span class="tag tag-accent">24 d streak</span>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="height:66px;flex:none;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between;padding:0 26px;gap:20px">
+      <div style="display:flex;align-items:baseline;gap:14px;min-width:0">
+        <h4 style="margin:0;font-size:21px;letter-spacing:-0.02em">{{ title }}</h4>
+        <span style="font-size:12px;font-weight:500;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ subtitle }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex:none">
+        <button type="button" onClick="{{ openPalette }}" class="btn btn-secondary" style="gap:22px;font-weight:500;color:var(--color-neutral-700)">
+          <span>Search everything</span>
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;border:1px solid var(--color-neutral-400);padding:1px 5px">⌘K</span>
+        </button>
+        <button type="button" onClick="{{ openPalette }}" class="btn btn-primary">New entry</button>
+      </div>
+    </header>
+
+    <div style="flex:1;min-height:0;overflow:auto">
+
+      <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:2px solid var(--color-divider)">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+            <div style="padding:18px 24px 20px;border-right:1px solid var(--color-neutral-300)">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--color-neutral-600)">{{ s.label }}</div>
+              <div style="margin-top:6px;display:flex;align-items:baseline;gap:6px">
+                <span style="font-size:38px;font-weight:800;letter-spacing:-0.035em;line-height:1;font-variant-numeric:tabular-nums">{{ s.value }}</span>
+                <span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">{{ s.unit }}</span>
+              </div>
+              <div style="margin-top:12px;height:4px;background:var(--color-neutral-300)">
+                <div style="height:4px;background:var(--color-accent);width:{{ s.pct }}"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.15fr 1fr 0.95fr;align-items:start">
+
+          <section style="border-right:1px solid var(--color-neutral-300)">
+            <div style="padding:14px 24px;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between">
+              <h6 style="margin:0">Agenda</h6>
+              <span style="font-size:11px;font-weight:600;color:var(--color-neutral-600)">7 blocks · 5h 45m booked</span>
+            </div>
+            <sc-for list="{{ agenda }}" as="a" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:60px 1fr;gap:16px;padding:15px 24px;border-bottom:1px solid var(--color-neutral-300)" style-hover="background:var(--color-neutral-200)">
+                <div style="font-size:12px;font-weight:700;letter-spacing:0.02em;font-variant-numeric:tabular-nums;color:var(--color-neutral-700);padding-top:2px">{{ a.time }}</div>
+                <div style="display:flex;gap:12px">
+                  <sc-if value="{{ a.now }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:3px;background:var(--color-accent);flex:none"></div>
+                  </sc-if>
+                  <sc-if value="{{ a.later }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:3px;background:var(--color-neutral-400);flex:none"></div>
+                  </sc-if>
+                  <div style="min-width:0">
+                    <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em">{{ a.label }}</div>
+                    <div style="margin-top:2px;font-size:12px;color:var(--color-neutral-600)">{{ a.meta }}</div>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </section>
+
+          <section style="border-right:1px solid var(--color-neutral-300)">
+            <div style="padding:14px 24px;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between">
+              <h6 style="margin:0">Today's list</h6>
+              <span style="font-size:11px;font-weight:600;color:var(--color-neutral-600)">{{ doneLabel }}</span>
+            </div>
+            <div style="display:flex;border-bottom:1px solid var(--color-neutral-300)">
+              <input class="input" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" placeholder="Add a task, press return" style="flex:1;border:0;padding:14px 24px;background:transparent">
+              <button type="button" onClick="{{ addTask }}" class="btn btn-ghost" style="padding-inline:20px;border-left:1px solid var(--color-neutral-300)">Add</button>
+            </div>
+            <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="7">
+              <div onClick="{{ t.toggle }}" style="display:flex;align-items:flex-start;gap:13px;padding:13px 24px;border-bottom:1px solid var(--color-neutral-300);cursor:pointer" style-hover="background:var(--color-neutral-200)">
+                <sc-if value="{{ t.done }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:18px;height:18px;flex:none;background:var(--color-accent);display:flex;align-items:center;justify-content:center;margin-top:1px">
+                    <span style="color:var(--color-bg);font-size:12px;font-weight:800;line-height:1">✓</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ t.open }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:18px;height:18px;flex:none;border:2px solid var(--color-neutral-600);margin-top:1px"></div>
+                </sc-if>
+                <div style="min-width:0;flex:1">
+                  <sc-if value="{{ t.done }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:14px;font-weight:500;color:var(--color-neutral-500);text-decoration:line-through">{{ t.label }}</div>
+                  </sc-if>
+                  <sc-if value="{{ t.open }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:14px;font-weight:600;letter-spacing:-0.005em">{{ t.label }}</div>
+                  </sc-if>
+                </div>
+                <span style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600);flex:none;margin-top:3px">{{ t.tag }}</span>
+              </div>
+            </sc-for>
+          </section>
+
+          <section>
+            <div style="padding:14px 24px;border-bottom:2px solid var(--color-divider)">
+              <h6 style="margin:0">Quick capture</h6>
+            </div>
+            <div style="padding:16px 24px 20px;border-bottom:2px solid var(--color-divider)">
+              <textarea placeholder="Write it down. Sort it later." style="width:100%;min-height:82px;resize:vertical;border:2px solid var(--color-neutral-400);background:var(--color-neutral-100);padding:11px 12px;font-size:13px;line-height:1.5;color:var(--color-text);border-radius:0"></textarea>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button type="button" class="btn btn-secondary" style="font-size:12px">To notes</button>
+                <button type="button" class="btn btn-secondary" style="font-size:12px">To list</button>
+              </div>
+            </div>
+            <div style="padding:14px 24px;border-bottom:1px solid var(--color-neutral-300)">
+              <h6 style="margin:0">Habits</h6>
+            </div>
+            <sc-for list="{{ habits }}" as="h" hint-placeholder-count="4">
+              <div style="padding:12px 24px;border-bottom:1px solid var(--color-neutral-300)">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:13px;font-weight:600">{{ h.label }}</span>
+                  <span style="font-size:11px;font-weight:700;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">{{ h.count }}</span>
+                </div>
+                <div style="display:flex;gap:5px;margin-top:9px">
+                  <sc-for list="{{ h.days }}" as="d" hint-placeholder-count="7">
+                    <button type="button" onClick="{{ d.toggle }}" style="width:22px;height:22px;border:2px solid var(--color-neutral-400);cursor:pointer;padding:0;background:{{ d.bg }}"></button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <div style="padding:14px 24px 24px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--color-neutral-600)">Up next</div>
+              <div style="margin-top:8px;font-size:14px;font-weight:700">Lisbon — depart 14 Aug</div>
+              <div style="font-size:12px;color:var(--color-neutral-600)">8 days · 3 of 5 preparations done</div>
+            </div>
+          </section>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:2px solid var(--color-divider)">
+          <div style="display:flex;align-items:center;gap:14px">
+            <button type="button" onClick="{{ prevMonth }}" class="btn btn-secondary" style="padding:6px 12px">‹</button>
+            <button type="button" onClick="{{ nextMonth }}" class="btn btn-secondary" style="padding:6px 12px">›</button>
+            <div style="font-size:22px;font-weight:800;letter-spacing:-0.025em">{{ monthLabel }}</div>
+            <span style="font-size:11px;font-weight:600;color:var(--color-neutral-600);letter-spacing:0.06em;text-transform:uppercase">{{ monthMeta }}</span>
+          </div>
+          <div style="display:flex">
+            <button type="button" onClick="{{ setMonthMode }}" class="btn btn-secondary" style="border-right-width:0">Month</button>
+            <button type="button" onClick="{{ setWeekMode }}" class="btn btn-secondary">Week</button>
+          </div>
+        </div>
+
+        <sc-if value="{{ isMonthMode }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:2px solid var(--color-divider)">
+            <sc-for list="{{ dayNames }}" as="d" hint-placeholder-count="7">
+              <div style="padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--color-neutral-600);border-right:1px solid var(--color-neutral-300)">{{ d }}</div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ weeks }}" as="w" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--color-neutral-300)">
+              <sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7">
+                <div style="min-height:118px;padding:9px 11px 11px;border-right:1px solid var(--color-neutral-300);background:{{ d.bg }}">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <sc-if value="{{ d.isToday }}" hint-placeholder-val="{{ false }}">
+                      <span style="background:var(--color-accent);color:var(--color-bg);font-size:12px;font-weight:800;padding:2px 6px;font-variant-numeric:tabular-nums">{{ d.n }}</span>
+                    </sc-if>
+                    <sc-if value="{{ d.notToday }}" hint-placeholder-val="{{ true }}">
+                      <span style="font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:{{ d.numColor }}">{{ d.n }}</span>
+                    </sc-if>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
+                    <sc-for list="{{ d.events }}" as="e" hint-placeholder-count="0">
+                      <div style="display:grid;grid-template-columns:5px 1fr;gap:7px;align-items:stretch">
+                        <div style="background:{{ e.bar }}"></div>
+                        <div style="min-width:0">
+                          <div style="font-size:11px;font-weight:700;letter-spacing:0.02em;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ e.t }}</div>
+                          <div style="font-size:12px;font-weight:600;line-height:1.25;letter-spacing:-0.005em">{{ e.label }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isWeekMode }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:64px repeat(7,1fr)">
+          <div style="border-right:1px solid var(--color-neutral-300);border-bottom:2px solid var(--color-divider)"></div>
+          <sc-for list="{{ weekCols }}" as="c" hint-placeholder-count="7">
+            <div style="padding:9px 11px;border-right:1px solid var(--color-neutral-300);border-bottom:2px solid var(--color-divider);background:{{ c.headBg }}">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--color-neutral-600)">{{ c.label }}</div>
+              <div style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:{{ c.numColor }}">{{ c.n }}</div>
+            </div>
+          </sc-for>
+          <div style="border-right:1px solid var(--color-neutral-300)">
+            <sc-for list="{{ hours }}" as="h" hint-placeholder-count="13">
+              <div style="height:52px;border-bottom:1px solid var(--color-neutral-300);padding:4px 9px;font-size:10px;font-weight:700;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">{{ h }}</div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ weekCols }}" as="c" hint-placeholder-count="7">
+            <div style="position:relative;border-right:1px solid var(--color-neutral-300);background:{{ c.bodyBg }}">
+              <sc-for list="{{ hours }}" as="h" hint-placeholder-count="13">
+                <div style="height:52px;border-bottom:1px solid var(--color-neutral-300)"></div>
+              </sc-for>
+              <sc-for list="{{ c.blocks }}" as="b" hint-placeholder-count="0">
+                <div style="position:absolute;left:3px;right:3px;overflow:hidden;border-left:3px solid {{ b.bar }};background:{{ b.fill }};top:{{ b.top }};height:{{ b.height }}">
+                  <sc-if value="{{ b.twoLine }}" hint-placeholder-val="{{ true }}">
+                    <div style="padding:5px 7px">
+                      <div style="font-size:10px;font-weight:700;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ b.t }}</div>
+                      <div style="font-size:12px;font-weight:700;line-height:1.2;letter-spacing:-0.01em">{{ b.label }}</div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ b.oneLine }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:baseline;gap:6px;padding:4px 6px;white-space:nowrap">
+                      <span style="font-size:10px;font-weight:700;color:var(--color-neutral-700);font-variant-numeric:tabular-nums;flex:none">{{ b.t }}</span>
+                      <span style="font-size:12px;font-weight:700;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis">{{ b.label }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isLists }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="padding:14px 26px;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between">
+          <h6 style="margin:0">Four lists · {{ listsMeta }}</h6>
+          <button type="button" onClick="{{ toggleCompleted }}" class="btn btn-secondary" style="font-size:12px">{{ completedLabel }}</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr)">
+          <sc-for list="{{ lists }}" as="l" hint-placeholder-count="4">
+            <div style="border-right:1px solid var(--color-neutral-300);border-bottom:1px solid var(--color-neutral-300)">
+              <div style="padding:16px 24px 14px;border-bottom:2px solid var(--color-divider)">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                  <div style="font-size:17px;font-weight:800;letter-spacing:-0.02em">{{ l.name }}</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--color-neutral-600);font-variant-numeric:tabular-nums;white-space:nowrap">{{ l.count }}</div>
+                </div>
+                <div style="margin-top:11px;height:5px;background:var(--color-neutral-300)">
+                  <div style="height:5px;background:var(--color-accent);width:{{ l.pct }}"></div>
+                </div>
+              </div>
+              <sc-for list="{{ l.items }}" as="i" hint-placeholder-count="5">
+                <div onClick="{{ i.toggle }}" style="display:flex;align-items:center;gap:13px;padding:12px 24px;border-bottom:1px solid var(--color-neutral-300);cursor:pointer" style-hover="background:var(--color-neutral-200)">
+                  <sc-if value="{{ i.done }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:17px;height:17px;flex:none;background:var(--color-accent);display:flex;align-items:center;justify-content:center">
+                      <span style="color:var(--color-bg);font-size:11px;font-weight:800;line-height:1">✓</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ i.open }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:17px;height:17px;flex:none;border:2px solid var(--color-neutral-600)"></div>
+                  </sc-if>
+                  <sc-if value="{{ i.done }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:14px;font-weight:500;color:var(--color-neutral-500);text-decoration:line-through">{{ i.label }}</span>
+                  </sc-if>
+                  <sc-if value="{{ i.open }}" hint-placeholder-val="{{ true }}">
+                    <span style="font-size:14px;font-weight:600">{{ i.label }}</span>
+                  </sc-if>
+                  <span style="margin-left:auto;font-size:11px;font-weight:600;color:var(--color-neutral-600);white-space:nowrap">{{ i.note }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isNotes }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:312px 1fr;min-height:100%">
+        <div style="border-right:2px solid var(--color-divider)">
+          <div style="padding:14px 22px;border-bottom:2px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between">
+            <h6 style="margin:0">All notes</h6>
+            <span style="font-size:11px;font-weight:600;color:var(--color-neutral-600)">{{ notesCount }}</span>
+          </div>
+          <sc-for list="{{ notes }}" as="n" hint-placeholder-count="5">
+            <div onClick="{{ n.select }}" style="padding:15px 22px;border-bottom:1px solid var(--color-neutral-300);cursor:pointer;background:{{ n.bg }}" style-hover="background:var(--color-neutral-200)">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:6px;height:6px;background:{{ n.dot }};flex:none"></div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">{{ n.date }}</div>
+              </div>
+              <div style="margin-top:6px;font-size:15px;font-weight:700;letter-spacing:-0.015em;line-height:1.2">{{ n.title }}</div>
+              <div style="margin-top:4px;font-size:12px;line-height:1.45;color:var(--color-neutral-700);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ n.excerpt }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:34px 46px 60px;max-width:760px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ note.tags }}" as="t" hint-placeholder-count="2">
+              <span class="tag tag-outline">{{ t }}</span>
+            </sc-for>
+          </div>
+          <h1 style="margin:16px 0 0;font-size:40px;letter-spacing:-0.03em;line-height:1.06">{{ note.title }}</h1>
+          <div style="margin-top:12px;font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-neutral-600)">{{ note.meta }}</div>
+          <hr class="hr" style="margin:22px 0 26px">
+          <sc-for list="{{ note.body }}" as="p" hint-placeholder-count="4">
+            <p style="font-size:15px;line-height:1.62;margin:0 0 16px;max-width:62ch;text-wrap:pretty">{{ p }}</p>
+          </sc-for>
+          <div style="margin-top:26px;border-top:2px solid var(--color-divider);padding-top:18px;display:flex;gap:10px">
+            <button type="button" class="btn btn-secondary">Edit</button>
+            <button type="button" class="btn btn-secondary">Link to a day</button>
+            <button type="button" class="btn btn-ghost">Archive</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isLog }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="padding:14px 26px;border-bottom:2px solid var(--color-divider);display:flex;align-items:baseline;justify-content:space-between">
+          <h6 style="margin:0">Year to date · one square per day</h6>
+          <span style="font-size:11px;font-weight:600;color:var(--color-neutral-600)">218 days recorded · 71% marked</span>
+        </div>
+        <div style="padding:26px 26px 30px;border-bottom:2px solid var(--color-divider);overflow-x:auto">
+          <sc-for list="{{ matrix }}" as="row" hint-placeholder-count="7">
+            <div style="display:flex;gap:3px;margin-bottom:3px;align-items:center">
+              <div style="width:34px;flex:none;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">{{ row.label }}</div>
+              <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="31">
+                <div style="width:12px;height:12px;flex:none;background:{{ c.bg }}"></div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="display:flex;align-items:center;gap:9px;margin-top:16px">
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">Less</span>
+            <div style="width:12px;height:12px;background:var(--color-neutral-200)"></div>
+            <div style="width:12px;height:12px;background:var(--color-accent-300)"></div>
+            <div style="width:12px;height:12px;background:var(--color-accent-500)"></div>
+            <div style="width:12px;height:12px;background:var(--color-accent)"></div>
+            <div style="width:12px;height:12px;background:var(--color-accent-700)"></div>
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600)">More</span>
+          </div>
+        </div>
+        <div style="padding:22px 26px 40px">
+          <h6 style="margin:0 0 14px">This week, in figures</h6>
+          <table class="table" style="width:100%">
+            <thead>
+              <tr>
+                <th style="text-align:left">Day</th>
+                <th style="text-align:left">Tasks closed</th>
+                <th style="text-align:left">Deep work</th>
+                <th style="text-align:left">Pages read</th>
+                <th style="text-align:left">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ weekTable }}" as="r" hint-placeholder-count="7">
+                <tr>
+                  <td style="font-weight:700">{{ r.day }}</td>
+                  <td style="font-variant-numeric:tabular-nums">{{ r.tasks }}</td>
+                  <td style="font-variant-numeric:tabular-nums">{{ r.deep }}</td>
+                  <td style="font-variant-numeric:tabular-nums">{{ r.pages }}</td>
+                  <td style="color:var(--color-neutral-700)">{{ r.note }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </main>
+
+  <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closePalette }}" style="position:fixed;inset:0;background:color-mix(in srgb, #201e1d 46%, transparent);display:flex;align-items:flex-start;justify-content:center;padding-top:12vh;z-index:50">
+    <div onClick="{{ stop }}" style="width:600px;max-width:92vw;background:var(--color-bg);border:2px solid var(--color-text);box-shadow:var(--shadow-lg)">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:2px solid var(--color-divider)">
+        <div style="width:10px;height:10px;background:var(--color-accent);flex:none"></div>
+        <input class="input" placeholder="Jump to, or create…" style="flex:1;border:0;padding:0;font-size:18px;font-weight:600;background:transparent">
+        <span style="font-size:11px;font-weight:700;border:1px solid var(--color-neutral-400);padding:1px 5px;color:var(--color-neutral-600)">ESC</span>
+      </div>
+      <div style="padding:10px 20px 6px;font-size:10px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--color-neutral-600)">Go to</div>
+      <sc-for list="{{ paletteItems }}" as="p" hint-placeholder-count="5">
+        <button type="button" onClick="{{ p.go }}" style="width:100%;display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;text-align:left;padding:12px 20px;border:0;border-top:1px solid var(--color-neutral-300);background:transparent;cursor:pointer;color:var(--color-text)" style-hover="background:var(--color-accent-100)">
+          <span style="font-size:14px;font-weight:700">{{ p.label }}</span>
+          <span style="font-size:11px;font-weight:600;color:var(--color-neutral-600)">{{ p.hint }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;weekStart&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Monday&quot;,&quot;Sunday&quot;],&quot;default&quot;:&quot;Monday&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Calendar&quot;},&quot;showWeekends&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Calendar&quot;}}">
+const NEU = { g200: 'var(--color-neutral-200)', g300: 'var(--color-neutral-300)' };
+
+const AGENDA = [
+  { time: '08:00', label: 'Deep work — draft Q3 plan', meta: '90 min · phone in the drawer', state: 'past' },
+  { time: '10:00', label: 'Standup', meta: '15 min · video', state: 'past' },
+  { time: '10:30', label: 'Dentist', meta: '44 Rue Bleue · 12 min walk', state: 'now' },
+  { time: '12:30', label: 'Lunch with Mira', meta: 'Café Ost · she is paying' },
+  { time: '14:00', label: 'Apartment paperwork', meta: 'Read the notary letter, twice' },
+  { time: '16:00', label: 'Gym — intervals', meta: '6 × 400 m' },
+  { time: '19:30', label: 'Cook: lentil ragù', meta: 'Recipe is in Notes' },
+];
+
+const TASKS = [
+  { label: 'Renew passport photos', tag: 'Travel', done: true },
+  { label: 'Call landlord about the lease', tag: 'Home', done: true },
+  { label: 'Water the plants', tag: 'Home', done: true },
+  { label: 'Book Lisbon flights', tag: 'Travel', done: false },
+  { label: 'Send invoice #0412', tag: 'Work', done: false },
+  { label: 'Read 20 pages — Calvino', tag: 'Read', done: false },
+  { label: 'Pay the electricity bill', tag: 'Admin', done: false },
+];
+
+const LISTS = [
+  { name: 'Groceries', items: [
+    { label: 'Lentils, 500 g', note: 'brown', done: true },
+    { label: 'Tinned tomatoes ×3', note: '', done: true },
+    { label: 'Celery, carrots, onion', note: 'soffritto', done: false },
+    { label: 'Bread — the dark one', note: 'Fri only', done: false },
+    { label: 'Coffee, 1 kg', note: 'Ost blend', done: false },
+    { label: 'Dish soap', note: '', done: false } ] },
+  { name: 'Lisbon, three days', items: [
+    { label: 'Flights', note: 'Aug 14 → 17', done: false },
+    { label: 'Hotel in Alfama', note: 'booked', done: true },
+    { label: 'Passport photos', note: '', done: true },
+    { label: 'Tram 28 early, before nine', note: '', done: false },
+    { label: 'Print the tickets', note: 'no signal', done: false } ] },
+  { name: 'Apartment', items: [
+    { label: 'Notary — questions list', note: 'in Notes', done: true },
+    { label: 'Confirm the survey date', note: 'Aug 13', done: true },
+    { label: 'Insurance quote ×3', note: '1 of 3', done: false },
+    { label: 'Measure the kitchen wall', note: '', done: false },
+    { label: 'Sign the lease', note: 'Aug 24', done: false } ] },
+  { name: 'Reading, second half', items: [
+    { label: 'Invisible Cities — Calvino', note: 'p. 88', done: false },
+    { label: 'The Shape of Time', note: 'done Jul', done: true },
+    { label: 'Grid Systems', note: 'reference', done: true },
+    { label: 'Seeing Like a State', note: 'queued', done: false },
+    { label: 'A Field Guide to Getting Lost', note: 'queued', done: false } ] },
+];
+
+const NOTES = [
+  { date: '04 Aug', title: 'Lisbon — three days', tags: ['Travel', 'Draft'],
+    excerpt: 'Three days is enough for one hill and one river. Everything else is a second trip.',
+    body: [
+      'Three days is enough for one hill and one river. Everything else is a second trip, and pretending otherwise is how holidays get ruined.',
+      'Thursday: land at two, drop the bag, walk east until the streets stop making sense. Eat standing up. Sleep early.',
+      'Friday: Gulbenkian in the morning while it is cool and empty, the long lunch afterwards, then nothing at all until evening. The nothing is the point.',
+      'Saturday: the market before eight, tram 28 before nine, and the afternoon left deliberately blank.',
+    ] },
+  { date: '02 Aug', title: 'On keeping a smaller inbox', tags: ['Method'],
+    excerpse: '', excerpt: 'The inbox is not a list of work. It is a list of other people\u2019s intentions.',
+    body: [
+      'The inbox is not a list of work. It is a list of other people\u2019s intentions, arriving in the order that suits them.',
+      'Two passes a day, twenty minutes each. Anything that survives both passes becomes a task with a date on it, or it does not exist.',
+      'Measured over July: 41 fewer open threads, and no one noticed the delay.',
+    ] },
+  { date: '29 Jul', title: 'Apartment: what to ask the notary', tags: ['Home', 'Checklist'],
+    excerpt: 'Twelve questions, in the order that gets the shortest answers.',
+    body: [
+      'Twelve questions, in the order that gets the shortest answers. Bring the survey; bring the earlier lease; bring a pen that works.',
+      'Ask about the service charge history before asking about the roof. The roof answer is better when it follows the numbers.',
+      'Do not sign anything on the day of the survey.',
+    ] },
+  { date: '21 Jul', title: 'Books, second half of 2026', tags: ['Read'],
+    excerpt: 'Five books, not fifteen. One re-read allowed.',
+    body: [
+      'Five books, not fifteen. One re-read allowed, because a re-read is the only reliable way to find out whether a book was actually good.',
+      'Twenty pages a day is eight books a year. The arithmetic is never the problem.',
+    ] },
+  { date: '15 Jul', title: 'Recipe — lentil ragù', tags: ['Kitchen'],
+    excerpt: 'Soffritto slowly, lentils quickly, tomatoes for an hour.',
+    body: [
+      'Soffritto slowly — twenty minutes, low, until the onion gives up. Lentils quickly, two minutes in the fat. Tomatoes for an hour.',
+      'Salt at the end. Bay leaf in, bay leaf out. Better on the second day, which is the whole reason to make it on a Thursday.',
+    ] },
+];
+
+const EVENTS = {
+  3: [{ t: '09:00', label: 'Quarter kickoff' }],
+  5: [{ t: '18:30', label: 'Choir' }],
+  6: [{ t: '10:30', label: 'Dentist', accent: true }, { t: '12:30', label: 'Lunch, Mira' }],
+  7: [{ t: 'Due', label: 'Invoice #0412', accent: true }],
+  10: [{ t: '08:00', label: 'Deep work' }],
+  12: [{ t: '18:30', label: 'Choir' }],
+  13: [{ t: '15:00', label: 'Flat survey' }],
+  14: [{ t: '14:05', label: 'Lisbon — depart', accent: true }],
+  17: [{ t: '21:40', label: 'Lisbon — return' }],
+  19: [{ t: '18:30', label: 'Choir' }],
+  20: [{ t: '11:00', label: 'Design review' }],
+  24: [{ t: '15:00', label: 'Sign the lease', accent: true }],
+  26: [{ t: '18:30', label: 'Choir' }],
+  28: [{ t: '19:00', label: 'Anna & Pim, dinner' }],
+  31: [{ t: 'Due', label: 'Rent' }],
+};
+
+const WEEK_BLOCKS = {
+  3: [{ s: 9, d: 1, label: 'Quarter kickoff' }, { s: 14, d: 2, label: 'Deep work' }],
+  4: [{ s: 10, d: 0.5, label: 'Standup' }, { s: 15, d: 1.5, label: 'Insurance calls' }],
+  5: [{ s: 8, d: 1.5, label: 'Deep work' }, { s: 18.5, d: 1.5, label: 'Choir' }],
+  6: [{ s: 8, d: 1.5, label: 'Deep work' }, { s: 10.5, d: 1, label: 'Dentist', accent: true }, { s: 12.5, d: 1.5, label: 'Lunch, Mira' }, { s: 16, d: 1, label: 'Intervals' }],
+  7: [{ s: 9, d: 2, label: 'Invoice + admin', accent: true }, { s: 13, d: 1, label: 'Barber' }],
+  8: [{ s: 11, d: 2, label: 'Market, then nothing' }],
+  9: [{ s: 17, d: 2, label: 'Prep for Lisbon' }],
+};
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+class Component extends DCLogic {
+  state = {
+    view: 'today',
+    month: 7,
+    year: 2026,
+    calMode: 'month',
+    note: 0,
+    tasks: TASKS.map(t => t.done),
+    lists: LISTS.map(l => l.items.map(i => i.done)),
+    habits: [[1, 1, 1, 1, 0, 0, 0], [1, 0, 1, 1, 1, 0, 0], [1, 1, 0, 1, 1, 0, 0], [0, 1, 1, 0, 1, 0, 0]],
+    draft: '',
+    extra: [],
+    palette: false,
+    hideDone: false,
+  };
+
+  componentDidMount() {
+    this._key = e => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ palette: !s.palette })); }
+      if (e.key === 'Escape') this.setState({ palette: false });
+    };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._key); }
+
+  go(view) { return () => this.setState({ view, palette: false }); }
+
+  renderVals() {
+    const s = this.state;
+    const weekStart = this.props.weekStart ?? 'Monday';
+    const showWeekend = this.props.showWeekends ?? true;
+    const hideDone = s.hideDone;
+
+    const allTasks = TASKS.concat(s.extra);
+    const doneCount = s.tasks.filter(Boolean).length;
+
+    const counts = { today: allTasks.length - doneCount, calendar: 14, lists: 21, notes: NOTES.length, log: 218 };
+    const nav = [
+      ['today', 'Today'], ['calendar', 'Calendar'], ['lists', 'Lists'], ['notes', 'Notes'], ['log', 'Log'],
+    ].map(([k, label]) => ({
+      label, count: counts[k], active: s.view === k, inactive: s.view !== k, go: this.go(k),
+    }));
+
+    const titles = {
+      today: ['Today', 'Thursday, 6 August 2026 · sunset 21:04'],
+      calendar: ['Calendar', 'Everything with a time attached'],
+      lists: ['Lists', 'Four lists, no folders'],
+      notes: ['Notes', NOTES.length + ' notes · plain text, dated'],
+      log: ['Log', 'What actually happened'],
+    };
+
+    // month grid
+    const offsets = { Monday: 1, Sunday: 0 };
+    const firstDow = new Date(s.year, s.month, 1).getDay();
+    const dim = new Date(s.year, s.month + 1, 0).getDate();
+    const lead = (firstDow - offsets[weekStart] + 7) % 7;
+    const names = weekStart === 'Monday'
+      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push(null);
+    for (let d = 1; d <= dim; d++) cells.push(d);
+    while (cells.length % 7) cells.push(null);
+    const isAug = s.month === 7 && s.year === 2026;
+    const weeks = [];
+    for (let w = 0; w < cells.length / 7; w++) {
+      weeks.push({
+        days: cells.slice(w * 7, w * 7 + 7).map((n, idx) => {
+          const dow = (idx + offsets[weekStart]) % 7;
+          const weekend = dow === 0 || dow === 6;
+          const today = isAug && n === 6;
+          const evs = (isAug && n ? EVENTS[n] || [] : []).filter(() => showWeekend || !weekend);
+          return {
+            n: n || '', isToday: today, notToday: !today,
+            numColor: n ? (weekend ? 'var(--color-neutral-500)' : 'var(--color-text)') : 'transparent',
+            bg: !n ? 'var(--color-neutral-200)' : today ? 'var(--color-accent-100)' : weekend ? 'var(--color-neutral-100)' : 'transparent',
+            events: evs.map(e => ({ ...e, bar: e.accent ? 'var(--color-accent)' : 'var(--color-text)' })),
+          };
+        }),
+      });
+    }
+
+    const hours = [];
+    for (let h = 8; h <= 20; h++) hours.push(String(h).padStart(2, '0') + ':00');
+    const weekDays = weekStart === 'Monday' ? [3, 4, 5, 6, 7, 8, 9] : [2, 3, 4, 5, 6, 7, 8];
+    const weekCols = weekDays.map(n => {
+      const dt = new Date(2026, 7, n);
+      const dow = dt.getDay();
+      const weekend = dow === 0 || dow === 6;
+      const today = n === 6;
+      return {
+        label: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dow], n: String(n).padStart(2, '0'),
+        numColor: today ? 'var(--color-accent)' : weekend ? 'var(--color-neutral-500)' : 'var(--color-text)',
+        headBg: today ? 'var(--color-accent-100)' : 'transparent',
+        bodyBg: today ? 'var(--color-accent-100)' : weekend ? 'var(--color-neutral-100)' : 'transparent',
+        blocks: (WEEK_BLOCKS[n] || []).map(b => ({
+          t: String(Math.floor(b.s)).padStart(2, '0') + ':' + (b.s % 1 ? '30' : '00'),
+          label: b.label,
+          oneLine: b.d <= 1, twoLine: b.d > 1,
+          top: (b.s - 8) * 52 + 'px', height: Math.max(b.d * 52 - 2, 26) + 'px',
+          bar: b.accent ? 'var(--color-accent)' : 'var(--color-text)',
+          fill: b.accent ? 'var(--color-accent-200)' : 'var(--color-neutral-200)',
+        })),
+      };
+    });
+
+    const lists = LISTS.map((l, li) => {
+      const flags = s.lists[li];
+      const done = flags.filter(Boolean).length;
+      const items = l.items.map((i, ii) => ({
+        label: i.label, note: i.note, done: flags[ii], open: !flags[ii],
+        toggle: () => this.setState(st => {
+          const next = st.lists.map(r => r.slice());
+          next[li][ii] = !next[li][ii];
+          return { lists: next };
+        }),
+      })).filter(i => !(hideDone && i.done));
+      return { name: l.name, items, count: done + ' / ' + flags.length, pct: Math.round(done / flags.length * 100) + '%' };
+    });
+
+    const matrix = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label, r) => ({
+      label,
+      cells: Array.from({ length: 31 }, (_, c) => {
+        const v = (Math.sin((r + 1) * 12.9898 + (c + 1) * 78.233) * 43758.5453) % 1;
+        const n = Math.abs(v);
+        const bg = c > 26 && r > 3 ? 'var(--color-neutral-200)'
+          : n < 0.18 ? 'var(--color-neutral-200)'
+          : n < 0.4 ? 'var(--color-accent-300)'
+          : n < 0.62 ? 'var(--color-accent-500)'
+          : n < 0.85 ? 'var(--color-accent)' : 'var(--color-accent-700)';
+        return { bg };
+      }),
+    }));
+
+    return {
+      nav,
+      title: titles[s.view][0],
+      subtitle: titles[s.view][1],
+      isToday: s.view === 'today', isCalendar: s.view === 'calendar', isLists: s.view === 'lists',
+      isNotes: s.view === 'notes', isLog: s.view === 'log',
+
+      stats: [
+        { label: 'Week', value: '32', unit: 'of 52', pct: '61%' },
+        { label: 'Day of year', value: '218', unit: '/ 365', pct: '60%' },
+        { label: 'Tasks closed today', value: String(doneCount), unit: 'of ' + allTasks.length, pct: Math.round(doneCount / allTasks.length * 100) + '%' },
+        { label: 'Habit streak', value: '24', unit: 'days', pct: '80%' },
+      ],
+      agenda: AGENDA.map(a => ({ ...a, now: a.state === 'now', later: a.state !== 'now' })),
+      doneLabel: doneCount + ' of ' + allTasks.length + ' closed',
+      tasks: allTasks.map((t, i) => ({
+        label: t.label, tag: t.tag, done: !!s.tasks[i], open: !s.tasks[i],
+        toggle: () => this.setState(st => { const n = st.tasks.slice(); n[i] = !n[i]; return { tasks: n }; }),
+      })),
+      draft: s.draft,
+      onDraft: e => this.setState({ draft: e.target.value }),
+      onDraftKey: e => { if (e.key === 'Enter') this.addDraft(); },
+      addTask: () => this.addDraft(),
+      habits: ['Twenty pages', 'Move the body', 'No screens after ten', 'Write one line'].map((label, hi) => ({
+        label, count: this.state.habits[hi].filter(Boolean).length + ' / 7',
+        days: this.state.habits[hi].map((on, di) => ({
+          bg: on ? 'var(--color-accent)' : 'transparent',
+          toggle: () => this.setState(st => {
+            const n = st.habits.map(r => r.slice());
+            n[hi][di] = n[hi][di] ? 0 : 1;
+            return { habits: n };
+          }),
+        })),
+      })),
+
+      monthLabel: MONTHS[s.month] + ' ' + s.year,
+      monthMeta: isAug ? '14 dated entries' : 'nothing dated yet',
+      prevMonth: () => this.setState(st => ({ month: st.month === 0 ? 11 : st.month - 1, year: st.month === 0 ? st.year - 1 : st.year })),
+      nextMonth: () => this.setState(st => ({ month: st.month === 11 ? 0 : st.month + 1, year: st.month === 11 ? st.year + 1 : st.year })),
+      isMonthMode: s.calMode === 'month', isWeekMode: s.calMode === 'week',
+      setMonthMode: () => this.setState({ calMode: 'month' }),
+      setWeekMode: () => this.setState({ calMode: 'week' }),
+      dayNames: names, weeks, hours, weekCols,
+
+      lists,
+      listsMeta: lists.reduce((a, l) => a + l.items.length, 0) + ' open items',
+      completedLabel: hideDone ? 'Show completed' : 'Hide completed',
+      toggleCompleted: () => this.setState(st => ({ hideDone: !st.hideDone })),
+
+      notesCount: NOTES.length + ' notes',
+      notes: NOTES.map((n, i) => ({
+        date: n.date, title: n.title, excerpt: n.excerpt,
+        bg: i === s.note ? 'var(--color-accent-100)' : 'transparent',
+        dot: i === s.note ? 'var(--color-accent)' : 'var(--color-neutral-400)',
+        select: () => this.setState({ note: i }),
+      })),
+      note: {
+        title: NOTES[s.note].title, tags: NOTES[s.note].tags, body: NOTES[s.note].body,
+        meta: NOTES[s.note].date + ' 2026 · ' + NOTES[s.note].body.join(' ').split(/\s+/).length + ' words',
+      },
+
+      matrix,
+      weekTable: [
+        { day: 'Mon 03', tasks: 5, deep: '2h 10m', pages: 22, note: 'Kickoff ran long' },
+        { day: 'Tue 04', tasks: 3, deep: '1h 30m', pages: 18, note: 'Insurance calls' },
+        { day: 'Wed 05', tasks: 6, deep: '2h 40m', pages: 24, note: 'Choir' },
+        { day: 'Thu 06', tasks: 3, deep: '1h 30m', pages: 0, note: 'In progress' },
+        { day: 'Fri 07', tasks: 0, deep: '—', pages: 0, note: 'Invoice due' },
+        { day: 'Sat 08', tasks: 0, deep: '—', pages: 0, note: 'Market' },
+        { day: 'Sun 09', tasks: 0, deep: '—', pages: 0, note: 'Pack' },
+      ],
+
+      paletteOpen: s.palette,
+      openPalette: () => this.setState({ palette: true }),
+      closePalette: () => this.setState({ palette: false }),
+      stop: e => e.stopPropagation(),
+      paletteItems: [
+        { label: 'Today', hint: 'Agenda, list, habits', go: this.go('today') },
+        { label: 'Calendar — August 2026', hint: 'Month or week', go: this.go('calendar') },
+        { label: 'Lists', hint: 'Groceries, Lisbon, Apartment, Reading', go: this.go('lists') },
+        { label: 'Notes', hint: '5 notes', go: this.go('notes') },
+        { label: 'Log', hint: 'Year to date', go: this.go('log') },
+      ],
+    };
+  }
+
+  addDraft() {
+    const v = this.state.draft.trim();
+    if (!v) return;
+    this.setState(st => ({
+      draft: '',
+      extra: st.extra.concat([{ label: v, tag: 'New', done: false }]),
+      tasks: st.tasks.concat([false]),
+    }));
+  }
+}
+
+</script>
+</body>
+</html>
