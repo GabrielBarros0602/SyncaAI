@@ -1,5 +1,10 @@
-# Runtime dependencies. Compile with:
-#   pip-compile requirements.in
+# Runtime dependencies.
+#
+# Regenerate the lockfile after editing this file:
+#   uv pip compile --universal --python-version 3.12 requirements.in -o requirements.txt
+#
+# Universal mode is deliberate: development happens on Windows and the runtime is Linux,
+# so the lockfile carries environment markers and is valid on both. See CONTRIBUTING.md.
 fastapi
 uvicorn[standard]
 pydantic-settings
