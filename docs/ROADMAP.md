@@ -17,7 +17,7 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 
 ---
 
-## S0 — Estrutura do repositório e walking skeleton · ⏳ Em andamento
+## S0 — Estrutura do repositório e walking skeleton · ✅ Concluído
 
 - [x] Repositório criado no GitHub
 - [x] Monorepo: `apps/api`, `apps/web`, `docs/adr`
