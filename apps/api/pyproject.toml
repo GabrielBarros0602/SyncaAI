@@ -32,6 +32,9 @@ select = [
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    "integration: requires a reachable PostgreSQL instance; deselect with -m 'not integration'",
+]
 
 [tool.mypy]
 python_version = "3.12"

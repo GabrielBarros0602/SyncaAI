@@ -34,7 +34,7 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 - [x] `db.py`: engine, sessionmaker e dependência `get_session`
 - [x] `GET /health` — liveness, sem dependência nenhuma
 - [x] `GET /health/ready` — readiness, `SELECT 1` no banco
-- [ ] Testes dos dois endpoints
+- [x] Testes dos dois endpoints
 - [ ] `docker compose up` sobe API e banco num comando
 - [x] `git init`, remote `origin`, histórico atômico empurrado
 
