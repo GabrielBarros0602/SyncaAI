@@ -31,7 +31,7 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 - [x] `requirements.in` compilado para `requirements.txt` com `uv pip compile --universal`,
       alvo 3.12 — resolvedor uv, instalação pip, motivo no `CONTRIBUTING.md`
 - [x] `config.py`: `Settings` via pydantic-settings, injetado com `get_settings`
-- [ ] `db.py`: engine, sessionmaker e dependência `get_session`
+- [x] `db.py`: engine, sessionmaker e dependência `get_session`
 - [ ] `GET /health` — liveness, sem dependência nenhuma
 - [ ] `GET /health/ready` — readiness, `SELECT 1` no banco
 - [ ] Testes dos dois endpoints
