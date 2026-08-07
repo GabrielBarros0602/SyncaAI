@@ -15,6 +15,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0004](0004-context-assembly-policy.md) | Calendar context assembly policy | Accepted |
 | [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted |
 | [0006](0006-cost-limits-cache-degradation.md) | Cost control, rate limiting, caching and degradation | Accepted |
+| [0007](0007-synchronous-persistence.md) | Synchronous SQLAlchemy for persistence | Accepted |
 
 ## Template
 

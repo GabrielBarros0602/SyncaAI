@@ -56,19 +56,19 @@ Tabela semanal ficam para S8; Notas entram no S7, junto com o caso de uso que pr
       de IA inteira depende — soma minutos ocupados por dia. Com início e fim, sobreposição é
       detectável diretamente e a soma exige subtração por linha; com início e duração, a soma
       é trivial e sobreposição exige recalcular o fim. Não é escolha cosmética: define a
-      forma da query mais importante do sistema. → merece **ADR-0007**
+      forma da query mais importante do sistema. → merece **ADR-0008**
 - [ ] **Decidir: fuso horário — e aqui a resposta padrão não basta.** "UTC no banco, converter
       na borda" está certo para *instantes*, mas um calendário agrupa por *dia local*, e dia
       local não é derivável de UTC sem o fuso do usuário. Provavelmente precisa dos dois:
       `timestamptz` para o instante mais uma `local_date` materializada para agrupar, mais
       `User.timezone`. Guardando só UTC, heatmap e contador de sequência erram perto da
       meia-noite; guardando só data local, ordenação e duração atravessando dias quebram.
-      → merece **ADR-0008**
+      → merece **ADR-0009**
 - [ ] **Decidir: `Day` é entidade ou visão derivada?** O protótipo linka nota a um dia, tem um
       quadrado por dia no heatmap e contador de sequência — tudo sugere linha por dia. Mas dia
       vazio não precisa existir. Materializar sob demanda ou derivar por agregação muda o
       custo da query do heatmap: 365 leituras indexadas contra varredura com `GROUP BY`.
-      → merece **ADR-0009**
+      → merece **ADR-0010**
 - [ ] **Decidir: delete físico ou lógico em `Task`.** A IA vai propor tarefas que o usuário
       descarta. Histórico de descarte mede a qualidade das gerações, o que é justamente a
       métrica que o portfólio quer apresentar — isso pesa para lógico.
