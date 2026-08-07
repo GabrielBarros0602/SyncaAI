@@ -4,7 +4,11 @@ Documento de trabalho. Governa a ordem do desenvolvimento e o que conta como pro
 
 Regras: nenhum sprint começa antes do anterior estar no `origin` e verde no CI. Item que
 começa com **Decidir:** só está pronto quando o ADR está escrito e commitado — não quando o
-código funciona. Sprint fecha com um commit próprio virando os checkboxes.
+código funciona.
+
+**Um item só é marcado quando está no `origin`.** Escrito no disco não conta. O checkbox vira
+no mesmo commit que fecha o item, então este arquivo é sempre verdadeiro e
+`git log -p docs/ROADMAP.md` mostra exatamente quando cada coisa fechou.
 
 Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões em
 [`adr/`](adr/README.md).
@@ -21,18 +25,18 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 - [x] README com definição do problema, em inglês com seção em português
 - [x] `.gitignore`, `LICENSE`, `.env.example`
 - [x] `pyproject.toml` com ruff, mypy strict e pytest
-- [x] `Dockerfile` e `docker-compose.yml` com PostgreSQL
-- [x] Workflow de CI: ruff, ruff format, mypy, pytest
+- [ ] `Dockerfile` e `docker-compose.yml` com PostgreSQL — escritos, aguardando o código
+- [ ] Workflow de CI: ruff, ruff format, mypy, pytest — escrito, entra depois dos testes
 - [x] `CONTRIBUTING.md` com a convenção de commits ampliada
 - [x] `requirements.in` compilado para `requirements.txt` com `uv pip compile --universal`,
       alvo 3.12 — resolvedor uv, instalação pip, motivo no `CONTRIBUTING.md`
-- [ ] `config.py`: `Settings` via pydantic-settings, injetado com `get_settings`
+- [x] `config.py`: `Settings` via pydantic-settings, injetado com `get_settings`
 - [ ] `db.py`: engine, sessionmaker e dependência `get_session`
 - [ ] `GET /health` — liveness, sem dependência nenhuma
 - [ ] `GET /health/ready` — readiness, `SELECT 1` no banco
 - [ ] Testes dos dois endpoints
 - [ ] `docker compose up` sobe API e banco num comando
-- [ ] `git init`, remote `origin`, histórico atômico empurrado
+- [x] `git init`, remote `origin`, histórico atômico empurrado
 
 **Por que dois endpoints de saúde e não um:** o orquestrador *reinicia* o container quando
 liveness falha, e apenas *para de rotear tráfego* quando readiness falha. Um endpoint único

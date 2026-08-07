@@ -150,8 +150,11 @@ Development is governed by [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - One checklist item is roughly one to three commits. If an item needs ten, it was two items.
 - A `Decidir:` item is not done when the code works. It is done when the ADR is written and
   committed.
-- A sprint closes with its own commit flipping the checkboxes:
-  `docs(roadmap): close S1`. The log then narrates sprint progression on its own.
+- **A checklist item is ticked in the same commit that completes it**, and only once the work
+  is on `origin` — written on disk does not count. This keeps the roadmap true at every point
+  in history, so `git log -p docs/ROADMAP.md` shows exactly when each item closed.
+- A sprint closes with its own commit updating the sprint header status:
+  `docs(roadmap): close S1`.
 - No sprint starts before the previous one is pushed and green in CI.
 
 ## Before every commit
@@ -183,9 +186,10 @@ que aquela decisão produziu. Serve diretamente ao objetivo de conseguir explica
 inteiro depois.
 
 **Disciplina de sprint:** um item de checklist são um a três commits. Item `Decidir:` só está
-pronto quando o ADR está escrito e commitado, não quando o código funciona. Sprint fecha com
-um commit próprio virando os checkboxes — `docs(roadmap): close S1` — e assim o log narra a
-progressão sozinho. Nenhum sprint começa antes do anterior estar no origin e verde no CI.
+pronto quando o ADR está escrito e commitado, não quando o código funciona. **O checkbox vira
+no mesmo commit que fecha o item, e só quando o trabalho está no `origin`** — escrito no disco
+não conta. Assim o roadmap é verdadeiro em qualquer ponto do histórico. Sprint fecha com um
+commit próprio atualizando o status no cabeçalho — `docs(roadmap): close S1`. Nenhum sprint começa antes do anterior estar no origin e verde no CI.
 
 **Dependências:** declaradas em `requirements.in` e `requirements-dev.in`; os `.txt` são
 gerados e nunca editados à mão. O resolvedor é o `uv` em modo universal com alvo 3.12, e a
