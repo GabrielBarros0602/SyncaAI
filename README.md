@@ -81,7 +81,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 uvicorn syncaai.main:app --reload
 ```
 
-Point `DATABASE_URL` at `localhost` instead of `db` when running this way.
+Point `DATABASE_URL` at `localhost:5433` instead of `db:5432` when running this way — compose publishes the database on host port 5433 so it does not collide with a local PostgreSQL already using 5432.
 
 ### Changing dependencies
 
