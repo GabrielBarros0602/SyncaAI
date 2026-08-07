@@ -32,8 +32,8 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
       alvo 3.12 — resolvedor uv, instalação pip, motivo no `CONTRIBUTING.md`
 - [x] `config.py`: `Settings` via pydantic-settings, injetado com `get_settings`
 - [x] `db.py`: engine, sessionmaker e dependência `get_session`
-- [ ] `GET /health` — liveness, sem dependência nenhuma
-- [ ] `GET /health/ready` — readiness, `SELECT 1` no banco
+- [x] `GET /health` — liveness, sem dependência nenhuma
+- [x] `GET /health/ready` — readiness, `SELECT 1` no banco
 - [ ] Testes dos dois endpoints
 - [ ] `docker compose up` sobe API e banco num comando
 - [x] `git init`, remote `origin`, histórico atômico empurrado
