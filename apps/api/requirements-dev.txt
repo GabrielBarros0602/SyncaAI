@@ -3,13 +3,9 @@
 anyio==4.14.2
     # via
     #   -c requirements.txt
-    #   httpx
+    #   httpx2
 ast-serialize==0.7.0
     # via mypy
-certifi==2026.7.22
-    # via
-    #   httpcore
-    #   httpx
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   -c requirements.txt
@@ -19,16 +15,16 @@ coverage==7.15.4
 h11==0.16.0
     # via
     #   -c requirements.txt
-    #   httpcore
-httpcore==1.0.9
-    # via httpx
-httpx==0.28.1
+    #   httpcore2
+httpcore2==2.9.1
+    # via httpx2
+httpx2==2.9.1
     # via -r requirements-dev.in
 idna==3.18
     # via
     #   -c requirements.txt
     #   anyio
-    #   httpx
+    #   httpx2
 iniconfig==2.3.0
     # via pytest
 librt==0.14.0 ; platform_python_implementation != 'PyPy'
@@ -55,10 +51,15 @@ pytest-cov==7.1.0
     # via -r requirements-dev.in
 ruff==0.16.1
     # via -r requirements-dev.in
+truststore==0.10.4
+    # via
+    #   httpcore2
+    #   httpx2
 typing-extensions==4.16.0
     # via
     #   -c requirements.txt
     #   anyio
+    #   httpx2
     #   mypy
 uv==0.12.2
     # via -r requirements-dev.in

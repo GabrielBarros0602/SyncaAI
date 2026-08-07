@@ -7,6 +7,6 @@
 uv
 pytest
 pytest-cov
-httpx
+httpx2
 ruff
 mypy
