@@ -35,7 +35,7 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 - [x] `GET /health` — liveness, sem dependência nenhuma
 - [x] `GET /health/ready` — readiness, `SELECT 1` no banco
 - [x] Testes dos dois endpoints
-- [ ] `docker compose up` sobe API e banco num comando
+- [x] `docker compose up` sobe API e banco num comando
 - [x] `git init`, remote `origin`, histórico atômico empurrado
 
 **Por que dois endpoints de saúde e não um:** o orquestrador *reinicia* o container quando
