@@ -103,6 +103,12 @@ cd apps/api
 ruff check . && ruff format --check . && mypy && pytest
 ```
 
+Tests marked `integration` need a reachable PostgreSQL. Without one running, deselect them:
+
+```bash
+pytest -m "not integration"
+```
+
 ## Architecture decisions
 
 Every non-trivial decision is recorded in [`docs/adr/`](docs/adr/README.md) before the code

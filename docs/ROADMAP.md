@@ -25,8 +25,8 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 - [x] README com definição do problema, em inglês com seção em português
 - [x] `.gitignore`, `LICENSE`, `.env.example`
 - [x] `pyproject.toml` com ruff, mypy strict e pytest
-- [ ] `Dockerfile` e `docker-compose.yml` com PostgreSQL — escritos, aguardando o código
-- [ ] Workflow de CI: ruff, ruff format, mypy, pytest — escrito, entra depois dos testes
+- [x] `Dockerfile` e `docker-compose.yml` com PostgreSQL
+- [x] Workflow de CI: ruff, ruff format, mypy, pytest
 - [x] `CONTRIBUTING.md` com a convenção de commits ampliada
 - [x] `requirements.in` compilado para `requirements.txt` com `uv pip compile --universal`,
       alvo 3.12 — resolvedor uv, instalação pip, motivo no `CONTRIBUTING.md`
