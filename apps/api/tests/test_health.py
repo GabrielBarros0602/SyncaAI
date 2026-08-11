@@ -4,7 +4,7 @@ Three of these run with no database at all: the session is substituted through t
 same dependency seam the application uses. Only the last one needs real Postgres, and
 it is marked so it can be deselected locally with ``-m "not integration"``.
 
-This split is the test pyramid from S9 in miniature — fast deterministic tests over
+This split is the test pyramid from S10 in miniature — fast deterministic tests over
 the logic, one narrow integration test over the wiring.
 """
 

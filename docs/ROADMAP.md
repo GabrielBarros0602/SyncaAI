@@ -48,9 +48,10 @@ que consulta o banco faz uma oscilação de rede no Postgres reiniciar a aplica�
 ## S1 — Modelagem de domínio e banco de dados · ⏳ Próximo
 
 Escopo mínimo decidido: `User`, `Day`, `Task`, `ChecklistItem`. Hábitos, Listas, Heatmap e
-Tabela semanal ficam para S8; Notas entram no S7, junto com o caso de uso que precisa delas.
+Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que precisa delas.
 
-- [ ] Modelar `User`, `Day`, `Task`, `ChecklistItem`
+- [ ] Modelar `User`, `Day`, `Task`, `ChecklistItem`. O `User` já nasce com `email`,
+      `password_hash` e `timezone`, porque o S2 depende deles
 - [ ] **Decidir: como representar um bloco de tempo.** `start` + `end` em `timestamptz`, ou
       `start` + duração em minutos inteiros? A query de capacidade livre — da qual a camada
       de IA inteira depende — soma minutos ocupados por dia. Com início e fim, sobreposição é
@@ -84,10 +85,30 @@ duas tarefas do mesmo usuário podem se sobrepor no tempo? apagar `Task` apaga o
 
 ---
 
-## S2 — CRUD do domínio e a query de capacidade
+## S2 — Autenticação e isolamento por dono
+
+- [ ] **Decidir: algoritmo de hash de senha** — bcrypt ou argon2. Nunca um SHA puro: hashes de
+      uso geral são rápidos, e rápido é exatamente o errado aqui
+- [ ] Emissão e verificação de JWT
+- [ ] Dependência `get_current_user`
+- [ ] **Classe base de repositório com escopo por dono.** A falha de segurança mais provável
+      deste projeto: o usuário A ler `/tasks/42`, que pertence ao usuário B. O filtro por
+      `user_id` vive na base que todo repositório herda, não é lembrado por cada serviço.
+      Vem antes dos repositórios existirem justamente para não ser retrofit em cada um
+- [ ] **Decidir: recurso de outro dono responde 404 ou 403.** 403 confirma que o recurso
+      existe, o que é vazamento de informação. 404 não distingue "não existe" de "não é seu"
+- [ ] **Decidir: tempo de vida do token e estratégia de refresh**
+- [ ] Rate limit no endpoint de login, separado do rate limit de IA do S6
+
+---
+
+## S3 — CRUD do domínio e a query de capacidade
 
 - [ ] Schemas Pydantic `Create` / `Update` / `Read` por entidade
-- [ ] Repositórios SQLAlchemy, injetados via `Depends`
+- [ ] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados
+      via `Depends` — nascem filtrados por `user_id`, sem retrofit
+- [ ] Teste que prova o isolamento em cada endpoint que recebe um id: usuário A
+      pedindo recurso de B não recebe o recurso
 - [ ] Serviços com as regras de verdade
 - [ ] Routers conectados em `api/v1/router.py`
 - [ ] Exceções de domínio mapeadas para status HTTP num lugar só — não `HTTPException`
@@ -100,30 +121,33 @@ duas tarefas do mesmo usuário podem se sobrepor no tempo? apagar `Task` apaga o
 - [ ] Query de capacidade medida com `EXPLAIN ANALYZE` numa janela de 14 dias, com os índices
       do S1 confirmados em uso
 
-**Marco:** ao fim do S2 existe um produto que já funciona sem nenhuma IA. Isso não é efeito
+**Marco:** ao fim do S3 existe um produto que já funciona sem nenhuma IA. Isso não é efeito
 colateral — é o requisito de degradação do ADR-0006, verificado na prática antes de existir
 algo de que degradar.
 
 ---
 
-## S3 — Autenticação e isolamento por dono
+## S4 — Primeira fatia visível
 
-- [ ] **Decidir: algoritmo de hash de senha** — bcrypt ou argon2. Nunca um SHA puro: hashes de
-      uso geral são rápidos, e rápido é exatamente o errado aqui
-- [ ] Emissão e verificação de JWT
-- [ ] Dependência `get_current_user`
-- [ ] **Isolamento por dono em toda query.** A falha de segurança mais provável deste projeto:
-      o usuário A ler `/tasks/42`, que pertence ao usuário B. O filtro por `user_id` precisa
-      viver no repositório, não ser lembrado por cada serviço
-- [ ] Teste que prova o isolamento em cada endpoint que recebe um id
-- [ ] **Decidir: recurso de outro dono responde 404 ou 403.** 403 confirma que o recurso
-      existe, o que é vazamento de informação. 404 não distingue "não existe" de "não é seu"
-- [ ] **Decidir: tempo de vida do token e estratégia de refresh**
-- [ ] Rate limit no endpoint de login, separado do rate limit de IA do S5
+Antecipado de propósito. Sem esta fatia, nada do produto é visível antes do S7, e o vazio
+entre S1 e S6 é onde a motivação morre. Depende do S2 e do S3 e de mais nada — nenhuma IA.
+
+- [ ] Tela de login e cadastro, consumindo os endpoints do S2
+- [ ] Sessão persistida no cliente e rota protegida
+- [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S3
+- [ ] Criar e concluir tarefa pela interface
+- [ ] Estados vazios e de erro visíveis, não tela branca
+
+**Marco:** ao fim do S4 o projeto é apresentável para qualquer pessoa, não só para quem lê
+código. Login de verdade, dado de verdade, a tese do produto na tela — "sua terça tem 90
+minutos livres". A camada de IA ainda não existe, e o produto já se explica sozinho.
+
+**O que fica devendo:** este front-end é deliberadamente mínimo e será substituído no S7,
+quando o protótipo inteiro entra. Trate como vitrine funcional, não como base definitiva.
 
 ---
 
-## S4 — Pipeline de IA sem provedor
+## S5 — Pipeline de IA sem provedor
 
 Sprint inteiro construído contra um dublê. Se qualquer coisa aqui custar dinheiro, algo está
 errado.
@@ -153,7 +177,7 @@ de "nenhum projeto com testes automatizados publicados".
 
 ---
 
-## S5 — Provedor real, guardrails e degradação
+## S6 — Provedor real, guardrails e degradação
 
 - [ ] Cliente real com structured output nativo do provedor
 - [ ] Tabela `ai_usage` escrita em toda chamada concluída: tokens de entrada e saída, custo
@@ -173,7 +197,7 @@ de "nenhum projeto com testes automatizados publicados".
 
 ---
 
-## S6 — Front-end ligado à API
+## S7 — Front-end ligado à API
 
 - [ ] Protótipo migrado do HTML estático para build real, preservando o design system em `_ds/`
 - [ ] Fluxo de autenticação
@@ -183,14 +207,14 @@ de "nenhum projeto com testes automatizados publicados".
 - [ ] Draft aprovado renderizado como o componente `3 of 5 preparations done`
 - [ ] Estados de erro visíveis: job falhou, provedor fora, acima do teto, rate limit
 
-**Marco:** ao fim do S6 o caso de uso 2 está completo e publicável. É o ponto em que o projeto
+**Marco:** ao fim do S7 o caso de uso 2 está completo e publicável. É o ponto em que o projeto
 pode ir para o currículo.
 
 ---
 
-## S7 — Assistência a tarefa específica
+## S8 — Assistência a tarefa específica
 
-Não começa antes do S6 estar publicado. Regra do ADR-0002.
+Não começa antes do S7 estar publicado. Regra do ADR-0002.
 
 - [ ] Entidades `Note` e o vínculo "link to a day"
 - [ ] Variante do montador de contexto com allowlist mais larga e explícita
@@ -200,13 +224,13 @@ Não começa antes do S6 estar publicado. Regra do ADR-0002.
 - [ ] Reuso confirmado: rate limit, teto, cache e circuit breaker sem reimplementação
 
 **Verificação da tese do ADR-0002:** este sprint deveria ser curto porque o caso 2 já
-construiu a infraestrutura. Se ele custar tanto quanto o S4 e o S5 somados, a premissa estava
+construiu a infraestrutura. Se ele custar tanto quanto o S5 e o S6 somados, a premissa estava
 errada e vale registrar isso num ADR — errar previsão documentada é material melhor de
 entrevista do que acertar sem registro.
 
 ---
 
-## S8 — Superfícies restantes do protótipo · primeiro sprint a cortar
+## S9 — Superfícies restantes do protótipo · primeiro sprint a cortar
 
 - [ ] Listas e itens de lista, com o destino `To list` da Captura rápida
 - [ ] Hábitos e contagem de sequência
@@ -217,7 +241,7 @@ entrevista do que acertar sem registro.
 
 ---
 
-## S9 — Testes, acabamento e publicação
+## S10 — Testes, acabamento e publicação
 
 - [ ] Pirâmide de testes: unitários para serviços, agendador e validador com repositórios
       falsos; integração para repositórios contra PostgreSQL real; camada fina de ponta a ponta

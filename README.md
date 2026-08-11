@@ -123,16 +123,17 @@ written.
 
 | Sprint | Scope | Status |
 |---|---|---|
-| S0 | Repository structure and walking skeleton | in progress |
+| S0 | Repository structure and walking skeleton | done |
 | S1 | Domain model and database | next |
-| S2 | Domain CRUD and the day-capacity query | |
-| S3 | Authentication and ownership isolation | |
-| S4 | AI pipeline against a test double, zero provider cost | |
-| S5 | Real provider, guardrails, degradation | |
-| S6 | Front end wired to the API — plan generation complete | |
-| S7 | Task assistance, streamed | |
-| S8 | Remaining prototype surfaces | |
-| S9 | Tests, polish, publication | |
+| S2 | Authentication and owner-scoped repository base | |
+| S3 | Domain CRUD and the day-capacity query | |
+| S4 | First visible slice — login and the week's free capacity | |
+| S5 | AI pipeline against a test double, zero provider cost | |
+| S6 | Real provider, guardrails, degradation | |
+| S7 | Front end wired to the API — plan generation complete | |
+| S8 | Task assistance, streamed | |
+| S9 | Remaining prototype surfaces | |
+| S10 | Tests, polish, publication | |
 | Phase 2 | Core reimplemented in Java 21 / Spring Boot | |
 
 ## Contributing
