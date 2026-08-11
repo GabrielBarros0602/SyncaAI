@@ -16,6 +16,10 @@ the old one and update the status of the old one — never rewrite history.
 | [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted |
 | [0006](0006-cost-limits-cache-degradation.md) | Cost control, rate limiting, caching and degradation | Accepted |
 | [0007](0007-synchronous-persistence.md) | Synchronous SQLAlchemy for persistence | Accepted |
+| [0008](0008-task-time-block.md) | Task time block: start plus duration, generated end | Accepted |
+| [0009](0009-time-and-timezone-storage.md) | Store instants in UTC, derive the local day | Accepted |
+| [0010](0010-day-as-a-table-for-day-level-state.md) | A `days` table for day-level state only | Accepted |
+| [0011](0011-hard-delete-for-tasks.md) | Hard delete for tasks | Accepted |
 
 ## Template
 

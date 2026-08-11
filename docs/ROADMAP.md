@@ -51,37 +51,33 @@ Escopo mínimo decidido: `User`, `Day`, `Task`, `ChecklistItem`. Hábitos, Lista
 Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que precisa delas.
 
 - [ ] Modelar `User`, `Day`, `Task`, `ChecklistItem`. O `User` já nasce com `email`,
-      `password_hash` e `timezone`, porque o S2 depende deles
-- [ ] **Decidir: como representar um bloco de tempo.** `start` + `end` em `timestamptz`, ou
-      `start` + duração em minutos inteiros? A query de capacidade livre — da qual a camada
-      de IA inteira depende — soma minutos ocupados por dia. Com início e fim, sobreposição é
-      detectável diretamente e a soma exige subtração por linha; com início e duração, a soma
-      é trivial e sobreposição exige recalcular o fim. Não é escolha cosmética: define a
-      forma da query mais importante do sistema. → merece **ADR-0008**
-- [ ] **Decidir: fuso horário — e aqui a resposta padrão não basta.** "UTC no banco, converter
-      na borda" está certo para *instantes*, mas um calendário agrupa por *dia local*, e dia
-      local não é derivável de UTC sem o fuso do usuário. Provavelmente precisa dos dois:
-      `timestamptz` para o instante mais uma `local_date` materializada para agrupar, mais
-      `User.timezone`. Guardando só UTC, heatmap e contador de sequência erram perto da
-      meia-noite; guardando só data local, ordenação e duração atravessando dias quebram.
-      → merece **ADR-0009**
-- [ ] **Decidir: `Day` é entidade ou visão derivada?** O protótipo linka nota a um dia, tem um
-      quadrado por dia no heatmap e contador de sequência — tudo sugere linha por dia. Mas dia
-      vazio não precisa existir. Materializar sob demanda ou derivar por agregação muda o
-      custo da query do heatmap: 365 leituras indexadas contra varredura com `GROUP BY`.
-      → merece **ADR-0010**
-- [ ] **Decidir: delete físico ou lógico em `Task`.** A IA vai propor tarefas que o usuário
-      descarta. Histórico de descarte mede a qualidade das gerações, o que é justamente a
-      métrica que o portfólio quer apresentar — isso pesa para lógico.
-- [ ] Restrições no schema, não só no Python: foreign keys, `NOT NULL`, `CHECK` garantindo
-      fim posterior ao início, `CHECK` de duração positiva
-- [ ] Índices no que a query de capacidade vai filtrar: `(user_id, local_date)`
+      `password_hash` e `timezone`, porque o S2 depende deles. `Task` **não** tem `day_id`
+- [x] **Decidido:** bloco de tempo é `start_at` + `duration_minutes`, com `end_at` como coluna
+      gerada pelo banco → [ADR-0008](adr/0008-task-time-block.md)
+- [x] **Decidido:** instantes em `timestamptz` e dia local derivado; nenhuma `local_date`
+      materializada → [ADR-0009](adr/0009-time-and-timezone-storage.md)
+- [x] **Decidido:** `days` existe para estado do próprio dia, e as tarefas não a referenciam
+      → [ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)
+- [x] **Decidido:** delete físico em `Task`; a métrica de IA vem de `draft_item`, não de tarefa
+      apagada → [ADR-0011](adr/0011-hard-delete-for-tasks.md)
+- [ ] Extensão `btree_gist` habilitada na primeira migration
+- [ ] Restrições no schema, não só no Python: foreign keys, `NOT NULL`,
+      `CHECK (duration_minutes > 0)`, único em `(user_id, local_date)` em `days`,
+      `ON DELETE CASCADE` de `Task` para `ChecklistItem`
+- [ ] Constraint de exclusão GiST proibindo sobreposição de tarefas do mesmo usuário, com a
+      violação traduzida para erro de domínio legível
+- [ ] Índice `(user_id, start_at)` — é ele que a query de capacidade usa, via predicado de
+      range em UTC calculado na borda
+- [ ] Helper único convertendo (janela em data local, zona) para intervalo UTC, com teste
+      atravessando mudança de horário de verão
 - [ ] Alembic inicializado, primeira migration gerada e aplicada
 - [ ] Migration verificada nos dois sentidos: `upgrade` e `downgrade` rodam limpos
 
-**Regras de negócio a definir:** duração zero é válida? tarefa pode ser agendada no passado?
-duas tarefas do mesmo usuário podem se sobrepor no tempo? apagar `Task` apaga os
-`ChecklistItem`, ou eles ficam órfãos?
+**Regras de negócio já resolvidas pelos ADRs:** duração zero é inválida (`CHECK > 0`), duas
+tarefas do mesmo usuário não podem se sobrepor (constraint de exclusão), apagar `Task` apaga os
+`ChecklistItem` (`ON DELETE CASCADE`).
+
+**Ainda a definir:** tarefa pode ser agendada no passado? existe duração máxima por tarefa?
 
 ---
 
