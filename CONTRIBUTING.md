@@ -112,6 +112,33 @@ fix(auth): filter tasks by owner in the repository layer
 - A commit that leaves the test suite red
 - A single commit containing a whole sprint
 
+## Branches and pull requests
+
+`main` is protected: it requires a pull request and a green `API — lint, type check, test`
+check. Nothing is committed to `main` directly.
+
+Branch names use the commit types as prefixes:
+
+```
+feat/task-model
+fix/env-file-discovery
+docs/adr-0012-business-rules
+build/multi-stage-dockerfile
+```
+
+The pull request title follows the commit convention, so the merged history reads the same as
+the log: `feat(db): add domain models for user, day, task and checklist item`.
+
+**Merge with rebase, never squash.** Squashing collapses a branch into one commit, which
+destroys the atomic history this project treats as a deliverable — a four-commit branch becomes
+one opaque change. Rebase keeps each commit and keeps the history linear. Enable
+*Allow rebase merging* and disable *Allow squash merging* in the repository settings so the
+wrong button is not there to press.
+
+Do not enable *Require approvals* on a solo repository: GitHub refuses to let an author approve
+their own pull request, so it would make every merge impossible or force an admin bypass, which
+turns the rule into theatre.
+
 ## Dependencies
 
 Declared in `requirements.in` and `requirements-dev.in`. Never edit the `.txt` files by hand —
@@ -190,6 +217,17 @@ pronto quando o ADR está escrito e commitado, não quando o código funciona. *
 no mesmo commit que fecha o item, e só quando o trabalho está no `origin`** — escrito no disco
 não conta. Assim o roadmap é verdadeiro em qualquer ponto do histórico. Sprint fecha com um
 commit próprio atualizando o status no cabeçalho — `docs(roadmap): close S1`. Nenhum sprint começa antes do anterior estar no origin e verde no CI.
+
+**Branches e pull requests:** a `main` é protegida e exige PR mais o check
+`API — lint, type check, test` verde. Nome de branch usa os tipos de commit como prefixo —
+`feat/task-model`, `docs/adr-0012-business-rules`. Título do PR segue a convenção de commit.
+
+**Merge com rebase, nunca squash.** Squash colapsa a branch num commit só e destrói o histórico
+atômico que este projeto trata como entregável. Desabilite *Allow squash merging* nas
+configurações para o botão errado não existir.
+
+Não habilite *Require approvals* em repositório solo: o GitHub não deixa o autor aprovar o
+próprio PR, então todo merge ficaria impossível ou dependeria de bypass de admin.
 
 **Dependências:** declaradas em `requirements.in` e `requirements-dev.in`; os `.txt` são
 gerados e nunca editados à mão. O resolvedor é o `uv` em modo universal com alvo 3.12, e a

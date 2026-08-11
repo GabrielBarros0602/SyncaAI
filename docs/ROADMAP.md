@@ -17,6 +17,23 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 
 ---
 
+## Pendências abertas
+
+Questões conhecidas que não estão resolvidas. Vivem aqui para não depender de ninguém lembrar.
+Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
+
+| # | Pendência | Onde resolver |
+|---|---|---|
+| 1 | Afirmações sobre PostgreSQL não verificadas: `btree_gist` disponível, e `timestamptz + interval` aceito em coluna gerada. Aparece na primeira migration | S1 |
+| 2 | `app_env` e `log_level` não são lidos por nada — configuração que ninguém consome | S1 |
+| 3 | `pytest` local falha no teste marcado `integration`: o `.env` aponta para `db:5432`, que não resolve do host | S1 |
+| 4 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
+| 5 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
+| 6 | Horas reais gastas por sprint não estão sendo anotadas, então a estimativa do [ADR-0001](adr/0001-backend-stack.md) segue não validada | contínuo |
+| 7 | Conector do GitHub não autorizado, então o CI não é visível de dentro das sessões de trabalho | quando incomodar |
+
+---
+
 ## S0 — Estrutura do repositório e walking skeleton · ✅ Concluído
 
 - [x] Repositório criado no GitHub
@@ -70,6 +87,12 @@ Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que pr
       range em UTC calculado na borda
 - [ ] Helper único convertendo (janela em data local, zona) para intervalo UTC, com teste
       atravessando mudança de horário de verão
+- [ ] `CHECK (duration_minutes > 0 AND duration_minutes <= 1440)`
+      → [ADR-0012](adr/0012-task-time-business-rules.md)
+- [ ] Regra de serviço recusando início no passado, com erro de domínio e teste na fronteira:
+      um minuto atrás recusa, um minuto à frente aceita
+- [ ] Helper de capacidade com piso em zero — um dia pode reportar mais de 1440 minutos
+      ocupados, por consequência aceita da regra 3
 - [ ] Alembic inicializado, primeira migration gerada e aplicada
 - [ ] Migration verificada nos dois sentidos: `upgrade` e `downgrade` rodam limpos
 
@@ -77,7 +100,8 @@ Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que pr
 tarefas do mesmo usuário não podem se sobrepor (constraint de exclusão), apagar `Task` apaga os
 `ChecklistItem` (`ON DELETE CASCADE`).
 
-**Ainda a definir:** tarefa pode ser agendada no passado? existe duração máxima por tarefa?
+**Regras de tempo resolvidas:** sem criação no passado, máximo de 1440 minutos, e os
+minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-business-rules.md)
 
 ---
 
