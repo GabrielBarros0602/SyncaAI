@@ -3,9 +3,11 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      # Required-variable syntax: compose refuses to start with a readable message
+      # instead of silently interpolating an empty string when .env is missing.
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in the root .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the root .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in the root .env}
     ports:
       # 5433 on the host: 5432 is commonly already taken by a local PostgreSQL.
       # The api reaches the database as db:5432 over the compose network, so this
@@ -14,7 +16,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # $$ escapes to a single $, so these are read from the container's own
+      # environment rather than interpolated by compose at parse time.
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 10
