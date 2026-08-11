@@ -67,7 +67,7 @@ que consulta o banco faz uma oscilação de rede no Postgres reiniciar a aplica�
 Escopo mínimo decidido: `User`, `Day`, `Task`, `ChecklistItem`. Hábitos, Listas, Heatmap e
 Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que precisa delas.
 
-- [ ] Modelar `User`, `Day`, `Task`, `ChecklistItem`. O `User` já nasce com `email`,
+- [x] Modelar `User`, `Day`, `Task`, `ChecklistItem`. O `User` já nasce com `email`,
       `password_hash` e `timezone`, porque o S2 depende deles. `Task` **não** tem `day_id`
 - [x] **Decidido:** bloco de tempo é `start_at` + `duration_minutes`, com `end_at` como coluna
       gerada pelo banco → [ADR-0008](adr/0008-task-time-block.md)
@@ -78,16 +78,17 @@ Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que pr
 - [x] **Decidido:** delete físico em `Task`; a métrica de IA vem de `draft_item`, não de tarefa
       apagada → [ADR-0011](adr/0011-hard-delete-for-tasks.md)
 - [ ] Extensão `btree_gist` habilitada na primeira migration
-- [ ] Restrições no schema, não só no Python: foreign keys, `NOT NULL`,
+- [x] Restrições no schema, não só no Python: foreign keys, `NOT NULL`,
       `CHECK (duration_minutes > 0)`, único em `(user_id, local_date)` em `days`,
       `ON DELETE CASCADE` de `Task` para `ChecklistItem`
-- [ ] Constraint de exclusão GiST proibindo sobreposição de tarefas do mesmo usuário, com a
-      violação traduzida para erro de domínio legível
-- [ ] Índice `(user_id, start_at)` — é ele que a query de capacidade usa, via predicado de
+- [x] Constraint de exclusão GiST proibindo sobreposição de tarefas do mesmo usuário
+- [ ] Violação da constraint de exclusão traduzida para erro de domínio legível — camada de
+      serviço, entra no S3
+- [x] Índice `(user_id, start_at)` — é ele que a query de capacidade usa, via predicado de
       range em UTC calculado na borda
 - [ ] Helper único convertendo (janela em data local, zona) para intervalo UTC, com teste
       atravessando mudança de horário de verão
-- [ ] `CHECK (duration_minutes > 0 AND duration_minutes <= 1440)`
+- [x] `CHECK (duration_minutes > 0 AND duration_minutes <= 1440)`
       → [ADR-0012](adr/0012-task-time-business-rules.md)
 - [ ] Regra de serviço recusando início no passado, com erro de domínio e teste na fronteira:
       um minuto atrás recusa, um minuto à frente aceita
