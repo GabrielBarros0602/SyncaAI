@@ -5,6 +5,9 @@ Importing this module therefore has no side effects: nothing connects, and nothi
 requires a valid ``DATABASE_URL`` until something actually asks for a session. That
 keeps modules importable in tests that never touch the database.
 
+The declarative base lives in ``syncaai.models``, so this module knows how to reach
+the database and nothing about the schema.
+
 See ADR-0007 for why persistence is synchronous.
 """
 
@@ -12,13 +15,9 @@ from collections.abc import Generator
 from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from syncaai.config import get_settings
-
-
-class Base(DeclarativeBase):
-    """Declarative base shared by every ORM model."""
 
 
 @lru_cache
