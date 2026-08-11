@@ -1,0 +1,22 @@
+# Line endings are normalised to LF in the repository and on checkout, on every
+# platform. Two reasons.
+#
+# The runtime is Linux containers: a shell script or entrypoint carrying CRLF fails
+# there with an obscure "bad interpreter" error that costs an afternoon to diagnose.
+#
+# And this working tree is read by more than one git. A Windows checkout with
+# core.autocrlf=true writes CRLF, which tooling configured for LF then reports as every
+# line changed — making `git status` useless for telling a real change from noise.
+* text=auto eol=lf
+
+# Never convert binaries. None are tracked yet; these guard the screenshots and fonts
+# that arrive with the README in S10.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.woff  binary
+*.woff2 binary
