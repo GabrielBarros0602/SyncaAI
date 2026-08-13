@@ -24,8 +24,6 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 
 | Pendência | Onde resolver |
 |---|---|
-| `app_env` e `log_level` não são lidos por nada — configuração que ninguém consome | S1 |
-| `pytest` local falha no teste marcado `integration`: o `.env` aponta para `db:5432`, que não resolve do host | S1 |
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S3 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
@@ -62,7 +60,7 @@ que consulta o banco faz uma oscilação de rede no Postgres reiniciar a aplica�
 
 ---
 
-## S1 — Modelagem de domínio e banco de dados · ⏳ Próximo
+## S1 — Modelagem de domínio e banco de dados · ✅ Concluído
 
 Escopo mínimo decidido: `User`, `Day`, `Task`, `ChecklistItem`. Hábitos, Listas, Heatmap e
 Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que precisa delas.
@@ -82,18 +80,13 @@ Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que pr
       `CHECK (duration_minutes > 0)`, único em `(user_id, local_date)` em `days`,
       `ON DELETE CASCADE` de `Task` para `ChecklistItem`
 - [x] Constraint de exclusão GiST proibindo sobreposição de tarefas do mesmo usuário
-- [ ] Violação da constraint de exclusão traduzida para erro de domínio legível — camada de
-      serviço, entra no S3
 - [x] Índice `(user_id, start_at)` — é ele que a query de capacidade usa, via predicado de
       range em UTC calculado na borda
-- [ ] Helper único convertendo (janela em data local, zona) para intervalo UTC, com teste
-      atravessando mudança de horário de verão
+- [x] Helper único convertendo (janela em data local, zona) para intervalo UTC, com teste
+      atravessando mudança de horário de verão — e `minutes_in_local_day`, porque um dia
+      local dura 1380 ou 1500 minutos nas viradas de horário de verão
 - [x] `CHECK (duration_minutes > 0 AND duration_minutes <= 1440)`
       → [ADR-0012](adr/0012-task-time-business-rules.md)
-- [ ] Regra de serviço recusando início no passado, com erro de domínio e teste na fronteira:
-      um minuto atrás recusa, um minuto à frente aceita
-- [ ] Helper de capacidade com piso em zero — um dia pode reportar mais de 1440 minutos
-      ocupados, por consequência aceita da regra 3
 - [x] Alembic inicializado, primeira migration escrita e aplicada pelo CI
 - [x] Migration verificada nos dois sentidos: o CI roda `upgrade`, `downgrade` e `upgrade`
 
@@ -106,7 +99,7 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 
 ---
 
-## S2 — Autenticação e isolamento por dono
+## S2 — Autenticação e isolamento por dono · ⏳ Próximo
 
 - [ ] **Decidir: algoritmo de hash de senha** — bcrypt ou argon2. Nunca um SHA puro: hashes de
       uso geral são rápidos, e rápido é exatamente o errado aqui
@@ -138,6 +131,11 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 - [ ] **A query de capacidade livre por dia numa janela** — por dia: minutos ocupados, minutos
       livres, contagem de tarefas. É a fundação da camada de IA (ADR-0004) e precisa estar
       testada antes de qualquer linha de código de IA existir
+- [ ] Violação da constraint de exclusão traduzida para erro de domínio legível
+- [ ] Regra de serviço recusando início no passado, com erro de domínio e teste na fronteira:
+      um minuto atrás recusa, um minuto à frente aceita
+- [ ] Capacidade livre calculada com `minutes_in_local_day`, não com 1440, e com piso em zero
+      — um dia pode reportar mais minutos ocupados do que tem
 - [ ] Testes de integração dos repositórios contra PostgreSQL real
 - [ ] Query de capacidade medida com `EXPLAIN ANALYZE` numa janela de 14 dias, com os índices
       do S1 confirmados em uso

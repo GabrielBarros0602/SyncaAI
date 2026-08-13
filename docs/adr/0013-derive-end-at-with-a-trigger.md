@@ -114,8 +114,9 @@ gate rather than behind a promise to check later.
 2. [x] Declare `end_at` as server-populated in the model so the ORM never writes it.
 3. [x] Integration tests asserting derivation on insert, derivation after update, and that
        overlapping tasks are rejected per user but allowed across users.
-4. [ ] Confirm through CI that PostgreSQL accepts the exclusion constraint — the failure
-       happened before that statement was reached, so it remains unproven.
+4. [x] Confirmed through CI: PostgreSQL accepts `btree_gist` and the exclusion constraint,
+       the trigger derives `end_at` on insert and after an update, and the migration reverses
+       and reapplies cleanly.
 
 ---
 

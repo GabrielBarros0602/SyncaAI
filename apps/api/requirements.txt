@@ -68,8 +68,10 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
     #   pydantic-settings
-tzdata==2026.3 ; sys_platform == 'win32'
-    # via psycopg
+tzdata==2026.3
+    # via
+    #   -r requirements.in
+    #   psycopg
 uvicorn==0.52.1
     # via -r requirements.in
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'

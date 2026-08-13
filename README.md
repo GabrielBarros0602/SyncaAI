@@ -81,7 +81,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 uvicorn syncaai.main:app --reload
 ```
 
-Point `DATABASE_URL` at `localhost:5433` instead of `db:5432` when running this way — compose publishes the database on host port 5433 so it does not collide with a local PostgreSQL already using 5432.
+`DATABASE_URL` already points at `localhost:5433`, which is where compose publishes the database, so nothing needs overriding. The api container gets `db:5432` from compose instead.
 
 ### Changing dependencies
 
@@ -115,7 +115,8 @@ cd apps/api
 ruff check . && ruff format --check . && mypy && pytest
 ```
 
-Tests marked `integration` need a reachable PostgreSQL. Without one running, deselect them:
+Tests marked `integration` need a reachable PostgreSQL. Start one with
+`docker compose up -d db` and they run as-is. Without one, deselect them:
 
 ```bash
 pytest -m "not integration"
