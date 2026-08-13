@@ -57,5 +57,13 @@ jobs:
       - name: Type check
         run: mypy
 
+      - name: Apply migrations
+        run: alembic upgrade head
+
+      - name: Verify the migration reverses cleanly
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+
       - name: Test
         run: pytest --cov=syncaai --cov-report=term-missing

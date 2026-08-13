@@ -96,6 +96,18 @@ uv pip compile --universal --python-version 3.12 requirements-dev.in -o requirem
 Installation stays on pip — `uv` is used only as the resolver, because development happens on
 Windows while the runtime is Linux. See [CONTRIBUTING.md](CONTRIBUTING.md#dependencies).
 
+### Database migrations
+
+```bash
+cd apps/api
+alembic upgrade head        # apply
+alembic downgrade base      # reverse
+alembic current             # which revision is applied
+```
+
+Migrations are not applied on container start. Run them explicitly, so a deploy never
+mutates a schema as a side effect of a restart.
+
 ### Checks
 
 ```bash

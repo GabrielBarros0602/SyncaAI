@@ -33,6 +33,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    MetaData,
     String,
     Text,
     UniqueConstraint,
@@ -44,9 +45,22 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 MINUTES_IN_A_DAY = 1440
 
+# Deterministic constraint names. Without them PostgreSQL invents names, which means a
+# downgrade cannot drop what an upgrade created and every future ALTER becomes guesswork.
+# Short names are given at the definition site; the convention expands them.
+NAMING_CONVENTION = {
+    "ix": "ix_%(table_name)s_%(column_0_N_name)s",
+    "uq": "uq_%(table_name)s_%(column_0_N_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
 
 class Base(DeclarativeBase):
     """Declarative base shared by every ORM model."""
+
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 class TimestampMixin:
@@ -106,7 +120,7 @@ class Day(Base, TimestampMixin):
     """
 
     __tablename__ = "days"
-    __table_args__ = (UniqueConstraint("user_id", "local_date", name="uq_days_user_local_date"),)
+    __table_args__ = (UniqueConstraint("user_id", "local_date"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -137,7 +151,7 @@ class Task(Base, TimestampMixin):
     __table_args__ = (
         CheckConstraint(
             f"duration_minutes > 0 AND duration_minutes <= {MINUTES_IN_A_DAY}",
-            name="ck_tasks_duration_within_one_day",
+            name="duration_within_one_day",
         ),
         ExcludeConstraint(
             ("user_id", "="),
@@ -186,7 +200,7 @@ class ChecklistItem(Base, TimestampMixin):
     __tablename__ = "checklist_items"
     __table_args__ = (
         Index("ix_checklist_items_task_position", "task_id", "position"),
-        CheckConstraint("position >= 0", name="ck_checklist_items_position_non_negative"),
+        CheckConstraint("position >= 0", name="position_non_negative"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

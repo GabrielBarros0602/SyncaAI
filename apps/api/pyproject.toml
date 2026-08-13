@@ -28,6 +28,11 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG"]  # fixtures are passed as unused-looking arguments
 
+[tool.ruff.lint.isort]
+# The alembic/ directory in this project makes ruff read the alembic package as local.
+# It is a third-party dependency; without this, imports get sorted into the wrong section.
+known-third-party = ["alembic"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
