@@ -20,10 +20,17 @@ def _ddl(model: type) -> str:
     return str(CreateTable(model.__table__).compile(dialect=postgresql.dialect()))
 
 
-def test_task_end_is_a_stored_generated_column() -> None:
-    ddl = _ddl(Task)
+def test_task_end_is_owned_by_the_database_not_the_orm() -> None:
+    """A trigger writes end_at, so the ORM must never include it in an INSERT.
 
-    assert "GENERATED ALWAYS AS (start_at + duration_minutes * interval '1 minute') STORED" in ddl
+    It cannot be a generated column: PostgreSQL requires those expressions to be
+    IMMUTABLE and timestamptz + interval is STABLE (ADR-0013).
+    """
+    end_at = Task.__table__.columns["end_at"]
+
+    assert end_at.server_default is not None
+    assert not end_at.nullable
+    assert "GENERATED ALWAYS AS" not in _ddl(Task)
 
 
 def test_task_duration_is_bounded_to_one_day() -> None:

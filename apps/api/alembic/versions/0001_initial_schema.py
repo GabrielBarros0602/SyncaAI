@@ -83,12 +83,10 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("duration_minutes", sa.Integer(), nullable=False),
-        sa.Column(
-            "end_at",
-            sa.DateTime(timezone=True),
-            sa.Computed("start_at + duration_minutes * interval '1 minute'", persisted=True),
-            nullable=False,
-        ),
+        # Written by the trigger below, never by the application. Not a generated
+        # column: PostgreSQL requires those expressions to be IMMUTABLE, and
+        # timestamptz + interval is only STABLE.
+        sa.Column("end_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
@@ -151,8 +149,32 @@ def upgrade() -> None:
         "ix_checklist_items_task_position", "checklist_items", ["task_id", "position"], unique=False
     )
 
+    # end_at is derived, and the database owns it. A trigger rather than a generated
+    # column, because a generation expression must be IMMUTABLE and timestamptz +
+    # interval is STABLE: interval arithmetic consults the session time zone to handle
+    # daylight saving transitions. Triggers carry no such requirement.
+    #
+    # It fires on every insert and update, not only when start_at or duration_minutes
+    # change, so end_at cannot be set by hand and cannot drift.
+    op.execute("""
+        CREATE FUNCTION tasks_set_end_at() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+            NEW.end_at := NEW.start_at + NEW.duration_minutes * interval '1 minute';
+            RETURN NEW;
+        END;
+        $$
+    """)
+    op.execute("""
+        CREATE TRIGGER tasks_set_end_at
+        BEFORE INSERT OR UPDATE ON tasks
+        FOR EACH ROW EXECUTE FUNCTION tasks_set_end_at()
+    """)
+
 
 def downgrade() -> None:
+    op.execute("DROP TRIGGER IF EXISTS tasks_set_end_at ON tasks")
+    op.execute("DROP FUNCTION IF EXISTS tasks_set_end_at()")
     op.drop_index("ix_checklist_items_task_position", table_name="checklist_items")
     op.drop_table("checklist_items")
     op.drop_index("ix_tasks_user_start_at", table_name="tasks")
