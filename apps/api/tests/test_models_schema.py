@@ -49,7 +49,7 @@ def test_checklist_items_do_not_duplicate_the_owner() -> None:
 
 
 def test_a_day_is_unique_per_user_and_local_date() -> None:
-    assert "CONSTRAINT uq_days_user_local_date UNIQUE (user_id, local_date)" in _ddl(Day)
+    assert "CONSTRAINT uq_days_user_id_local_date UNIQUE (user_id, local_date)" in _ddl(Day)
 
 
 def test_capacity_query_index_exists_on_owner_and_start() -> None:
