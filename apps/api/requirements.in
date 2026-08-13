@@ -11,3 +11,8 @@ pydantic-settings
 sqlalchemy
 alembic
 psycopg[binary]
+
+# The IANA time zone database as a package. python:3.12-slim does not ship the system
+# database, so zoneinfo would raise ZoneInfoNotFoundError in the container while working
+# fine on a developer machine — a failure that only appears after deploy.
+tzdata

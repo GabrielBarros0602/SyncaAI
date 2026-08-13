@@ -1,8 +1,13 @@
 # ADR-0012: Business rules for a task's position in time
 
-**Status:** Accepted
+**Status:** Accepted — one consequence corrected below
 **Date:** 2026-08-11
 **Deciders:** Gabriel Barros
+
+> **Correction.** This record states that free capacity is `max(0, 1440 - occupied)`. A local
+> day is not always 1440 minutes: where daylight saving applies it can be 1380 or 1500. Use
+> `syncaai.time_windows.minutes_in_local_day` instead of the constant. The rules themselves
+> are unaffected; the maximum duration of 1440 remains the right bound for a single task.
 
 ## Context
 

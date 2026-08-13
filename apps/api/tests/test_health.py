@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 from syncaai.db import get_session
+from syncaai.main import create_app
 
 
 class _StubSession:
@@ -63,3 +64,22 @@ def test_readiness_against_a_real_database(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready", "database": "reachable"}
+
+
+def test_interactive_documentation_is_exposed_outside_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "local")
+
+    assert create_app().docs_url == "/docs"
+
+
+def test_interactive_documentation_is_absent_in_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+
+    app = create_app()
+
+    assert app.docs_url is None
+    assert app.openapi_url is None
