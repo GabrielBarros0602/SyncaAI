@@ -21,6 +21,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0010](0010-day-as-a-table-for-day-level-state.md) | A `days` table for day-level state only | Accepted |
 | [0011](0011-hard-delete-for-tasks.md) | Hard delete for tasks | Accepted |
 | [0012](0012-task-time-business-rules.md) | Business rules for a task's position in time | Accepted |
+| [0013](0013-derive-end-at-with-a-trigger.md) | Derive `end_at` with a trigger, not a generated column | Accepted |
 
 ## Template
 

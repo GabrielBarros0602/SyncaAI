@@ -1,8 +1,13 @@
 # ADR-0008: Represent a task's time block as start plus duration, with a generated end
 
-**Status:** Accepted
+**Status:** Accepted — mechanism superseded by [ADR-0013](0013-derive-end-at-with-a-trigger.md)
 **Date:** 2026-08-11
 **Deciders:** Gabriel Barros
+
+> **Correction.** This record claims `timestamptz + interval` is `IMMUTABLE` and uses that to
+> justify a generated column. The claim is false: the operator is `STABLE`, and PostgreSQL
+> rejected the migration. What is stored is unchanged; `end_at` is maintained by a trigger.
+> See [ADR-0013](0013-derive-end-at-with-a-trigger.md).
 
 ## Context
 
