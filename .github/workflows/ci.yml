@@ -31,6 +31,9 @@ jobs:
     env:
       APP_ENV: ci
       DATABASE_URL: postgresql+psycopg://syncaai:syncaai@localhost:5432/syncaai_test
+      # Required with no default (ADR-0015). A throwaway value: it signs nothing that
+      # leaves the job.
+      JWT_SECRET: a-secret-only-for-continuous-integration
 
     steps:
       - uses: actions/checkout@v4
