@@ -25,6 +25,7 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | Pendência | Onde resolver |
 |---|---|
 | Unicidade de email recai sobre o valor gravado, normalizado pelo serviço. Um escritor que passe por fora do serviço poderia gravar variante de caixa. Índice funcional sobre `lower(email)` resolveria, ao custo de o `alembic check` não comparar índice de expressão de forma confiável | S4 |
+| `get_engine` ainda lê `get_settings()` por dentro, então o motor de banco não é substituível por injeção — só por variável de ambiente. Aceitável enquanto é decisão de processo e não de requisição, mas é a última leitura implícita que sobrou | quando incomodar |
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S4 |
 | `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S4 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |

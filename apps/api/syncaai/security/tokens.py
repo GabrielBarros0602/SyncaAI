@@ -11,6 +11,11 @@ nothing here and adds key management.
 Timestamps are Unix seconds rather than datetimes: that is what a JWT carries by
 specification, so converting through ``datetime`` would only add a step that can be got
 wrong.
+
+Settings arrive as an argument rather than being read from the cached accessor. A security
+primitive reaching for global state hides an input, and the cache made that input
+impossible to change from a test without remembering to clear it — a failure that produced
+passing tests asserting the wrong value.
 """
 
 import time
@@ -18,7 +23,7 @@ from uuid import UUID
 
 import jwt
 
-from syncaai.config import get_settings
+from syncaai.config import Settings
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_TYPE = "access"
@@ -28,9 +33,8 @@ class InvalidTokenError(Exception):
     """Raised when a token is malformed, expired, wrongly signed, or not an access token."""
 
 
-def create_access_token(user_id: UUID) -> str:
+def create_access_token(user_id: UUID, settings: Settings) -> str:
     """Mint an access token for a user."""
-    settings = get_settings()
     issued_at = _now()
     payload = {
         "sub": str(user_id),
@@ -41,14 +45,13 @@ def create_access_token(user_id: UUID) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str) -> UUID:
+def decode_access_token(token: str, settings: Settings) -> UUID:
     """Return the user id a valid access token names.
 
     Every failure raises the same exception. A caller deciding whether to authenticate has
     no use for the difference between expired, forged and malformed, and reporting it would
     tell an attacker which part of a forgery attempt to fix.
     """
-    settings = get_settings()
     try:
         payload = jwt.decode(
             token,

@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
+from syncaai.config import Settings
 from syncaai.db import get_session
 from syncaai.main import create_app
 
@@ -66,20 +67,15 @@ def test_readiness_against_a_real_database(client: TestClient) -> None:
     assert response.json() == {"status": "ready", "database": "reachable"}
 
 
-def test_interactive_documentation_is_exposed_outside_production(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("APP_ENV", "local")
-
-    assert create_app().docs_url == "/docs"
+def test_interactive_documentation_is_exposed_outside_production(settings: Settings) -> None:
+    assert create_app(settings).docs_url == "/docs"
 
 
-def test_interactive_documentation_is_absent_in_production(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("APP_ENV", "production")
+def test_interactive_documentation_is_absent_in_production(settings: Settings) -> None:
+    """Built with explicit settings, so the surrounding environment cannot decide this."""
+    settings.app_env = "production"
 
-    app = create_app()
+    app = create_app(settings)
 
     assert app.docs_url is None
     assert app.openapi_url is None

@@ -29,8 +29,13 @@ REFRESH_COOKIE_NAME = "syncaai_refresh"
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
-def get_auth_service(session: Annotated[Session, Depends(get_session)]) -> AuthService:
-    return AuthService(UserRepository(session), RefreshTokenRepository(session))
+SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+
+def get_auth_service(
+    session: Annotated[Session, Depends(get_session)], settings: SettingsDep
+) -> AuthService:
+    return AuthService(UserRepository(session), RefreshTokenRepository(session), settings)
 
 
 ServiceDep = Annotated[AuthService, Depends(get_auth_service)]
@@ -65,7 +70,11 @@ def register(payload: RegisterRequest, service: ServiceDep, session: SessionDep)
 
 @router.post("/login", summary="Exchange credentials for tokens")
 def login(
-    payload: LoginRequest, service: ServiceDep, session: SessionDep, response: Response
+    payload: LoginRequest,
+    service: ServiceDep,
+    session: SessionDep,
+    settings: SettingsDep,
+    response: Response,
 ) -> TokenResponse:
     """Authenticate and open a session.
 
@@ -76,9 +85,8 @@ def login(
     raw_refresh = service.issue_refresh_token(user)
     session.commit()
 
-    settings = get_settings()
     body = TokenResponse(
-        access_token=create_access_token(user.id),
+        access_token=create_access_token(user.id, settings),
         expires_in=settings.access_token_minutes * 60,
     )
 
@@ -93,6 +101,7 @@ def login(
 def refresh(
     service: ServiceDep,
     session: SessionDep,
+    settings: SettingsDep,
     payload: Annotated[RefreshRequest | None, Body()] = None,
     cookie_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE_NAME)] = None,
 ) -> TokenResponse:
@@ -109,8 +118,8 @@ def refresh(
     session.commit()
 
     return TokenResponse(
-        access_token=create_access_token(user.id),
-        expires_in=get_settings().access_token_minutes * 60,
+        access_token=create_access_token(user.id, settings),
+        expires_in=settings.access_token_minutes * 60,
     )
 
 

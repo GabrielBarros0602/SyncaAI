@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from syncaai.config import Settings
 from syncaai.errors import EmailAlreadyRegisteredError, InvalidCredentialsError
 from syncaai.models import RefreshToken, User
 from syncaai.security import passwords
@@ -57,9 +58,16 @@ class FakeSessions:
         self.rows.append(token)
 
 
+A_SETTINGS = Settings(
+    database_url="postgresql+psycopg://user:pass@localhost:5432/syncaai_test",
+    jwt_secret="a-secret-only-for-tests-long-enough-for-hs256",
+    _env_file=None,
+)
+
+
 def _service(*users: User) -> AuthService:
     people = FakeUsers(*users)
-    return AuthService(people, FakeSessions(people))  # type: ignore[arg-type]
+    return AuthService(people, FakeSessions(people), A_SETTINGS)  # type: ignore[arg-type]
 
 
 def _existing(email: str = AN_EMAIL, password: str = A_PASSWORD) -> User:
@@ -71,7 +79,7 @@ def _existing(email: str = AN_EMAIL, password: str = A_PASSWORD) -> User:
 
 def test_registering_stores_a_hash_and_never_the_password() -> None:
     users = FakeUsers()
-    service = AuthService(users, FakeSessions(users))  # type: ignore[arg-type]
+    service = AuthService(users, FakeSessions(users), A_SETTINGS)  # type: ignore[arg-type]
 
     user = service.register(AN_EMAIL, A_PASSWORD, A_ZONE)
 
@@ -137,7 +145,7 @@ def test_issuing_a_session_stores_only_the_digest() -> None:
     user = _existing()
     people = FakeUsers(user)
     sessions = FakeSessions(people)
-    service = AuthService(people, sessions)  # type: ignore[arg-type]
+    service = AuthService(people, sessions, A_SETTINGS)  # type: ignore[arg-type]
 
     raw = service.issue_refresh_token(user)
 
@@ -148,7 +156,7 @@ def test_issuing_a_session_stores_only_the_digest() -> None:
 def test_a_live_session_resolves_to_its_owner() -> None:
     user = _existing()
     people = FakeUsers(user)
-    service = AuthService(people, FakeSessions(people))  # type: ignore[arg-type]
+    service = AuthService(people, FakeSessions(people), A_SETTINGS)  # type: ignore[arg-type]
     raw = service.issue_refresh_token(user)
 
     assert service.exchange_refresh_token(raw) is user
@@ -162,7 +170,7 @@ def test_an_unknown_session_is_refused() -> None:
 def test_a_revoked_session_is_refused() -> None:
     user = _existing()
     people = FakeUsers(user)
-    service = AuthService(people, FakeSessions(people))  # type: ignore[arg-type]
+    service = AuthService(people, FakeSessions(people), A_SETTINGS)  # type: ignore[arg-type]
     raw = service.issue_refresh_token(user)
 
     service.revoke_refresh_token(raw)
@@ -175,7 +183,7 @@ def test_an_expired_session_is_refused() -> None:
     user = _existing()
     people = FakeUsers(user)
     sessions = FakeSessions(people)
-    service = AuthService(people, sessions)  # type: ignore[arg-type]
+    service = AuthService(people, sessions, A_SETTINGS)  # type: ignore[arg-type]
     raw = service.issue_refresh_token(user)
     sessions.rows[0].expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
 

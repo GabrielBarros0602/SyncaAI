@@ -25,9 +25,17 @@ def configure_logging(level: str) -> None:
     )
 
 
-def create_app() -> FastAPI:
-    """Build and configure the application."""
-    settings: Settings = get_settings()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Build and configure the application.
+
+    Passing settings explicitly makes the application use exactly those, for the decisions
+    taken here at construction *and* for everything read per request. Without it a test can
+    only influence settings through the environment, and the accessor is cached, so a change
+    made after the first read is silently ignored — which produces a test that passes while
+    asserting the wrong thing.
+    """
+    explicit = settings is not None
+    settings = settings or get_settings()
     configure_logging(settings.log_level)
 
     # Interactive documentation describes every endpoint and payload shape. Useful while
@@ -43,6 +51,9 @@ def create_app() -> FastAPI:
         openapi_url=None if in_production else "/openapi.json",
     )
     register_error_handlers(app)
+    if explicit:
+        app.dependency_overrides[get_settings] = lambda: settings
+
     app.include_router(health.router)
     app.include_router(v1.router)
     return app
