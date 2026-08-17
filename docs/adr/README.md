@@ -22,6 +22,9 @@ the old one and update the status of the old one — never rewrite history.
 | [0011](0011-hard-delete-for-tasks.md) | Hard delete for tasks | Accepted |
 | [0012](0012-task-time-business-rules.md) | Business rules for a task's position in time | Accepted |
 | [0013](0013-derive-end-at-with-a-trigger.md) | Derive `end_at` with a trigger, not a generated column | Accepted |
+| [0014](0014-password-hashing-with-argon2id.md) | Hash passwords with argon2id | Accepted |
+| [0015](0015-session-model.md) | Short-lived access token with a revocable refresh token | Accepted |
+| [0016](0016-ownership-isolation.md) | Ownership in the repository base, 404 across owners | Accepted |
 
 ## Template
 

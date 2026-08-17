@@ -25,8 +25,6 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | Pendência | Onde resolver |
 |---|---|
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S3 |
-| Email não é normalizado: `Gabriel@x.com` e `gabriel@x.com` criam duas contas e o login falha de forma confusa. O índice único não protege, porque as strings diferem | S2 |
-| `User.timezone` não é validado em lugar nenhum. Hoje aceita `"Marte/Olympus"`, e o erro só aparece depois no `utc_window`, longe da causa | S2 |
 | `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S3 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
@@ -102,20 +100,36 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 
 ---
 
-## S2 — Autenticação e isolamento por dono · ⏳ Próximo
+## S2 — Autenticação e isolamento por dono · ⏳ Em andamento
 
-- [ ] **Decidir: algoritmo de hash de senha** — bcrypt ou argon2. Nunca um SHA puro: hashes de
-      uso geral são rápidos, e rápido é exatamente o errado aqui
-- [ ] Emissão e verificação de JWT
+- [x] **Decidido:** hash de senha com argon2id, padrões `m=65536, t=3, p=4`
+      → [ADR-0014](adr/0014-password-hashing-with-argon2id.md)
+- [x] **Decidido:** access token JWT de 30 min mais refresh opaco de 30 dias, guardado
+      hasheado e revogável → [ADR-0015](adr/0015-session-model.md)
+- [x] **Decidido:** recurso de outro dono responde 404, com o motivo real no log
+      → [ADR-0016](adr/0016-ownership-isolation.md)
+- [ ] `JWT_SECRET`, `ACCESS_TOKEN_MINUTES` e `REFRESH_TOKEN_DAYS` em settings — o segredo
+      obrigatório e sem default, igual ao `database_url`
+- [ ] Par de funções de hash isolando o algoritmo num lugar só, com limite de tamanho de
+      senha antes de hashear
+- [ ] Cadastro e login, com hash de custo comparável mesmo quando o email não existe, para
+      não vazar a existência da conta por tempo de resposta
+- [ ] Tabela `refresh_tokens`: dono, token hasheado, expiração, revogado em, criado em
+- [ ] Endpoint de refresh recusando expirado, revogado e desconhecido com a **mesma**
+      resposta, para não revelar qual dos três
+- [ ] Logout revoga o refresh token apresentado
 - [ ] Dependência `get_current_user`
-- [ ] **Classe base de repositório com escopo por dono.** A falha de segurança mais provável
-      deste projeto: o usuário A ler `/tasks/42`, que pertence ao usuário B. O filtro por
-      `user_id` vive na base que todo repositório herda, não é lembrado por cada serviço.
-      Vem antes dos repositórios existirem justamente para não ser retrofit em cada um
-- [ ] **Decidir: recurso de outro dono responde 404 ou 403.** 403 confirma que o recurso
-      existe, o que é vazamento de informação. 404 não distingue "não existe" de "não é seu"
-- [ ] **Decidir: tempo de vida do token e estratégia de refresh**
+- [ ] **Classe base de repositório com escopo por dono**, sem nenhum acessor sem escopo —
+      a query sem filtro não deve ser expressável
+- [ ] Caminho até o dono declarado por modelo, para `ChecklistItem` escopar via `tasks`
 - [ ] Rate limit no endpoint de login, separado do rate limit de IA do S6
+- [ ] Teste provando que refresh revogado não emite access token
+- [ ] `User.timezone` validado contra `zoneinfo` antes de gravar
+- [ ] Email normalizado antes de gravar, e unicidade sobre o valor normalizado
+
+**Dívida que o S4 tem que honrar:** o access token vive só em memória no cliente. Se o
+front-end guardá-lo onde script alcança, o ADR-0015 fica pior que a alternativa de cookie que
+foi recusada.
 
 ---
 
