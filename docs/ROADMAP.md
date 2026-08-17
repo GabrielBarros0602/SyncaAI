@@ -25,6 +25,9 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | Pendência | Onde resolver |
 |---|---|
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S3 |
+| Email não é normalizado: `Gabriel@x.com` e `gabriel@x.com` criam duas contas e o login falha de forma confusa. O índice único não protege, porque as strings diferem | S2 |
+| `User.timezone` não é validado em lugar nenhum. Hoje aceita `"Marte/Olympus"`, e o erro só aparece depois no `utc_window`, longe da causa | S2 |
+| `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S3 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
 | Horas reais gastas por sprint não estão sendo anotadas, então a estimativa do [ADR-0001](adr/0001-backend-stack.md) segue não validada | contínuo |
