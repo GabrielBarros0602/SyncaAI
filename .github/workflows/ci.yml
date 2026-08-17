@@ -60,10 +60,18 @@ jobs:
       - name: Apply migrations
         run: alembic upgrade head
 
+      - name: Verify the models and the migrations agree
+        # Without this, changing a model and forgetting the migration passes CI: the tests
+        # that never touch the new column cannot tell. The drift is only discovered
+        # sprints later, with conflicting migrations to untangle.
+        run: alembic check
+
       - name: Verify the migration reverses cleanly
         run: |
           alembic downgrade base
           alembic upgrade head
 
       - name: Test
-        run: pytest --cov=syncaai --cov-report=term-missing
+        # The floor guards against regression; it is not a target. Raise it deliberately
+        # in S10 once a number has been chosen and justified.
+        run: pytest --cov=syncaai --cov-report=term-missing --cov-fail-under=85

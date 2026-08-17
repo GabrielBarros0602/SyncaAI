@@ -11,10 +11,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from syncaai.db import get_session_factory
-from syncaai.models import Task, User
+from syncaai.models import ChecklistItem, Task, User
 
 A_FIXED_FUTURE = datetime(2030, 1, 1, 10, 0, tzinfo=UTC)
 
@@ -102,5 +103,41 @@ def test_two_users_may_occupy_the_same_slot() -> None:
             ]
         )
         session.flush()
+
+        session.rollback()
+
+
+@pytest.mark.integration
+def test_deleting_a_user_removes_their_tasks_and_checklist_items() -> None:
+    """The cascade is the schema's, not the ORM's.
+
+    A Core ``DELETE`` bypasses SQLAlchemy's relationship cascade entirely, so if the
+    ``ON DELETE CASCADE`` clauses were missing this would fail on a foreign key violation
+    rather than quietly passing. The schema test asserts the clause is declared; this
+    asserts the database honours it.
+    """
+    with get_session_factory()() as session:
+        user = _a_user()
+        session.add(user)
+        session.flush()
+
+        task = Task(user_id=user.id, title="probe", start_at=A_FIXED_FUTURE, duration_minutes=60)
+        task.items = [ChecklistItem(label="a step", position=0)]
+        session.add(task)
+        session.flush()
+        task_id = task.id
+
+        session.execute(delete(User).where(User.id == user.id))
+        session.expire_all()
+
+        remaining_tasks = session.scalar(
+            select(func.count()).select_from(Task).where(Task.id == task_id)
+        )
+        remaining_items = session.scalar(
+            select(func.count()).select_from(ChecklistItem).where(ChecklistItem.task_id == task_id)
+        )
+
+        assert remaining_tasks == 0
+        assert remaining_items == 0
 
         session.rollback()
