@@ -120,10 +120,12 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
       não vazar a existência da conta por tempo de resposta
 - [x] Erros de domínio mapeados para HTTP num lugar só — nenhum serviço importa
       `HTTPException`
-- [ ] Tabela `refresh_tokens`: dono, token hasheado, expiração, revogado em, criado em
-- [ ] Endpoint de refresh recusando expirado, revogado e desconhecido com a **mesma**
+- [x] Tabela `refresh_tokens`: dono, token hasheado, expiração, revogado em, criado em
+- [x] Endpoint de refresh recusando expirado, revogado e desconhecido com a **mesma**
       resposta, para não revelar qual dos três
-- [ ] Logout revoga o refresh token apresentado
+- [x] **Decidido:** refresh entregue por cookie `HttpOnly` a cliente web e no corpo a
+      cliente nativo, de forma exclusiva → [ADR-0017](adr/0017-refresh-token-delivery.md)
+- [x] Logout revoga o refresh token apresentado, e responde igual para token inexistente
 - [ ] Dependência `get_current_user`
 - [ ] **Classe base de repositório com escopo por dono**, sem nenhum acessor sem escopo —
       a query sem filtro não deve ser expressável
@@ -132,13 +134,13 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 - [ ] Rate limit no endpoint de cadastro — ele faz um hash argon2 de 64 MiB por
       chamada, então sem limite é vetor de exaustão de memória, independente de
       enumeração
-- [ ] Teste provando que refresh revogado não emite access token
+- [x] Teste provando que refresh revogado não emite access token
 - [x] `User.timezone` validado contra `zoneinfo` antes de gravar
 - [x] Email normalizado antes de gravar; a unicidade recai sobre o valor já normalizado
 
-**Dívida que o S4 tem que honrar:** o access token vive só em memória no cliente. Se o
-front-end guardá-lo onde script alcança, o ADR-0015 fica pior que a alternativa de cookie que
-foi recusada.
+**Dívida que o S5 tem que honrar:** o access token vive só em memória no cliente. O refresh
+já está fora do alcance de script pelo ADR-0017, mas se o front-end guardar o **access** token
+em `localStorage`, um XSS ganha 30 minutos que não precisava ganhar.
 
 ---
 
