@@ -108,10 +108,13 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
       hasheado e revogável → [ADR-0015](adr/0015-session-model.md)
 - [x] **Decidido:** recurso de outro dono responde 404, com o motivo real no log
       → [ADR-0016](adr/0016-ownership-isolation.md)
-- [ ] `JWT_SECRET`, `ACCESS_TOKEN_MINUTES` e `REFRESH_TOKEN_DAYS` em settings — o segredo
-      obrigatório e sem default, igual ao `database_url`
-- [ ] Par de funções de hash isolando o algoritmo num lugar só, com limite de tamanho de
-      senha antes de hashear
+- [x] `JWT_SECRET`, `ACCESS_TOKEN_MINUTES` e `REFRESH_TOKEN_DAYS` em settings — o segredo
+      obrigatório, sem default, e recusado abaixo de 32 bytes, que é o mínimo da RFC 7518
+      para HS256
+- [x] Par de funções de hash isolando o algoritmo num lugar só, com limite de tamanho de
+      senha antes de hashear, e verificação-isca para o caso de conta inexistente
+- [x] Emissão e verificação de access token JWT, com tipo de token checado e `exp`
+      obrigatório
 - [ ] Cadastro e login, com hash de custo comparável mesmo quando o email não existe, para
       não vazar a existência da conta por tempo de resposta
 - [ ] Tabela `refresh_tokens`: dono, token hasheado, expiração, revogado em, criado em

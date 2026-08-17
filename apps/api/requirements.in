@@ -16,3 +16,7 @@ psycopg[binary]
 # database, so zoneinfo would raise ZoneInfoNotFoundError in the container while working
 # fine on a developer machine — a failure that only appears after deploy.
 tzdata
+
+# Password hashing (ADR-0014) and access tokens (ADR-0015).
+argon2-cffi
+pyjwt

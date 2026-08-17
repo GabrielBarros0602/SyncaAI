@@ -10,9 +10,15 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ROOT_MARKERS = (".git", "docker-compose.yml")
+
+# RFC 7518 section 3.2 requires an HMAC key at least as long as the hash output, so 32
+# bytes for HS256. A shorter key weakens every token the service issues. PyJWT only warns
+# about it, so the check belongs here, where a bad value stops the process at boot.
+MIN_JWT_SECRET_LENGTH = 32
 
 
 def discover_env_file(start: Path | None = None) -> Path | None:
@@ -54,6 +60,13 @@ class Settings(BaseSettings):
 
     # No default: the service must refuse to start without a database.
     database_url: str
+
+    # No default either, and for the same reason. A signing secret with a fallback value is
+    # worse than none: it works in development and silently ships a known key (ADR-0015).
+    jwt_secret: str = Field(min_length=MIN_JWT_SECRET_LENGTH)
+
+    access_token_minutes: int = 30
+    refresh_token_days: int = 30
 
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"

@@ -7,7 +7,10 @@ different depth than on a developer machine. These tests pin both layouts.
 
 from pathlib import Path
 
-from syncaai.config import discover_env_file
+import pytest
+from pydantic import ValidationError
+
+from syncaai.config import MIN_JWT_SECRET_LENGTH, Settings, discover_env_file
 
 
 def test_finds_the_env_file_beside_a_repository_marker(tmp_path: Path) -> None:
@@ -38,3 +41,25 @@ def test_returns_none_for_the_flattened_container_layout(tmp_path: Path) -> None
     module.touch()
 
     assert discover_env_file(module) is None
+
+
+def test_a_signing_secret_shorter_than_the_hmac_minimum_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RFC 7518 wants 32 bytes for HS256. PyJWT only warns, so the process refuses to boot.
+
+    A weak signing key is not a degraded feature — every token the service issues becomes
+    forgeable — so it fails at startup rather than at the first request.
+    """
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/d")
+    monkeypatch.setenv("JWT_SECRET", "x" * (MIN_JWT_SECRET_LENGTH - 1))
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+
+def test_a_signing_secret_at_the_minimum_is_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/d")
+    monkeypatch.setenv("JWT_SECRET", "x" * MIN_JWT_SECRET_LENGTH)
+
+    assert Settings(_env_file=None).jwt_secret == "x" * MIN_JWT_SECRET_LENGTH
