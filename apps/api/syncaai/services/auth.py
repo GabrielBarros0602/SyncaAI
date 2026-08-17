@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from syncaai.config import get_settings
+from syncaai.config import Settings
 from syncaai.errors import EmailAlreadyRegisteredError, InvalidCredentialsError
 from syncaai.models import RefreshToken, User
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
@@ -12,9 +12,12 @@ from syncaai.security.refresh import generate_refresh_token, hash_refresh_token
 
 
 class AuthService:
-    def __init__(self, users: UserRepository, sessions: RefreshTokenRepository) -> None:
+    def __init__(
+        self, users: UserRepository, sessions: RefreshTokenRepository, settings: Settings
+    ) -> None:
         self._users = users
         self._sessions = sessions
+        self._settings = settings
 
     def register(self, email: str, password: str, timezone: str) -> User:
         """Create an account.
@@ -62,7 +65,7 @@ class AuthService:
         the digest, so a database leak yields no usable session.
         """
         raw = generate_refresh_token()
-        expires_at = datetime.now(timezone.utc) + timedelta(days=get_settings().refresh_token_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=self._settings.refresh_token_days)
         self._sessions.add(
             RefreshToken(user_id=user.id, token_hash=hash_refresh_token(raw), expires_at=expires_at)
         )
