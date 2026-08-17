@@ -24,10 +24,9 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 
 | Pendência | Onde resolver |
 |---|---|
-| Cadastro revela se um endereço já tem conta, respondendo 409. Isso enfraquece a defesa de tempo do login, que gasta hash de propósito para esconder a mesma informação. O conserto correto é aceitar o cadastro e enviar verificação por email | discussão de segurança pós-S2 |
-| Unicidade de email recai sobre o valor gravado, normalizado pelo serviço. Um escritor que passe por fora do serviço poderia gravar variante de caixa. Índice funcional sobre `lower(email)` resolveria, ao custo de o `alembic check` não comparar índice de expressão de forma confiável | S3 |
-| Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S3 |
-| `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S3 |
+| Unicidade de email recai sobre o valor gravado, normalizado pelo serviço. Um escritor que passe por fora do serviço poderia gravar variante de caixa. Índice funcional sobre `lower(email)` resolveria, ao custo de o `alembic check` não comparar índice de expressão de forma confiável | S4 |
+| Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S4 |
+| `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S4 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
 | Horas reais gastas por sprint não estão sendo anotadas, então a estimativa do [ADR-0001](adr/0001-backend-stack.md) segue não validada | contínuo |
@@ -66,7 +65,7 @@ que consulta o banco faz uma oscilação de rede no Postgres reiniciar a aplica�
 ## S1 — Modelagem de domínio e banco de dados · ✅ Concluído
 
 Escopo mínimo decidido: `User`, `Day`, `Task`, `ChecklistItem`. Hábitos, Listas, Heatmap e
-Tabela semanal ficam para S9; Notas entram no S8, junto com o caso de uso que precisa delas.
+Tabela semanal ficam para S10; Notas entram no S9, junto com o caso de uso que precisa delas.
 
 - [x] Modelar `User`, `Day`, `Task`, `ChecklistItem`. O `User` já nasce com `email`,
       `password_hash` e `timezone`, porque o S2 depende deles. `Task` **não** tem `day_id`
@@ -129,7 +128,10 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 - [ ] **Classe base de repositório com escopo por dono**, sem nenhum acessor sem escopo —
       a query sem filtro não deve ser expressável
 - [ ] Caminho até o dono declarado por modelo, para `ChecklistItem` escopar via `tasks`
-- [ ] Rate limit no endpoint de login, separado do rate limit de IA do S6
+- [ ] Rate limit no endpoint de login, separado do rate limit de IA do S7
+- [ ] Rate limit no endpoint de cadastro — ele faz um hash argon2 de 64 MiB por
+      chamada, então sem limite é vetor de exaustão de memória, independente de
+      enumeração
 - [ ] Teste provando que refresh revogado não emite access token
 - [x] `User.timezone` validado contra `zoneinfo` antes de gravar
 - [x] Email normalizado antes de gravar; a unicidade recai sobre o valor já normalizado
@@ -140,7 +142,32 @@ foi recusada.
 
 ---
 
-## S3 — CRUD do domínio e a query de capacidade
+## S3 — Verificação de email e respostas genéricas de autenticação
+
+Existe porque o cadastro respondendo 409 revela quais endereços têm conta. Verificação de
+email é o que torna **honesta** uma resposta genérica no cadastro.
+
+O ponto que decide se este sprint funciona: fechar a brecha exige que **toda** resposta de
+autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
+
+- [ ] **Decidir:** provedor de email — serviço transacional ou SMTP direto → merece ADR
+- [ ] **Decidir:** conta não verificada faz login, ou fica bloqueada até verificar
+- [ ] Abstração de envio com dublê para teste, mesmo padrão do `PlanGenerator` do S6
+- [ ] Modelo de token de verificação: dono, hash do token, expiração, usado em
+- [ ] Cadastro sempre responde 202; o **email** decide a mensagem — link de verificação para
+      endereço novo, aviso de tentativa para endereço que já tem conta
+- [ ] Endpoint de verificação com uso único e expiração
+- [ ] Reenvio com rate limit próprio — sem ele é vetor de email bombing
+- [ ] Login não distingue conta não verificada de conta inexistente
+- [ ] Recuperação de senha com resposta genérica, exista a conta ou não
+- [ ] Degradação: o que a aplicação faz quando o provedor de email está fora
+- [ ] **Teste provando que cadastro de endereço novo e de endereço existente devolvem
+      respostas idênticas** — é a asserção que justifica o sprint, no mesmo formato do teste
+      byte a byte do login
+
+---
+
+## S4 — CRUD do domínio e a query de capacidade
 
 - [ ] Schemas Pydantic `Create` / `Update` / `Read` por entidade
 - [ ] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados
@@ -164,33 +191,33 @@ foi recusada.
 - [ ] Query de capacidade medida com `EXPLAIN ANALYZE` numa janela de 14 dias, com os índices
       do S1 confirmados em uso
 
-**Marco:** ao fim do S3 existe um produto que já funciona sem nenhuma IA. Isso não é efeito
+**Marco:** ao fim do S4 existe um produto que já funciona sem nenhuma IA. Isso não é efeito
 colateral — é o requisito de degradação do ADR-0006, verificado na prática antes de existir
 algo de que degradar.
 
 ---
 
-## S4 — Primeira fatia visível
+## S5 — Primeira fatia visível
 
 Antecipado de propósito. Sem esta fatia, nada do produto é visível antes do S7, e o vazio
-entre S1 e S6 é onde a motivação morre. Depende do S2 e do S3 e de mais nada — nenhuma IA.
+entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada — nenhuma IA.
 
 - [ ] Tela de login e cadastro, consumindo os endpoints do S2
 - [ ] Sessão persistida no cliente e rota protegida
-- [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S3
+- [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
 - [ ] Criar e concluir tarefa pela interface
 - [ ] Estados vazios e de erro visíveis, não tela branca
 
-**Marco:** ao fim do S4 o projeto é apresentável para qualquer pessoa, não só para quem lê
+**Marco:** ao fim do S5 o projeto é apresentável para qualquer pessoa, não só para quem lê
 código. Login de verdade, dado de verdade, a tese do produto na tela — "sua terça tem 90
 minutos livres". A camada de IA ainda não existe, e o produto já se explica sozinho.
 
-**O que fica devendo:** este front-end é deliberadamente mínimo e será substituído no S7,
+**O que fica devendo:** este front-end é deliberadamente mínimo e será substituído no S8,
 quando o protótipo inteiro entra. Trate como vitrine funcional, não como base definitiva.
 
 ---
 
-## S5 — Pipeline de IA sem provedor
+## S6 — Pipeline de IA sem provedor
 
 Sprint inteiro construído contra um dublê. Se qualquer coisa aqui custar dinheiro, algo está
 errado.
@@ -220,7 +247,7 @@ de "nenhum projeto com testes automatizados publicados".
 
 ---
 
-## S6 — Provedor real, guardrails e degradação
+## S7 — Provedor real, guardrails e degradação
 
 - [ ] Cliente real com structured output nativo do provedor
 - [ ] Tabela `ai_usage` escrita em toda chamada concluída: tokens de entrada e saída, custo
@@ -240,7 +267,7 @@ de "nenhum projeto com testes automatizados publicados".
 
 ---
 
-## S7 — Front-end ligado à API
+## S8 — Front-end ligado à API
 
 - [ ] Protótipo migrado do HTML estático para build real, preservando o design system em `_ds/`
 - [ ] Fluxo de autenticação
@@ -250,14 +277,14 @@ de "nenhum projeto com testes automatizados publicados".
 - [ ] Draft aprovado renderizado como o componente `3 of 5 preparations done`
 - [ ] Estados de erro visíveis: job falhou, provedor fora, acima do teto, rate limit
 
-**Marco:** ao fim do S7 o caso de uso 2 está completo e publicável. É o ponto em que o projeto
+**Marco:** ao fim do S8 o caso de uso 2 está completo e publicável. É o ponto em que o projeto
 pode ir para o currículo.
 
 ---
 
-## S8 — Assistência a tarefa específica
+## S9 — Assistência a tarefa específica
 
-Não começa antes do S7 estar publicado. Regra do ADR-0002.
+Não começa antes do S8 estar publicado. Regra do ADR-0002.
 
 - [ ] Entidades `Note` e o vínculo "link to a day"
 - [ ] Variante do montador de contexto com allowlist mais larga e explícita
@@ -267,13 +294,13 @@ Não começa antes do S7 estar publicado. Regra do ADR-0002.
 - [ ] Reuso confirmado: rate limit, teto, cache e circuit breaker sem reimplementação
 
 **Verificação da tese do ADR-0002:** este sprint deveria ser curto porque o caso 2 já
-construiu a infraestrutura. Se ele custar tanto quanto o S5 e o S6 somados, a premissa estava
+construiu a infraestrutura. Se ele custar tanto quanto o S6 e o S7 somados, a premissa estava
 errada e vale registrar isso num ADR — errar previsão documentada é material melhor de
 entrevista do que acertar sem registro.
 
 ---
 
-## S9 — Superfícies restantes do protótipo · primeiro sprint a cortar
+## S10 — Superfícies restantes do protótipo · primeiro sprint a cortar
 
 - [ ] Listas e itens de lista, com o destino `To list` da Captura rápida
 - [ ] Hábitos e contagem de sequência
@@ -284,7 +311,7 @@ entrevista do que acertar sem registro.
 
 ---
 
-## S10 — Testes, acabamento e publicação
+## S11 — Testes, acabamento e publicação
 
 - [ ] Pirâmide de testes: unitários para serviços, agendador e validador com repositórios
       falsos; integração para repositórios contra PostgreSQL real; camada fina de ponta a ponta
