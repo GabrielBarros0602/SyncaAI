@@ -25,6 +25,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0014](0014-password-hashing-with-argon2id.md) | Hash passwords with argon2id | Accepted |
 | [0015](0015-session-model.md) | Short-lived access token with a revocable refresh token | Accepted |
 | [0016](0016-ownership-isolation.md) | Ownership in the repository base, 404 across owners | Accepted |
+| [0017](0017-refresh-token-delivery.md) | Refresh token delivery: cookie for browsers, body for native | Accepted |
 
 ## Template
 
