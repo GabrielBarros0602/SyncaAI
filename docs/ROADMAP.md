@@ -127,10 +127,11 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 - [x] **Decidido:** refresh entregue por cookie `HttpOnly` a cliente web e no corpo a
       cliente nativo, de forma exclusiva → [ADR-0017](adr/0017-refresh-token-delivery.md)
 - [x] Logout revoga o refresh token apresentado, e responde igual para token inexistente
-- [ ] Dependência `get_current_user`
-- [ ] **Classe base de repositório com escopo por dono**, sem nenhum acessor sem escopo —
-      a query sem filtro não deve ser expressável
-- [ ] Caminho até o dono declarado por modelo, para `ChecklistItem` escopar via `tasks`
+- [x] Dependência `get_current_user_id`, que não toca no banco, e `get_current_user` para
+      os endpoints que precisam da linha inteira
+- [x] **Classe base de repositório com escopo por dono**, sem nenhum acessor sem escopo —
+      a query sem filtro não é expressável
+- [x] Caminho até o dono declarado por modelo, para `ChecklistItem` escopar via `tasks`
 - [ ] Rate limit no endpoint de login, separado do rate limit de IA do S7
 - [ ] Rate limit no endpoint de cadastro — ele faz um hash argon2 de 64 MiB por
       chamada, então sem limite é vetor de exaustão de memória, independente de
