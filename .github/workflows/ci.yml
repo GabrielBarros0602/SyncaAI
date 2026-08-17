@@ -7,7 +7,10 @@ on:
 
 jobs:
   api:
-    name: API — lint, type check, test
+    # Deliberately does not enumerate the steps. The previous name listed three of them
+    # and went stale as soon as the migration steps were added; the real list is one click
+    # away and cannot disagree with itself.
+    name: API checks
     runs-on: ubuntu-latest
     defaults:
       run:
