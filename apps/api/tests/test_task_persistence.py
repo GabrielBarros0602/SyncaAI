@@ -8,7 +8,7 @@ Nothing is committed — each test rolls back — so they leave no residue.
 """
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import delete, func, select
@@ -17,11 +17,11 @@ from sqlalchemy.exc import IntegrityError
 from syncaai.db import get_session_factory
 from syncaai.models import ChecklistItem, Task, User
 
-A_FIXED_FUTURE = datetime(2030, 1, 1, 10, 0, tzinfo=UTC)
+A_FIXED_FUTURE = datetime(2030, 1, 1, 10, 0, tzinfo=timezone.utc)
 
 
 def _a_user() -> User:
-    return User(email=f"probe-{uuid.uuid4()}@example.test", password_hash="not-a-real-hash")
+    return User(email=f"probe-{uuid.uuid4()}@example.com", password_hash="not-a-real-hash")
 
 
 @pytest.mark.integration

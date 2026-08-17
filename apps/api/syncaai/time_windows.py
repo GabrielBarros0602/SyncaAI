@@ -14,10 +14,26 @@ are covered by tests:
 - A day is not always 1440 minutes. The same date lasted 23 hours; 2019-02-16 lasted 25.
 """
 
-from datetime import UTC, date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
+# timezone.utc rather than the datetime.UTC alias: identical object, and the older
+# spelling keeps this module importable under interpreters before 3.11.
+from datetime import date, datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 SECONDS_IN_A_MINUTE = 60
+
+
+def is_valid_timezone(zone_name: str) -> bool:
+    """Return whether the name is one the time zone database knows.
+
+    Validated at the boundary, before a user is stored. A stored name that does not resolve
+    turns every later window calculation for that user into an exception raised far from
+    its cause.
+    """
+    try:
+        ZoneInfo(zone_name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+    return True
 
 
 def utc_window(first_day: date, last_day: date, zone_name: str) -> tuple[datetime, datetime]:
@@ -37,7 +53,7 @@ def utc_window(first_day: date, last_day: date, zone_name: str) -> tuple[datetim
     zone = ZoneInfo(zone_name)
     start = datetime.combine(first_day, time.min, tzinfo=zone)
     end = datetime.combine(last_day + timedelta(days=1), time.min, tzinfo=zone)
-    return start.astimezone(UTC), end.astimezone(UTC)
+    return start.astimezone(timezone.utc), end.astimezone(timezone.utc)
 
 
 def minutes_in_local_day(day: date, zone_name: str) -> int:

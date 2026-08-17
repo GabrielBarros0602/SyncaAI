@@ -6,7 +6,7 @@ asserting: daylight saving there began *at* midnight, so a date could have no mi
 a day could be shorter or longer than 1440 minutes.
 """
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -19,15 +19,15 @@ LISBON = "Europe/Lisbon"
 def test_a_week_becomes_a_half_open_utc_range() -> None:
     start, end = utc_window(date(2026, 8, 10), date(2026, 8, 16), SAO_PAULO)
 
-    assert start == datetime(2026, 8, 10, 3, 0, tzinfo=UTC)
-    assert end == datetime(2026, 8, 17, 3, 0, tzinfo=UTC)
+    assert start == datetime(2026, 8, 10, 3, 0, tzinfo=timezone.utc)
+    assert end == datetime(2026, 8, 17, 3, 0, tzinfo=timezone.utc)
 
 
 def test_the_window_depends_on_the_zone() -> None:
     start, end = utc_window(date(2026, 8, 10), date(2026, 8, 10), LISBON)
 
-    assert start == datetime(2026, 8, 9, 23, 0, tzinfo=UTC)
-    assert end == datetime(2026, 8, 10, 23, 0, tzinfo=UTC)
+    assert start == datetime(2026, 8, 9, 23, 0, tzinfo=timezone.utc)
+    assert end == datetime(2026, 8, 10, 23, 0, tzinfo=timezone.utc)
 
 
 def test_a_day_whose_midnight_never_happened() -> None:
@@ -37,8 +37,8 @@ def test_a_day_whose_midnight_never_happened() -> None:
     """
     start, end = utc_window(date(2018, 11, 4), date(2018, 11, 4), SAO_PAULO)
 
-    assert start == datetime(2018, 11, 4, 3, 0, tzinfo=UTC)
-    assert end == datetime(2018, 11, 5, 2, 0, tzinfo=UTC)
+    assert start == datetime(2018, 11, 4, 3, 0, tzinfo=timezone.utc)
+    assert end == datetime(2018, 11, 5, 2, 0, tzinfo=timezone.utc)
 
 
 def test_an_ordinary_day_lasts_1440_minutes() -> None:

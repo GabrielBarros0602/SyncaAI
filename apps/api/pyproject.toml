@@ -25,6 +25,14 @@ select = [
     "RUF",  # ruff-specific
 ]
 
+ignore = [
+    # UP017 rewrites datetime.timezone.utc to the datetime.UTC alias added in 3.11. They are
+    # the same object. The older spelling is kept so every module stays importable under an
+    # interpreter older than 3.11, which is what part of the verification tooling runs, and
+    # nothing is gained by the newer name.
+    "UP017",
+]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG"]  # fixtures are passed as unused-looking arguments
 

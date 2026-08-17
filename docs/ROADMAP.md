@@ -24,6 +24,8 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 
 | Pendência | Onde resolver |
 |---|---|
+| Cadastro revela se um endereço já tem conta, respondendo 409. Isso enfraquece a defesa de tempo do login, que gasta hash de propósito para esconder a mesma informação. O conserto correto é aceitar o cadastro e enviar verificação por email | discussão de segurança pós-S2 |
+| Unicidade de email recai sobre o valor gravado, normalizado pelo serviço. Um escritor que passe por fora do serviço poderia gravar variante de caixa. Índice funcional sobre `lower(email)` resolveria, ao custo de o `alembic check` não comparar índice de expressão de forma confiável | S3 |
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S3 |
 | `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S3 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
@@ -115,8 +117,10 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
       senha antes de hashear, e verificação-isca para o caso de conta inexistente
 - [x] Emissão e verificação de access token JWT, com tipo de token checado e `exp`
       obrigatório
-- [ ] Cadastro e login, com hash de custo comparável mesmo quando o email não existe, para
+- [x] Cadastro e login, com hash de custo comparável mesmo quando o email não existe, para
       não vazar a existência da conta por tempo de resposta
+- [x] Erros de domínio mapeados para HTTP num lugar só — nenhum serviço importa
+      `HTTPException`
 - [ ] Tabela `refresh_tokens`: dono, token hasheado, expiração, revogado em, criado em
 - [ ] Endpoint de refresh recusando expirado, revogado e desconhecido com a **mesma**
       resposta, para não revelar qual dos três
@@ -127,8 +131,8 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 - [ ] Caminho até o dono declarado por modelo, para `ChecklistItem` escopar via `tasks`
 - [ ] Rate limit no endpoint de login, separado do rate limit de IA do S6
 - [ ] Teste provando que refresh revogado não emite access token
-- [ ] `User.timezone` validado contra `zoneinfo` antes de gravar
-- [ ] Email normalizado antes de gravar, e unicidade sobre o valor normalizado
+- [x] `User.timezone` validado contra `zoneinfo` antes de gravar
+- [x] Email normalizado antes de gravar; a unicidade recai sobre o valor já normalizado
 
 **Dívida que o S4 tem que honrar:** o access token vive só em memória no cliente. Se o
 front-end guardá-lo onde script alcança, o ADR-0015 fica pior que a alternativa de cookie que

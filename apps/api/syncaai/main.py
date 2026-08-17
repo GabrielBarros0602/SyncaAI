@@ -11,6 +11,8 @@ import logging
 
 from fastapi import FastAPI
 
+from syncaai.api import v1
+from syncaai.api.errors import register_error_handlers
 from syncaai.api.routes import health
 from syncaai.config import Settings, get_settings
 
@@ -40,7 +42,9 @@ def create_app() -> FastAPI:
         redoc_url=None if in_production else "/redoc",
         openapi_url=None if in_production else "/openapi.json",
     )
+    register_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(v1.router)
     return app
 
 
