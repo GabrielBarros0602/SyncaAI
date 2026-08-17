@@ -52,6 +52,12 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(max_length=MAX_PASSWORD_LENGTH)
 
+    # Decides how the refresh token is delivered, and the two are exclusive: a web client
+    # gets a cookie and no token in the body, a native client the reverse (ADR-0017). It is
+    # a request field rather than the response carrying both, so a browser taking the body
+    # path has to declare itself native — a deliberate, visible act.
+    client: Literal["web", "native"] = "web"
+
     @field_validator("email")
     @classmethod
     def normalise(cls, value: str) -> str:
@@ -67,7 +73,17 @@ class UserRead(BaseModel):
     created_at: datetime
 
 
+class RefreshRequest(BaseModel):
+    """A native client sends the token here; a web client sends nothing and uses its cookie."""
+
+    refresh_token: str | None = None
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
     expires_in: int
+
+    # Present only for a native client. Absent for a web client, whose token is in a cookie
+    # the response sets and JavaScript cannot read.
+    refresh_token: str | None = None

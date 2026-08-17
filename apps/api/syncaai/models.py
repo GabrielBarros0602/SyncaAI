@@ -11,6 +11,7 @@ decisions become enforceable:
   reference it — a task's day is implied by ``start_at`` and is never stored twice
   (ADR-0010).
 - Tasks are deleted physically (ADR-0011).
+- A session is a row, so revoking one does not touch any other (ADR-0015).
 - Duration is bounded to one day, and a task's minutes count entirely on the day it starts
   (ADR-0012).
 
@@ -42,6 +43,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.schema import FetchedValue
+
+from syncaai.security.refresh import TOKEN_HASH_LENGTH
 
 MINUTES_IN_A_DAY = 1440
 
@@ -222,3 +225,34 @@ class ChecklistItem(Base, TimestampMixin):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     task: Mapped[Task] = relationship(back_populates="items")
+
+
+class RefreshToken(Base, TimestampMixin):
+    """One long-lived session.
+
+    A row rather than a claim inside a token, so that revoking a single session is a write
+    instead of rotating a signing secret and ending everybody else's session too. That
+    matters here beyond general hygiene: ADR-0006 puts a spend cap per user on the AI layer,
+    so a stolen credential spends the owner's money and "wait for it to expire" is not an
+    answer.
+
+    Only the digest is stored. A database leak should not hand over live sessions, which is
+    the same reason passwords are hashed — but a fast digest suffices, because the value is
+    random rather than human-chosen (see ``syncaai.security.refresh``).
+
+    ``revoked_at`` rather than deleting the row: a revoked session that is presented again is
+    worth being able to see, and it is what reuse detection will need if rotation is added.
+    """
+
+    __tablename__ = "refresh_tokens"
+    __table_args__ = (Index("ix_refresh_tokens_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(TOKEN_HASH_LENGTH), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
