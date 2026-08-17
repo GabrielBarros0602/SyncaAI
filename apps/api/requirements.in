@@ -6,6 +6,10 @@
 # Universal mode is deliberate: development happens on Windows and the runtime is Linux,
 # so the lockfile carries environment markers and is valid on both. See CONTRIBUTING.md.
 fastapi
+
+# EmailStr, for rejecting malformed addresses at the boundary. Pydantic disables the
+# deliverability check, so no DNS lookup happens per request.
+pydantic[email]
 uvicorn[standard]
 pydantic-settings
 sqlalchemy
