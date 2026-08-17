@@ -1,8 +1,14 @@
 # ADR-0015: Short-lived access token with a revocable opaque refresh token
 
-**Status:** Accepted
+**Status:** Accepted — extended by [ADR-0017](0017-refresh-token-delivery.md)
 **Date:** 2026-08-17
 **Deciders:** Gabriel Barros
+
+> **Gap found later.** This record says the access token never reaches browser storage, but
+> never says where the refresh token goes. In a browser the only place readable by script and
+> surviving a reload is `localStorage`, so returning it in the body would hand a script a
+> thirty-day credential and cancel the reason the access token is short.
+> [ADR-0017](0017-refresh-token-delivery.md) decides delivery.
 
 ## Context
 
