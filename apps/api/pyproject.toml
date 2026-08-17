@@ -31,6 +31,10 @@ ignore = [
     # interpreter older than 3.11, which is what part of the verification tooling runs, and
     # nothing is gained by the newer name.
     "UP017",
+    # UP046 rewrites Generic[T] into the PEP 695 syntax added in 3.12. Same semantics,
+    # newer spelling, and it would stop the module being importable under the older
+    # interpreter used for verification. Same trade as UP017 above.
+    "UP046",
 ]
 
 [tool.ruff.lint.per-file-ignores]
