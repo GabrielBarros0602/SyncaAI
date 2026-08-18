@@ -6,11 +6,7 @@ anyio==4.14.2
     #   httpx2
 ast-serialize==0.7.0
     # via mypy
-colorama==0.4.6 ; sys_platform == 'win32'
-    # via
-    #   -c requirements.txt
-    #   pytest
-coverage==7.15.4
+coverage[toml]==7.15.4
     # via pytest-cov
 h11==0.16.0
     # via
@@ -27,9 +23,9 @@ idna==3.18
     #   httpx2
 iniconfig==2.3.0
     # via pytest
-librt==0.14.0 ; platform_python_implementation != 'PyPy'
+librt==0.14.0
     # via mypy
-mypy==2.3.0
+mypy==2.3.1
     # via -r requirements-dev.in
 mypy-extensions==1.1.0
     # via mypy
@@ -58,8 +54,6 @@ truststore==0.10.4
 typing-extensions==4.16.0
     # via
     #   -c requirements.txt
-    #   anyio
-    #   httpx2
     #   mypy
 uv==0.12.2
     # via -r requirements-dev.in
