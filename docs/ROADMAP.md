@@ -172,8 +172,13 @@ email é o que torna **honesta** uma resposta genérica no cadastro.
 O ponto que decide se este sprint funciona: fechar a brecha exige que **toda** resposta de
 autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 
-- [ ] **Decidir:** provedor de email — serviço transacional ou SMTP direto → merece ADR
-- [ ] **Decidir:** conta não verificada faz login, ou fica bloqueada até verificar
+- [x] **Decidido:** provedor transacional atrás de abstração com dublê, enviando de domínio
+      próprio com SPF, DKIM e DMARC → [ADR-0018](adr/0018-email-delivery.md)
+- [x] **Decidido:** conta não verificada não faz login. Credencial certa em conta não
+      verificada responde 403; todo o resto continua no 401 genérico
+      → [ADR-0019](adr/0019-account-verification.md)
+- [ ] Registrar domínio e publicar SPF, DKIM e DMARC
+- [ ] Conta no provedor, com a chave em settings e ausente nos testes
 - [ ] Abstração de envio com dublê para teste, mesmo padrão do `PlanGenerator` do S6
 - [ ] Modelo de token de verificação: dono, hash do token, expiração, usado em
 - [ ] Cadastro sempre responde 202; o **email** decide a mensagem — link de verificação para
