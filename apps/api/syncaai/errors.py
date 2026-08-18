@@ -21,3 +21,11 @@ class InvalidCredentialsError(DomainError):
     the same decision to make, and distinguishing them is exactly the account enumeration
     that ``verify_dummy`` spends time to prevent.
     """
+
+
+class RateLimitExceededError(DomainError):
+    """Raised when a caller has spent its allowance for the current window."""
+
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__(retry_after_seconds)
+        self.retry_after_seconds = retry_after_seconds

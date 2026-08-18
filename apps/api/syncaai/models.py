@@ -256,3 +256,26 @@ class RefreshToken(Base, TimestampMixin):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship()
+
+
+class RateLimitCounter(Base, TimestampMixin):
+    """Hits inside one fixed window, for one bucket.
+
+    A counter per window rather than a row per request: an endpoint that is being brute
+    forced is exactly the one where writing a row per attempt costs most, and the count is
+    all the decision needs.
+
+    Fixed windows let a caller spend a full allowance at the end of one window and another
+    at the start of the next, so a burst of twice the limit is possible across a boundary.
+    Accepted here for the same reason ADR-0006 accepted it for the AI limit: a sliding
+    window costs more to store and the difference does not change what an attacker can
+    achieve against argon2.
+    """
+
+    __tablename__ = "rate_limit_counters"
+    __table_args__ = (UniqueConstraint("bucket", "window_start"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    bucket: Mapped[str] = mapped_column(String(200), nullable=False)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    hits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

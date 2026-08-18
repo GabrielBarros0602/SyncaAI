@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from syncaai.errors import InvalidCredentialsError
 from syncaai.models import User
 from syncaai.repositories.users import UserRepository
 from syncaai.security.tokens import InvalidTokenError, decode_access_token
+from syncaai.services.rate_limit import RateLimiter
 
 # auto_error=False so a missing or malformed header reaches this module rather than
 # producing FastAPI's default body. Every authentication failure in this API answers the
@@ -65,3 +66,32 @@ def get_current_user(user_id: CurrentUserId, session: SessionDep) -> User:
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_client_address(request: Request) -> str:
+    """Identify the caller for rate limiting.
+
+    Behind a proxy every request arrives from the proxy, so this collapses into a single
+    global bucket unless uvicorn runs with proxy headers enabled and a trusted forwarder
+    list. Trusting ``X-Forwarded-For`` unconditionally would be worse than not limiting at
+    all: the header is client-controlled, so anyone could mint a fresh allowance per
+    request. Deployment carries this, and it is recorded for S11.
+    """
+    return request.client.host if request.client else "unknown"
+
+
+ClientAddress = Annotated[str, Depends(get_client_address)]
+
+
+def limit_login(address: ClientAddress, session: SessionDep, settings: SettingsDep) -> None:
+    """Bound credential guessing per caller."""
+    RateLimiter(session).check(f"login:{address}", settings.login_attempts_per_hour)
+
+
+def limit_registration(address: ClientAddress, session: SessionDep, settings: SettingsDep) -> None:
+    """Bound registrations per caller.
+
+    Each attempt costs a 64 MiB argon2 hash, so an unlimited endpoint is a memory
+    exhaustion vector on its own, before any question of account enumeration.
+    """
+    RateLimiter(session).check(f"register:{address}", settings.registrations_per_hour)

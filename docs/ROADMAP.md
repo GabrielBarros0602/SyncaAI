@@ -26,6 +26,8 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 |---|---|
 | Unicidade de email recai sobre o valor gravado, normalizado pelo serviço. Um escritor que passe por fora do serviço poderia gravar variante de caixa. Índice funcional sobre `lower(email)` resolveria, ao custo de o `alembic check` não comparar índice de expressão de forma confiável | S4 |
 | `get_engine` ainda lê `get_settings()` por dentro, então o motor de banco não é substituível por injeção — só por variável de ambiente. Aceitável enquanto é decisão de processo e não de requisição, mas é a última leitura implícita que sobrou | quando incomodar |
+| Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar | S11, no deploy |
+| `rate_limit_counters` acumula linhas por janela e ninguém as remove. Uma por bucket por hora é pouco, mas cresce para sempre | quando incomodar |
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S4 |
 | `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S4 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
@@ -102,7 +104,7 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 
 ---
 
-## S2 — Autenticação e isolamento por dono · ⏳ Em andamento
+## S2 — Autenticação e isolamento por dono · ✅ Concluído
 
 - [x] **Decidido:** hash de senha com argon2id, padrões `m=65536, t=3, p=4`
       → [ADR-0014](adr/0014-password-hashing-with-argon2id.md)
@@ -132,8 +134,8 @@ minutos contam no dia em que a tarefa começa → [ADR-0012](adr/0012-task-time-
 - [x] **Classe base de repositório com escopo por dono**, sem nenhum acessor sem escopo —
       a query sem filtro não é expressável
 - [x] Caminho até o dono declarado por modelo, para `ChecklistItem` escopar via `tasks`
-- [ ] Rate limit no endpoint de login, separado do rate limit de IA do S7
-- [ ] Rate limit no endpoint de cadastro — ele faz um hash argon2 de 64 MiB por
+- [x] Rate limit no endpoint de login, separado do rate limit de IA do S7
+- [x] Rate limit no endpoint de cadastro — ele faz um hash argon2 de 64 MiB por
       chamada, então sem limite é vetor de exaustão de memória, independente de
       enumeração
 - [x] Teste provando que refresh revogado não emite access token
@@ -146,7 +148,7 @@ em `localStorage`, um XSS ganha 30 minutos que não precisava ganhar.
 
 ---
 
-## S3 — Verificação de email e respostas genéricas de autenticação
+## S3 — Verificação de email e respostas genéricas de autenticação · ⏳ Próximo
 
 Existe porque o cadastro respondendo 409 revela quais endereços têm conta. Verificação de
 email é o que torna **honesta** uma resposta genérica no cadastro.
