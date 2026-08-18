@@ -100,6 +100,13 @@ def limit_verification_resend(
     RateLimiter(session).check(f"resend:{address}", settings.verification_resends_per_hour)
 
 
+def limit_password_reset(
+    address: ClientAddress, session: SessionDep, settings: SettingsDep
+) -> None:
+    """Same tight bound as resending a confirmation, and for the same reason."""
+    RateLimiter(session).check(f"reset:{address}", settings.verification_resends_per_hour)
+
+
 def limit_registration(address: ClientAddress, session: SessionDep, settings: SettingsDep) -> None:
     """Bound registrations per caller.
 

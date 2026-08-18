@@ -44,6 +44,8 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | `get_engine` ainda lê `get_settings()` por dentro, então o motor de banco não é substituível por injeção — só por variável de ambiente. Aceitável enquanto é decisão de processo e não de requisição, mas é a última leitura implícita que sobrou | quando incomodar |
 | Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar | S11, no deploy |
 | `rate_limit_counters` acumula linhas por janela e ninguém as remove. Uma por bucket por hora é pouco, mas cresce para sempre | quando incomodar |
+| Domínio próprio com SPF, DKIM e DMARC, e conta no provedor de email. Sem isso o envio fica restrito ao próprio dono da conta, então ninguém mais completa o cadastro — o código está pronto e testado contra o dublê, falta só a decisão | antes de demonstrar ou publicar |
+| Cliente real do provedor de email não existe. É um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
 | Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S4 |
 | `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S4 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
@@ -164,7 +166,7 @@ em `localStorage`, um XSS ganha 30 minutos que não precisava ganhar.
 
 ---
 
-## S3 — Verificação de email e respostas genéricas de autenticação · ⏳ Próximo
+## S3 — Verificação de email e respostas genéricas de autenticação · ✅ Concluído
 
 Existe porque o cadastro respondendo 409 revela quais endereços têm conta. Verificação de
 email é o que torna **honesta** uma resposta genérica no cadastro.
@@ -177,8 +179,6 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 - [x] **Decidido:** conta não verificada não faz login. Credencial certa em conta não
       verificada responde 403; todo o resto continua no 401 genérico
       → [ADR-0019](adr/0019-account-verification.md)
-- [ ] Registrar domínio e publicar SPF, DKIM e DMARC
-- [ ] Conta no provedor, com a chave em settings e ausente nos testes
 - [x] Abstração de envio com dublê para teste, mesmo padrão do `PlanGenerator` do S6 —
       interface, implementação de console e implementação que grava em memória
 - [x] Modelo de token de verificação: dono, hash do token, expiração, usado em
@@ -189,15 +189,17 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 - [x] Reenvio com rate limit próprio — sem ele é vetor de email bombing
 - [x] Login não distingue conta não verificada de conta inexistente — o 403 só é
       alcançável depois de a senha bater
-- [ ] Recuperação de senha com resposta genérica, exista a conta ou não
-- [ ] Degradação: o que a aplicação faz quando o provedor de email está fora
+- [x] Recuperação de senha com resposta genérica, exista a conta ou não — e o reset
+      revoga todas as sessões abertas, senão quem sabia a senha antiga continuaria dentro
+- [x] Degradação: falha de envio não derruba a operação, é registrada em log com o
+      endereço em digest, e o usuário tem o caminho de reenvio
 - [x] **Teste provando que cadastro de endereço novo e de endereço existente devolvem
       respostas idênticas** — é a asserção que justifica o sprint, no mesmo formato do teste
       byte a byte do login
 
 ---
 
-## S4 — CRUD do domínio e a query de capacidade
+## S4 — CRUD do domínio e a query de capacidade · ⏳ Próximo
 
 - [ ] Schemas Pydantic `Create` / `Update` / `Read` por entidade
 - [ ] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados

@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 
 from syncaai.config import Settings
 from syncaai.errors import InvalidVerificationTokenError
-from syncaai.mail import Mailer
+from syncaai.mail import Mailer, send_or_log
 from syncaai.mail.messages import registration_attempted, verification_requested
 from syncaai.models import User, VerificationToken
 from syncaai.repositories.users import UserRepository
@@ -36,7 +36,7 @@ class RegistrationService:
         """
         existing = self._users.get_by_email(email)
         if existing is not None:
-            self._mailer.send(registration_attempted(email))
+            send_or_log(self._mailer, registration_attempted(email))
             return
 
         user = User(email=email, password_hash=hash_password(password), timezone=timezone_name)
@@ -80,8 +80,9 @@ class RegistrationService:
             )
         )
         query = urlencode({"token": raw})
-        self._mailer.send(
+        send_or_log(
+            self._mailer,
             verification_requested(
                 user.email, f"{self._settings.app_base_url.rstrip('/')}/verify?{query}"
-            )
+            ),
         )

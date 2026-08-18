@@ -8,26 +8,31 @@ from sqlalchemy.orm import Session
 from syncaai.api.dependencies import (
     MailerDep,
     limit_login,
+    limit_password_reset,
     limit_registration,
     limit_verification_resend,
 )
 from syncaai.config import Settings, get_settings
 from syncaai.db import get_session
 from syncaai.errors import InvalidCredentialsError
+from syncaai.repositories.password_reset_tokens import PasswordResetTokenRepository
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
 from syncaai.repositories.users import UserRepository
 from syncaai.repositories.verification_tokens import VerificationTokenRepository
 from syncaai.schemas.auth import (
     AcceptedResponse,
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
     ResendRequest,
+    ResetPasswordRequest,
     TokenResponse,
     VerifyRequest,
 )
 from syncaai.security.tokens import create_access_token
 from syncaai.services.auth import AuthService
+from syncaai.services.password_reset import PasswordResetService
 from syncaai.services.registration import RegistrationService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -57,7 +62,22 @@ def get_registration_service(
 
 
 ServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+def get_password_reset_service(
+    session: Annotated[Session, Depends(get_session)], settings: SettingsDep, mailer: MailerDep
+) -> PasswordResetService:
+    return PasswordResetService(
+        UserRepository(session),
+        PasswordResetTokenRepository(session),
+        RefreshTokenRepository(session),
+        mailer,
+        settings,
+    )
+
+
 RegistrationDep = Annotated[RegistrationService, Depends(get_registration_service)]
+PasswordResetDep = Annotated[PasswordResetService, Depends(get_password_reset_service)]
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
@@ -122,6 +142,38 @@ def resend_verification(
     service.resend(payload.email)
     session.commit()
     return AcceptedResponse()
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Ask for a password reset link",
+    dependencies=[Depends(limit_password_reset)],
+)
+def forgot_password(
+    payload: ForgotPasswordRequest, service: PasswordResetDep, session: SessionDep
+) -> AcceptedResponse:
+    """Answer the same thing whether or not there is an account.
+
+    This is the path that would reopen everything the sprint closed: it asks the same
+    question registration asks, in a different shape.
+    """
+    service.request(payload.email)
+    session.commit()
+    return AcceptedResponse()
+
+
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Set a new password",
+)
+def reset_password(
+    payload: ResetPasswordRequest, service: PasswordResetDep, session: SessionDep
+) -> None:
+    """Spend a reset token and sign every device out."""
+    service.reset(payload.token, payload.password)
+    session.commit()
 
 
 @router.post(
