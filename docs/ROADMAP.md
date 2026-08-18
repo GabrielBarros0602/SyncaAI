@@ -16,6 +16,21 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 **Repositório:** https://github.com/GabrielBarros0602/SyncaAI
 **Modelo de ameaças:** [`threat-model.md`](threat-model.md)
 
+## Esforço por sprint
+
+O git mede só o que foi commitado. Decisão, leitura e revisão não produzem commit, e a
+janela de calendário abaixo não as enxerga — o S2 fechou em 1,1 dia de commits depois de
+dias de conversa que não aparecem em lugar nenhum.
+
+Horas passam a ser anotadas a partir do S3, com registro feito na hora e não reconstruído
+depois.
+
+| Sprint | Calendário (git) | Horas |
+|---|---|---|
+| S0 | 4,4 dias | — |
+| S1 | 6,1 dias | — |
+| S2 | 1,1 dia | — |
+
 ---
 
 ## Pendências abertas

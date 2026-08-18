@@ -1,11 +1,6 @@
-## What changes
-
-<!-- One paragraph. What the branch does, not how. -->
-
-## Why
-
-<!-- The problem or decision behind it. Link the ADR if one was written:
-     Refs: ADR-00XX -->
+<!-- GitHub puts the commit message above this template when a branch has one commit, so
+     nothing here asks again for what a commit already says. If the branch has several
+     commits, write the summary yourself at the top. -->
 
 ## What to look at when reviewing
 
