@@ -179,7 +179,8 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
       → [ADR-0019](adr/0019-account-verification.md)
 - [ ] Registrar domínio e publicar SPF, DKIM e DMARC
 - [ ] Conta no provedor, com a chave em settings e ausente nos testes
-- [ ] Abstração de envio com dublê para teste, mesmo padrão do `PlanGenerator` do S6
+- [x] Abstração de envio com dublê para teste, mesmo padrão do `PlanGenerator` do S6 —
+      interface, implementação de console e implementação que grava em memória
 - [ ] Modelo de token de verificação: dono, hash do token, expiração, usado em
 - [ ] Cadastro sempre responde 202; o **email** decide a mensagem — link de verificação para
       endereço novo, aviso de tentativa para endereço que já tem conta

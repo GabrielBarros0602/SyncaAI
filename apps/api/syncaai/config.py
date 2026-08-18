@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     login_attempts_per_hour: int = 10
     registrations_per_hour: int = 5
 
+    # Which mailer the application uses. "console" writes to the log, which is what makes
+    # local development work with no provider account; "recording" keeps messages in memory.
+    # A real provider joins this list when there is a domain to send from (ADR-0018).
+    mail_backend: Literal["console", "recording"] = "console"
+
+    # The sender address. A placeholder until a domain exists — a provider will refuse to
+    # send from a domain it has not verified, so this value only becomes real then.
+    mail_from: str = "SyncaAI <no-reply@localhost>"
+
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 

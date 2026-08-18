@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from syncaai.config import Settings, get_settings
 from syncaai.db import get_session
 from syncaai.errors import InvalidCredentialsError
+from syncaai.mail import ConsoleMailer, Mailer, RecordingMailer
 from syncaai.models import User
 from syncaai.repositories.users import UserRepository
 from syncaai.security.tokens import InvalidTokenError, decode_access_token
@@ -95,3 +96,17 @@ def limit_registration(address: ClientAddress, session: SessionDep, settings: Se
     exhaustion vector on its own, before any question of account enumeration.
     """
     RateLimiter(session).check(f"register:{address}", settings.registrations_per_hour)
+
+
+# One instance per process rather than per request. A recording mailer that was rebuilt on
+# every request would forget everything between them, which would make it useless as the
+# evidence ADR-0019 relies on.
+_MAILERS: dict[str, Mailer] = {"console": ConsoleMailer(), "recording": RecordingMailer()}
+
+
+def get_mailer(settings: SettingsDep) -> Mailer:
+    """Return the configured mailer."""
+    return _MAILERS[settings.mail_backend]
+
+
+MailerDep = Annotated[Mailer, Depends(get_mailer)]
