@@ -24,6 +24,11 @@ from syncaai.config import get_settings
 def get_engine() -> Engine:
     """Return the process-wide engine and its connection pool.
 
+    This reads settings itself rather than receiving them, unlike everything on the request
+    path (see ``syncaai.main``). That is deliberate: an engine is a process-level decision
+    made once, not a per-request one, so there is nothing for a test to vary. A test that
+    needs a different database changes the environment before the process reads it.
+
     ``pool_pre_ping`` issues a cheap liveness check before handing out a pooled
     connection. Without it, a connection dropped while idle — Postgres restarted,
     an idle timeout, a network blip — is handed to the application and fails on

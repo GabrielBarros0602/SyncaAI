@@ -40,18 +40,13 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 
 | Pendência | Onde resolver |
 |---|---|
-| Unicidade de email recai sobre o valor gravado, normalizado pelo serviço. Um escritor que passe por fora do serviço poderia gravar variante de caixa. Índice funcional sobre `lower(email)` resolveria, ao custo de o `alembic check` não comparar índice de expressão de forma confiável | S4 |
-| `get_engine` ainda lê `get_settings()` por dentro, então o motor de banco não é substituível por injeção — só por variável de ambiente. Aceitável enquanto é decisão de processo e não de requisição, mas é a última leitura implícita que sobrou | quando incomodar |
+| Domínio próprio com SPF, DKIM e DMARC, e conta no provedor. Sem isso o envio fica restrito ao próprio dono da conta, então ninguém mais completa o cadastro. O código está pronto e testado contra o dublê — falta a decisão | antes de demonstrar ou publicar |
+| Cliente real do provedor de email. Um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
+| Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker | S6 |
 | Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar | S11, no deploy |
-| `rate_limit_counters` acumula linhas por janela e ninguém as remove. Uma por bucket por hora é pouco, mas cresce para sempre | quando incomodar |
-| Domínio próprio com SPF, DKIM e DMARC, e conta no provedor de email. Sem isso o envio fica restrito ao próprio dono da conta, então ninguém mais completa o cadastro — o código está pronto e testado contra o dublê, falta só a decisão | antes de demonstrar ou publicar |
-| Cliente real do provedor de email não existe. É um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
-| Tarefa não tem `tag`, que o protótipo mostra. String livre convida dado inconsistente; tabela de tags é decisão de design ainda não tomada | S4 |
-| `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S4 |
-| Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
-| Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
-| Nenhuma varredura de dependência vulnerável. Lockfile congela a vulnerabilidade tão bem quanto congela o comportamento. Alertas do Dependabot são ligados nas configurações do repositório, não no arquivo | ligar agora |
-| Conector do GitHub não autorizado, então o CI não é visível de dentro das sessões de trabalho | quando incomodar |
+| Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S10 ou stretch |
+| Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S10 |
+| Eu não enxergo o CI de dentro das sessões de trabalho, então o resultado sempre precisa ser colado. O conector do GitHub resolveria; o `gh` já resolveu o atrito de abrir PR, que era a parte que incomodava você | quando incomodar |
 
 ---
 
@@ -201,6 +196,15 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 
 ## S4 — CRUD do domínio e a query de capacidade · ⏳ Próximo
 
+- [ ] **Decidir: `tag` na tarefa.** O protótipo mostra uma por tarefa. String livre convida
+      dado inconsistente; tabela de tags é desenho que ainda não foi feito
+- [ ] **Decidir: `(task_id, position)` é único?** Sem unicidade, dois itens dividem a mesma
+      posição e a ordem do checklist fica não determinística. Com ela, reordenar exige
+      constraint adiada ou valores temporários
+- [ ] Unicidade de email sobre o valor normalizado, imposta pelo schema e não só pelo
+      serviço — hoje um escritor que passe por fora gravaria variante de caixa. Índice
+      funcional sobre `lower(email)`, conferindo que o `alembic check` não passa a acusar
+      divergência em todo PR
 - [ ] Schemas Pydantic `Create` / `Update` / `Read` por entidade
 - [ ] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados
       via `Depends` — nascem filtrados por `user_id`, sem retrofit
