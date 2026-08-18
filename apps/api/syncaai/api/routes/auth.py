@@ -5,21 +5,30 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Cookie, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from syncaai.api.dependencies import limit_login, limit_registration
+from syncaai.api.dependencies import (
+    MailerDep,
+    limit_login,
+    limit_registration,
+    limit_verification_resend,
+)
 from syncaai.config import Settings, get_settings
 from syncaai.db import get_session
 from syncaai.errors import InvalidCredentialsError
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
 from syncaai.repositories.users import UserRepository
+from syncaai.repositories.verification_tokens import VerificationTokenRepository
 from syncaai.schemas.auth import (
+    AcceptedResponse,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResendRequest,
     TokenResponse,
-    UserRead,
+    VerifyRequest,
 )
 from syncaai.security.tokens import create_access_token
 from syncaai.services.auth import AuthService
+from syncaai.services.registration import RegistrationService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -39,7 +48,16 @@ def get_auth_service(
     return AuthService(UserRepository(session), RefreshTokenRepository(session), settings)
 
 
+def get_registration_service(
+    session: Annotated[Session, Depends(get_session)], settings: SettingsDep, mailer: MailerDep
+) -> RegistrationService:
+    return RegistrationService(
+        UserRepository(session), VerificationTokenRepository(session), mailer, settings
+    )
+
+
 ServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+RegistrationDep = Annotated[RegistrationService, Depends(get_registration_service)]
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
@@ -59,19 +77,51 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
 
 @router.post(
     "/register",
-    status_code=status.HTTP_201_CREATED,
-    summary="Create an account",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Ask to create an account",
     dependencies=[Depends(limit_registration)],
 )
-def register(payload: RegisterRequest, service: ServiceDep, session: SessionDep) -> UserRead:
-    """Create an account and return it.
+def register(
+    payload: RegisterRequest, service: RegistrationDep, session: SessionDep
+) -> AcceptedResponse:
+    """Answer the same thing whether or not the address already has an account.
 
-    No token is issued here. Registration is the rare path, and minting credentials in two
-    places doubles what has to be audited; the client logs in afterwards.
+    202 rather than 201: nothing usable was created from the caller's point of view, and
+    saying "created" would be a claim only true in one of the two cases.
     """
-    user = service.register(payload.email, payload.password, payload.timezone)
+    service.register(payload.email, payload.password, payload.timezone)
     session.commit()
-    return UserRead.model_validate(user)
+    return AcceptedResponse()
+
+
+@router.post("/verify", status_code=status.HTTP_204_NO_CONTENT, summary="Confirm an address")
+def verify(payload: VerifyRequest, service: RegistrationDep, session: SessionDep) -> None:
+    """Spend a confirmation token.
+
+    A POST rather than a link the mail client can follow. Scanners fetch links in mail, and
+    a scanner would spend the token before its owner ever clicked; the page behind the link
+    posts here instead (ADR-0019).
+    """
+    service.verify(payload.token)
+    session.commit()
+
+
+@router.post(
+    "/resend-verification",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Ask for another confirmation link",
+    dependencies=[Depends(limit_verification_resend)],
+)
+def resend_verification(
+    payload: ResendRequest, service: RegistrationDep, session: SessionDep
+) -> AcceptedResponse:
+    """Answer the same thing whether or not there was anything to send.
+
+    A different answer here would restore the oracle registration stopped being.
+    """
+    service.resend(payload.email)
+    session.commit()
+    return AcceptedResponse()
 
 
 @router.post(

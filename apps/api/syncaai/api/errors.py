@@ -8,19 +8,29 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from syncaai.errors import (
-    EmailAlreadyRegisteredError,
+    AccountNotVerifiedError,
     InvalidCredentialsError,
+    InvalidVerificationTokenError,
     RateLimitExceededError,
 )
 from syncaai.security.passwords import PasswordTooLongError
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    @app.exception_handler(EmailAlreadyRegisteredError)
-    async def _email_taken(_: Request, __: EmailAlreadyRegisteredError) -> JSONResponse:
+    @app.exception_handler(AccountNotVerifiedError)
+    async def _not_verified(_: Request, __: AccountNotVerifiedError) -> JSONResponse:
+        # Reachable only with correct credentials, so saying why is safe and saying nothing
+        # would strand a user who has no way to guess what is wrong.
         return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={"detail": "That address already has an account."},
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Confirm your address before signing in."},
+        )
+
+    @app.exception_handler(InvalidVerificationTokenError)
+    async def _bad_verification(_: Request, __: InvalidVerificationTokenError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "That confirmation link is not valid. Request a new one."},
         )
 
     @app.exception_handler(InvalidCredentialsError)

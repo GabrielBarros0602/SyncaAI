@@ -181,15 +181,17 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 - [ ] Conta no provedor, com a chave em settings e ausente nos testes
 - [x] Abstração de envio com dublê para teste, mesmo padrão do `PlanGenerator` do S6 —
       interface, implementação de console e implementação que grava em memória
-- [ ] Modelo de token de verificação: dono, hash do token, expiração, usado em
-- [ ] Cadastro sempre responde 202; o **email** decide a mensagem — link de verificação para
+- [x] Modelo de token de verificação: dono, hash do token, expiração, usado em
+- [x] Cadastro sempre responde 202; o **email** decide a mensagem — link de verificação para
       endereço novo, aviso de tentativa para endereço que já tem conta
-- [ ] Endpoint de verificação com uso único e expiração
-- [ ] Reenvio com rate limit próprio — sem ele é vetor de email bombing
-- [ ] Login não distingue conta não verificada de conta inexistente
+- [x] Endpoint de verificação com uso único e expiração — `POST`, não link com `GET`,
+      porque scanner de email seguiria o link e gastaria o token antes do dono clicar
+- [x] Reenvio com rate limit próprio — sem ele é vetor de email bombing
+- [x] Login não distingue conta não verificada de conta inexistente — o 403 só é
+      alcançável depois de a senha bater
 - [ ] Recuperação de senha com resposta genérica, exista a conta ou não
 - [ ] Degradação: o que a aplicação faz quando o provedor de email está fora
-- [ ] **Teste provando que cadastro de endereço novo e de endereço existente devolvem
+- [x] **Teste provando que cadastro de endereço novo e de endereço existente devolvem
       respostas idênticas** — é a asserção que justifica o sprint, no mesmo formato do teste
       byte a byte do login
 

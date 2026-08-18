@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     login_attempts_per_hour: int = 10
     registrations_per_hour: int = 5
 
+    # Tighter than the others. Unlimited, this endpoint mails any address on demand, which
+    # is a way to use this service against somebody else's inbox (ADR-0019).
+    verification_resends_per_hour: int = 3
+
     # Which mailer the application uses. "console" writes to the log, which is what makes
     # local development work with no provider account; "recording" keeps messages in memory.
     # A real provider joins this list when there is a domain to send from (ADR-0018).
@@ -82,6 +86,13 @@ class Settings(BaseSettings):
     # The sender address. A placeholder until a domain exists — a provider will refuse to
     # send from a domain it has not verified, so this value only becomes real then.
     mail_from: str = "SyncaAI <no-reply@localhost>"
+
+    # Where a verification link points. The page there posts the token back to the API,
+    # rather than the link consuming it with a GET: mail scanners follow links, and a
+    # scanner would spend the token before its owner ever clicked (ADR-0019).
+    app_base_url: str = "http://localhost:5173"
+
+    verification_token_hours: int = 24
 
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"

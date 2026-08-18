@@ -10,8 +10,19 @@ class DomainError(Exception):
     """Base for a violated rule of the domain, as opposed to a failure of the process."""
 
 
-class EmailAlreadyRegisteredError(DomainError):
-    """Raised when registration is attempted with an address that already has an account."""
+class AccountNotVerifiedError(DomainError):
+    """Raised when correct credentials belong to an account whose address is unproven.
+
+    Only reachable after authentication succeeds, so it discloses nothing: a caller holding
+    the right password already knows the account exists (ADR-0019).
+    """
+
+
+class InvalidVerificationTokenError(DomainError):
+    """Raised for a verification token that is unknown, expired or already spent.
+
+    One error for all three, so presenting a token cannot be used to learn which it was.
+    """
 
 
 class InvalidCredentialsError(DomainError):

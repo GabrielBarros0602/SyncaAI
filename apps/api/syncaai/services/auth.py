@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from syncaai.config import Settings
-from syncaai.errors import EmailAlreadyRegisteredError, InvalidCredentialsError
+from syncaai.errors import AccountNotVerifiedError, InvalidCredentialsError
 from syncaai.models import RefreshToken, User
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
 from syncaai.repositories.users import UserRepository
@@ -19,23 +19,6 @@ class AuthService:
         self._sessions = sessions
         self._settings = settings
 
-    def register(self, email: str, password: str, timezone: str) -> User:
-        """Create an account.
-
-        Rejecting a duplicate address tells the caller that the address has an account,
-        which is the enumeration that login goes out of its way to prevent. Closing that
-        hole properly requires accepting the registration and sending a verification mail,
-        which this project cannot do yet. The leak is accepted and recorded rather than
-        hidden behind a vague message that would confuse a legitimate user without stopping
-        an attacker.
-        """
-        if self._users.get_by_email(email) is not None:
-            raise EmailAlreadyRegisteredError(email)
-
-        user = User(email=email, password_hash=hash_password(password), timezone=timezone)
-        self._users.add(user)
-        return user
-
     def authenticate(self, email: str, password: str) -> User:
         """Return the user these credentials identify, or raise.
 
@@ -50,6 +33,11 @@ class AuthService:
 
         if not verify_password(password, user.password_hash):
             raise InvalidCredentialsError
+
+        # Checked only after the password matched. A caller who got this far already knows
+        # the account exists, so naming the reason discloses nothing (ADR-0019).
+        if user.verified_at is None:
+            raise AccountNotVerifiedError
 
         # A successful login is the only moment the plain password is available, so it is
         # the only moment an old hash can be upgraded without asking for a reset.

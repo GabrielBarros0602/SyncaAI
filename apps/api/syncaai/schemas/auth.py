@@ -64,6 +64,28 @@ class LoginRequest(BaseModel):
         return _normalise_email(value)
 
 
+class VerifyRequest(BaseModel):
+    token: str
+
+
+class ResendRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def normalise(cls, value: str) -> str:
+        return _normalise_email(value)
+
+
+class AcceptedResponse(BaseModel):
+    """The one answer registration gives, whatever happened behind it."""
+
+    detail: str = (
+        "If that address is new, a confirmation link is on its way. "
+        "Check your inbox to finish signing up."
+    )
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
