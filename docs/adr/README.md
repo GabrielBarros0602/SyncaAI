@@ -26,6 +26,8 @@ the old one and update the status of the old one — never rewrite history.
 | [0015](0015-session-model.md) | Short-lived access token with a revocable refresh token | Accepted |
 | [0016](0016-ownership-isolation.md) | Ownership in the repository base, 404 across owners | Accepted |
 | [0017](0017-refresh-token-delivery.md) | Refresh token delivery: cookie for browsers, body for native | Accepted |
+| [0018](0018-email-delivery.md) | Send mail through a transactional provider, behind an abstraction | Accepted |
+| [0019](0019-account-verification.md) | Verify addresses, and make every authentication response generic | Accepted |
 
 ## Template
 
