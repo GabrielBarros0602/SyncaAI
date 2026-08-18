@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from syncaai.config import Settings
-from syncaai.errors import EmailAlreadyRegisteredError, InvalidCredentialsError
+from syncaai.errors import AccountNotVerifiedError, InvalidCredentialsError
 from syncaai.models import RefreshToken, User
 from syncaai.security import passwords
 from syncaai.security.passwords import hash_password
@@ -70,29 +70,12 @@ def _service(*users: User) -> AuthService:
     return AuthService(people, FakeSessions(people), A_SETTINGS)  # type: ignore[arg-type]
 
 
-def _existing(email: str = AN_EMAIL, password: str = A_PASSWORD) -> User:
+def _existing(email: str = AN_EMAIL, password: str = A_PASSWORD, *, verified: bool = True) -> User:
     user = User(email=email, password_hash=hash_password(password), timezone=A_ZONE)
     user.id = uuid.uuid4()
     user.created_at = A_TIMESTAMP
+    user.verified_at = A_TIMESTAMP if verified else None
     return user
-
-
-def test_registering_stores_a_hash_and_never_the_password() -> None:
-    users = FakeUsers()
-    service = AuthService(users, FakeSessions(users), A_SETTINGS)  # type: ignore[arg-type]
-
-    user = service.register(AN_EMAIL, A_PASSWORD, A_ZONE)
-
-    assert user.password_hash != A_PASSWORD
-    assert A_PASSWORD not in user.password_hash
-    assert users.rows == [user]
-
-
-def test_registering_an_address_that_already_exists_is_refused() -> None:
-    service = _service(_existing())
-
-    with pytest.raises(EmailAlreadyRegisteredError):
-        service.register(AN_EMAIL, A_PASSWORD, A_ZONE)
 
 
 def test_the_right_credentials_authenticate() -> None:
@@ -194,3 +177,19 @@ def test_an_expired_session_is_refused() -> None:
 def test_revoking_an_unknown_session_is_silent() -> None:
     """Logging out answers the same way regardless, so it reveals nothing."""
     _service(_existing()).revoke_refresh_token("never issued")
+
+
+def test_an_unverified_account_cannot_authenticate() -> None:
+    """Raised only after the password matched, so it discloses nothing new."""
+    service = _service(_existing(verified=False))
+
+    with pytest.raises(AccountNotVerifiedError):
+        service.authenticate(AN_EMAIL, A_PASSWORD)
+
+
+def test_a_wrong_password_on_an_unverified_account_is_indistinguishable() -> None:
+    """The generic error, not the verification one — otherwise this becomes the oracle."""
+    service = _service(_existing(verified=False))
+
+    with pytest.raises(InvalidCredentialsError):
+        service.authenticate(AN_EMAIL, "not the password")

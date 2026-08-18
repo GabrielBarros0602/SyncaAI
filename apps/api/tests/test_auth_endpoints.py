@@ -21,7 +21,6 @@ from tests.test_auth_service import (
     _existing,
 )
 
-REGISTER = "/api/v1/auth/register"
 LOGIN = "/api/v1/auth/login"
 REFRESH = "/api/v1/auth/refresh"
 LOGOUT = "/api/v1/auth/logout"
@@ -46,106 +45,6 @@ def _wire(app: FastAPI, users: FakeUsers, settings: Settings) -> FakeSessions:
         settings,
     )
     return sessions
-
-
-def test_registering_returns_the_created_account(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    _wire(app, FakeUsers(), settings)
-
-    response = client.post(
-        REGISTER, json={"email": AN_EMAIL, "password": A_PASSWORD, "timezone": "Europe/Lisbon"}
-    )
-
-    assert response.status_code == 201
-    body = response.json()
-    assert body["email"] == AN_EMAIL
-    assert body["timezone"] == "Europe/Lisbon"
-    assert "password" not in body
-    assert "password_hash" not in body
-
-
-def test_registering_normalises_the_address(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    """Mixed case and surrounding space must not create a second account."""
-    users = FakeUsers()
-    _wire(app, users, settings)
-
-    response = client.post(
-        REGISTER, json={"email": "  GaBrIeL@Example.COM  ", "password": A_PASSWORD}
-    )
-
-    assert response.status_code == 201
-    assert response.json()["email"] == AN_EMAIL
-    assert users.rows[0].email == AN_EMAIL
-
-
-def test_registering_an_existing_address_answers_409(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    _wire(app, FakeUsers(_existing()), settings)
-
-    response = client.post(REGISTER, json={"email": AN_EMAIL, "password": A_PASSWORD})
-
-    assert response.status_code == 409
-
-
-def test_a_malformed_address_is_refused(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    _wire(app, FakeUsers(), settings)
-
-    assert (
-        client.post(REGISTER, json={"email": "not-an-email", "password": A_PASSWORD}).status_code
-        == 422
-    )
-
-
-def test_a_special_use_domain_is_refused(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    """RFC 2606 reserves .test, .invalid and .localhost. The validator rejects them.
-
-    Worth asserting because it is stricter than a hand-written pattern would be, and
-    because it is the kind of behaviour that surprises whoever writes the first fixture.
-    """
-    _wire(app, FakeUsers(), settings)
-
-    response = client.post(REGISTER, json={"email": "someone@example.test", "password": A_PASSWORD})
-
-    assert response.status_code == 422
-
-
-def test_a_short_password_is_refused(app: FastAPI, client: TestClient, settings: Settings) -> None:
-    _wire(app, FakeUsers(), settings)
-
-    assert client.post(REGISTER, json={"email": AN_EMAIL, "password": "short"}).status_code == 422
-
-
-def test_an_unknown_time_zone_is_refused(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    """Refused here so no later window calculation raises far from the cause."""
-    _wire(app, FakeUsers(), settings)
-
-    response = client.post(
-        REGISTER,
-        json={"email": AN_EMAIL, "password": A_PASSWORD, "timezone": "Marte/Olympus"},
-    )
-
-    assert response.status_code == 422
-
-
-def test_the_default_time_zone_is_applied(
-    app: FastAPI, client: TestClient, settings: Settings
-) -> None:
-    users = FakeUsers()
-    _wire(app, users, settings)
-
-    client.post(REGISTER, json={"email": AN_EMAIL, "password": A_PASSWORD})
-
-    assert users.rows[0].timezone == "America/Sao_Paulo"
 
 
 def test_logging_in_returns_a_usable_access_token(

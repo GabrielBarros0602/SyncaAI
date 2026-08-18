@@ -89,6 +89,17 @@ def limit_login(address: ClientAddress, session: SessionDep, settings: SettingsD
     RateLimiter(session).check(f"login:{address}", settings.login_attempts_per_hour)
 
 
+def limit_verification_resend(
+    address: ClientAddress, session: SessionDep, settings: SettingsDep
+) -> None:
+    """Bound how often a caller can make this service mail somebody.
+
+    Tighter than login, because the cost of abuse falls on a third party: the owner of the
+    address being mailed, who never asked for any of it.
+    """
+    RateLimiter(session).check(f"resend:{address}", settings.verification_resends_per_hour)
+
+
 def limit_registration(address: ClientAddress, session: SessionDep, settings: SettingsDep) -> None:
     """Bound registrations per caller.
 

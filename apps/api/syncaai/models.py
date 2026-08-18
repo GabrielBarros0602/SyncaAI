@@ -44,7 +44,7 @@ from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.schema import FetchedValue
 
-from syncaai.security.refresh import TOKEN_HASH_LENGTH
+from syncaai.security.opaque import TOKEN_HASH_LENGTH
 
 MINUTES_IN_A_DAY = 1440
 
@@ -98,6 +98,10 @@ class User(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Null until the address is proven reachable. An account cannot log in before this is
+    # set (ADR-0019), so it is the gate rather than a label.
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     timezone: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default="America/Sao_Paulo"
     )
@@ -279,3 +283,32 @@ class RateLimitCounter(Base, TimestampMixin):
     bucket: Mapped[str] = mapped_column(String(200), nullable=False)
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     hits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class VerificationToken(Base, TimestampMixin):
+    """A single use of a link that proves someone reads an address.
+
+    Only the digest is stored, for the same reason as a session: a database leak should not
+    hand over the ability to verify somebody else's address.
+
+    Single use and a short life matter more here than for a session token, because this one
+    **travels in a URL**. It lands in browser history and is exposed through ``Referer`` to
+    whatever the landing page loads. Neither is preventable from the server; both are
+    survivable if the token dies on first use and expires within a day (ADR-0019).
+
+    ``used_at`` rather than deleting the row: a link presented twice is worth being able to
+    see, and the second presentation is the interesting one.
+    """
+
+    __tablename__ = "verification_tokens"
+    __table_args__ = (Index("ix_verification_tokens_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(TOKEN_HASH_LENGTH), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
