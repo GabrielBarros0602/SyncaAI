@@ -8,7 +8,9 @@ free capacity of your week, decomposes a goal into concrete items, and a determi
 scheduler places those items on the days that actually have room. The output is reviewable
 data in the product's own vocabulary, never a block of text to copy by hand.
 
-> Status: early development. The walking skeleton is the current milestone.
+> **Status:** in development. Accounts, sessions and per-owner isolation work; the
+> calendar domain and the AI layer do not exist yet. See the roadmap below for what is
+> built and what is next.
 
 ## Why this is not CRUD
 
@@ -38,10 +40,15 @@ Two design decisions carry most of the weight:
 |---|---|
 | API | Python 3.12, FastAPI, Pydantic |
 | Database | PostgreSQL 16, SQLAlchemy, Alembic |
-| Job queue | PostgreSQL, `SELECT ... FOR UPDATE SKIP LOCKED` |
-| Dependencies | pip + pip-tools |
+| Passwords | argon2id, memory-hard ([ADR-0014](docs/adr/0014-password-hashing-with-argon2id.md)) |
+| Sessions | short-lived JWT plus a revocable opaque refresh token ([ADR-0015](docs/adr/0015-session-model.md)) |
+| Mail | one interface, console and recording implementations ([ADR-0018](docs/adr/0018-email-delivery.md)) |
+| Dependencies | pip, with `uv` as the resolver ([why](CONTRIBUTING.md#dependencies)) |
 | Quality | ruff, mypy (strict), pytest |
 | Runtime | Docker Compose |
+
+Planned but not built: the job queue on PostgreSQL with `SELECT ... FOR UPDATE SKIP LOCKED`
+([ADR-0003](docs/adr/0003-ai-request-lifecycle.md)), and the AI layer it carries.
 
 Stack rationale, including the estimated cost of the alternative, is in
 [ADR-0001](docs/adr/0001-backend-stack.md).
@@ -51,11 +58,34 @@ Stack rationale, including the estimated cost of the alternative, is in
 ```
 .
 ├── apps/
-│   ├── api/       FastAPI service
-│   └── web/       interface prototype (visual baseline)
-├── docs/adr/      architecture decision records
+│   ├── api/                  FastAPI service
+│   └── web/                  interface prototype (visual baseline, not wired up)
+├── docs/
+│   ├── adr/                  architecture decision records
+│   ├── ROADMAP.md            sprint checklist and open questions
+│   └── threat-model.md       assets, attackers, what is and is not mitigated
+├── .github/                  CI, dependency scanning, pull request template
 └── docker-compose.yml
 ```
+
+## What the API does today
+
+| Endpoint | |
+|---|---|
+| `POST /api/v1/auth/register` | Answers `202` identically whether or not the address has an account. Which of the two happened is visible only to whoever reads the mailbox ([ADR-0019](docs/adr/0019-account-verification.md)). |
+| `POST /api/v1/auth/verify` | Spends a single-use confirmation token. A `POST`, not a link, because mail scanners follow links and would spend it first. |
+| `POST /api/v1/auth/resend-verification` | Another link, rate limited more tightly than login. |
+| `POST /api/v1/auth/login` | Returns an access token, and a refresh token by cookie or body depending on the client ([ADR-0017](docs/adr/0017-refresh-token-delivery.md)). Refuses an unverified account. |
+| `POST /api/v1/auth/refresh` | Exchanges a live session for a new access token. |
+| `POST /api/v1/auth/logout` | Revokes the session presented. |
+| `POST /api/v1/auth/forgot-password` | Answers `202` identically whether or not there is an account. |
+| `POST /api/v1/auth/reset-password` | Sets a new password and signs every device out. |
+| `GET /health`, `GET /health/ready` | Liveness and readiness, separate on purpose. |
+
+Interactive documentation is at `/docs` outside production.
+
+No calendar endpoints yet — the domain model and its constraints exist, and S4 puts an API
+in front of them.
 
 ## Running locally
 
@@ -81,7 +111,9 @@ pip install -r requirements.txt -r requirements-dev.txt
 uvicorn syncaai.main:app --reload
 ```
 
-`DATABASE_URL` already points at `localhost:5433`, which is where compose publishes the database, so nothing needs overriding. The api container gets `db:5432` from compose instead.
+`DATABASE_URL` already points at `localhost:5433`, which is where compose publishes the
+database, so nothing needs overriding. The api container gets `db:5432` from compose
+instead.
 
 ### Changing dependencies
 
@@ -138,9 +170,9 @@ written.
 |---|---|---|
 | S0 | Repository structure and walking skeleton | done |
 | S1 | Domain model and database | done |
-| S2 | Authentication and owner-scoped repository base | in progress |
-| S3 | Email verification and generic authentication responses | |
-| S4 | Domain CRUD and the day-capacity query | |
+| S2 | Authentication and owner-scoped repository base | done |
+| S3 | Email verification and generic authentication responses | done |
+| S4 | Domain CRUD and the day-capacity query | next |
 | S5 | First visible slice — login and the week's free capacity | |
 | S6 | AI pipeline against a test double, zero provider cost | |
 | S7 | Real provider, guardrails, degradation | |
@@ -193,6 +225,16 @@ Duas decisões carregam o peso:
 - **Saída de IA é proposta, não fato.** Planos gerados chegam como draft revisável. Nada é
   escrito no calendário antes da aprovação.
 
+### O que a API faz hoje
+
+Contas, sessões e isolamento por dono. Cadastro e recuperação de senha respondem **igual**
+exista ou não a conta — o que a resposta esconde, a caixa de entrada revela, e só para o
+dono do endereço. Sessão é revogável, senha é hasheada com argon2id, e toda leitura de
+recurso passa por uma base de repositório que não expõe query sem filtro de dono.
+
+Ainda **não existe** endpoint de calendário. O modelo de domínio e suas restrições existem;
+o S4 põe uma API na frente deles.
+
 ### Rodando localmente
 
 ```bash
@@ -201,6 +243,15 @@ docker compose up --build
 ```
 
 API em `http://localhost:8000`, documentação interativa em `http://localhost:8000/docs`.
+
+Em desenvolvimento o email é escrito no log em vez de enviado, então o link de verificação
+aparece no terminal.
+
+### Segurança
+
+O [`docs/threat-model.md`](docs/threat-model.md) registra o que vale proteger, quem
+realisticamente tentaria, o que já está no caminho e o que não está — incluindo o que foi
+aceito de propósito, e por quê.
 
 ### Decisões arquiteturais
 
