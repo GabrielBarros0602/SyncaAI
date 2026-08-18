@@ -81,3 +81,31 @@ jobs:
         # The floor guards against regression; it is not a target. Raise it deliberately
         # in S10 once a number has been chosen and justified.
         run: pytest --cov=syncaai --cov-report=term-missing --cov-fail-under=85
+
+  commits:
+    name: Commit messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The default shallow clone cannot see the base branch, so there is nothing to
+          # compare the branch against.
+          fetch-depth: 0
+
+      - name: Subjects fit in 72 characters
+        # CONTRIBUTING asks for it and six of the first forty-four commits broke it, all
+        # written by someone who had read the rule. A convention only holds if something
+        # checks it. GitHub truncates the subject at exactly this width, which is why the
+        # limit is not arbitrary.
+        run: |
+          long=$(git log --format='%s' origin/${{ github.base_ref }}..HEAD | awk 'length($0) > 72')
+          if [ -n "$long" ]; then
+            echo "These subjects exceed 72 characters:"
+            echo "$long" | while read -r subject; do
+              echo "  ${#subject}  $subject"
+            done
+            exit 1
+          fi
+          echo "All subjects fit."

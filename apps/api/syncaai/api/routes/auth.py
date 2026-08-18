@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Cookie, Depends, Response, status
 from sqlalchemy.orm import Session
 
+from syncaai.api.dependencies import limit_login, limit_registration
 from syncaai.config import Settings, get_settings
 from syncaai.db import get_session
 from syncaai.errors import InvalidCredentialsError
@@ -56,7 +57,12 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
     )
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, summary="Create an account")
+@router.post(
+    "/register",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an account",
+    dependencies=[Depends(limit_registration)],
+)
 def register(payload: RegisterRequest, service: ServiceDep, session: SessionDep) -> UserRead:
     """Create an account and return it.
 
@@ -68,7 +74,11 @@ def register(payload: RegisterRequest, service: ServiceDep, session: SessionDep)
     return UserRead.model_validate(user)
 
 
-@router.post("/login", summary="Exchange credentials for tokens")
+@router.post(
+    "/login",
+    summary="Exchange credentials for tokens",
+    dependencies=[Depends(limit_login)],
+)
 def login(
     payload: LoginRequest,
     service: ServiceDep,

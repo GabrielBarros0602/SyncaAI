@@ -7,7 +7,11 @@ reconstructed. Services raise domain errors and never import ``HTTPException``.
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from syncaai.errors import EmailAlreadyRegisteredError, InvalidCredentialsError
+from syncaai.errors import (
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+    RateLimitExceededError,
+)
 from syncaai.security.passwords import PasswordTooLongError
 
 
@@ -27,6 +31,16 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Incorrect email or password."},
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(RateLimitExceededError)
+    async def _rate_limited(_: Request, error: RateLimitExceededError) -> JSONResponse:
+        # Retry-After tells an honest client exactly when to come back, which is cheaper
+        # for everyone than it guessing. It tells an attacker nothing it could not measure.
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": "Too many attempts. Try again later."},
+            headers={"Retry-After": str(error.retry_after_seconds)},
         )
 
     @app.exception_handler(PasswordTooLongError)

@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     access_token_minutes: int = 30
     refresh_token_days: int = 30
 
+    # Per client address, per hour. Login is bounded to slow credential guessing;
+    # registration because each attempt costs a 64 MiB argon2 hash, which makes an
+    # unlimited endpoint a memory exhaustion vector regardless of enumeration.
+    login_attempts_per_hour: int = 10
+    registrations_per_hour: int = 5
+
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 

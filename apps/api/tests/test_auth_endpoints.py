@@ -7,6 +7,7 @@ error mapping and token issuing are all exercised without a database.
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from syncaai.api.dependencies import limit_login, limit_registration
 from syncaai.api.routes.auth import get_auth_service
 from syncaai.config import Settings
 from syncaai.db import get_session
@@ -34,6 +35,10 @@ class _NoOpSession:
 
 def _wire(app: FastAPI, users: FakeUsers, settings: Settings) -> FakeSessions:
     sessions = FakeSessions(users)
+    # The limiters need a real session and are exercised on their own; here they would only
+    # add a database to tests that are about something else.
+    app.dependency_overrides[limit_login] = lambda: None
+    app.dependency_overrides[limit_registration] = lambda: None
     app.dependency_overrides[get_session] = lambda: _NoOpSession()
     app.dependency_overrides[get_auth_service] = lambda: AuthService(
         users,  # type: ignore[arg-type]
