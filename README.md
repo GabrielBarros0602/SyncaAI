@@ -150,6 +150,12 @@ written.
 | S11 | Tests, polish, publication | |
 | Phase 2 | Core reimplemented in Java 21 / Spring Boot | |
 
+## Security
+
+[`docs/threat-model.md`](docs/threat-model.md) records what is worth protecting, who would
+realistically try, what is already in the way and what is not — including what is accepted
+on purpose, and why. Reviewed at the end of a sprint that changes the attack surface.
+
 ## Contributing
 
 Conventions — commit format, scopes, ADR references, sprint discipline — are in

@@ -14,6 +14,7 @@ Convenções de commit em [`../CONTRIBUTING.md`](../CONTRIBUTING.md). Decisões 
 [`adr/`](adr/README.md).
 
 **Repositório:** https://github.com/GabrielBarros0602/SyncaAI
+**Modelo de ameaças:** [`threat-model.md`](threat-model.md)
 
 ---
 
@@ -32,7 +33,7 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | `(task_id, position)` não é único, então dois itens podem dividir a mesma posição e a ordem do checklist fica não determinística. Tornar único tem custo em reordenação — é decisão, não conserto óbvio | S4 |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S9 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S9 |
-| Horas reais gastas por sprint não estão sendo anotadas, então a estimativa do [ADR-0001](adr/0001-backend-stack.md) segue não validada | contínuo |
+| Nenhuma varredura de dependência vulnerável. Lockfile congela a vulnerabilidade tão bem quanto congela o comportamento. Alertas do Dependabot são ligados nas configurações do repositório, não no arquivo | ligar agora |
 | Conector do GitHub não autorizado, então o CI não é visível de dentro das sessões de trabalho | quando incomodar |
 
 ---
