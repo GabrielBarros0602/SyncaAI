@@ -4,13 +4,14 @@
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 
-> **The hour estimate lost its basis.** It assumed the developer writes the code. The
-> working arrangement changed during S1 to one where the code is written for review, so
-> hours spent no longer compare against the number below and tracking them would validate
-> nothing. What is measurable, and is tracked instead, is calendar time per sprint: S0 took
-> 4.4 days, S1 6.1, S2 1.1. The comparison the ADR was built on — Python against Java for
-> the same person — remains the reasoning that decided the stack, and it is untestable now
-> for the same reason.
+> **The hour estimate lost its basis.** It assumed the developer writes the code, and the
+> working arrangement changed during S1 to one where the code is written for review. Hours
+> spent now measure different work and cannot be compared against the figures below. They
+> are tracked from S3 onward in `docs/ROADMAP.md` anyway, because they say what the project
+> costs its owner — recorded as the work happens, since reconstructing them afterwards
+> produced a number too unreliable to keep. The comparison this record was built on, Python
+> against Java for the same person, is what decided the stack and is untestable now for the
+> same reason.
 
 ## Context
 
