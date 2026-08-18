@@ -312,3 +312,30 @@ class VerificationToken(Base, TimestampMixin):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship()
+
+
+class PasswordResetToken(Base, TimestampMixin):
+    """A single use of a link that sets a new password.
+
+    A separate table from ``verification_tokens`` rather than one table with a purpose
+    column. The two grant different powers, and sharing storage means a check somewhere has
+    to keep them apart — which is a check that can be forgotten. If a third kind appears,
+    collapsing all of them into one table behind a purpose-scoped repository becomes the
+    better trade; two does not justify it yet.
+
+    Shorter-lived than a verification token because it is worth more: verification proves an
+    address is read, a reset takes over the account.
+    """
+
+    __tablename__ = "password_reset_tokens"
+    __table_args__ = (Index("ix_password_reset_tokens_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(TOKEN_HASH_LENGTH), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()

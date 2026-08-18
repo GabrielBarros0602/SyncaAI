@@ -79,3 +79,31 @@ def test_the_mailer_survives_between_requests(settings: Settings) -> None:
     settings.mail_backend = "recording"
 
     assert get_mailer(settings) is get_mailer(settings)
+
+
+class _BrokenMailer:
+    def send(self, message: Message) -> None:
+        message_error = "the provider is having a bad day"
+        raise RuntimeError(message_error)
+
+
+def test_a_failed_send_does_not_propagate(caplog: pytest.LogCaptureFixture) -> None:
+    """ADR-0018: losing an account because a third party had an outage is the worse loss."""
+    from syncaai.mail import send_or_log
+
+    with caplog.at_level(logging.ERROR, logger="syncaai.mail"):
+        send_or_log(_BrokenMailer(), A_MESSAGE)
+
+    assert "mail could not be sent" in caplog.text
+
+
+def test_a_failed_send_does_not_log_the_address_in_the_clear(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A log aggregator should not become a list of who uses this service."""
+    from syncaai.mail import send_or_log
+
+    with caplog.at_level(logging.ERROR, logger="syncaai.mail"):
+        send_or_log(_BrokenMailer(), A_MESSAGE)
+
+    assert A_MESSAGE.to not in caplog.text

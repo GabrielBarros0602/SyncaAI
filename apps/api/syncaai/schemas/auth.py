@@ -77,6 +77,20 @@ class ResendRequest(BaseModel):
         return _normalise_email(value)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def normalise(cls, value: str) -> str:
+        return _normalise_email(value)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+
 class AcceptedResponse(BaseModel):
     """The one answer registration gives, whatever happened behind it."""
 

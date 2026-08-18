@@ -41,3 +41,23 @@ def registration_attempted(to: str) -> Message:
             "No action is needed."
         ),
     )
+
+
+def password_reset_requested(to: str, reset_url: str) -> Message:
+    """Sent when a reset was asked for on an address that has an account.
+
+    Nothing is sent when the address has no account. That is not only about not confirming
+    which addresses exist — sending anyway would let anyone use this service to put mail in
+    a stranger's inbox, which is a different and worse problem.
+    """
+    return Message(
+        to=to,
+        subject="Reset your SyncaAI password",
+        text=(
+            "Someone asked to reset the password for this address.\n\n"
+            f"Set a new one here:\n{reset_url}\n\n"
+            "The link works once and expires in an hour. Using it signs out every device "
+            "currently signed in.\n\n"
+            "If this was not you, nothing has changed and you can ignore this message."
+        ),
+    )

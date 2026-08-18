@@ -51,6 +51,11 @@ class FakeSessions:
     def get_by_hash(self, token_hash: str) -> RefreshToken | None:
         return next((row for row in self.rows if row.token_hash == token_hash), None)
 
+    def revoke_all_for(self, user_id: uuid.UUID) -> None:
+        for row in self.rows:
+            if row.user_id == user_id and row.revoked_at is None:
+                row.revoked_at = datetime.now(timezone.utc)
+
     def add(self, token: RefreshToken) -> None:
         token.id = uuid.uuid4()
         token.created_at = A_TIMESTAMP

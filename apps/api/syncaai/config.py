@@ -94,6 +94,10 @@ class Settings(BaseSettings):
 
     verification_token_hours: int = 24
 
+    # Shorter than a verification token, because it is worth more: verification proves an
+    # address is read, a reset takes over the account.
+    password_reset_token_hours: int = 1
+
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
