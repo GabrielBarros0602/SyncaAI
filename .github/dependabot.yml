@@ -1,0 +1,26 @@
+# Addresses threat 18 in docs/threat-model.md: a lockfile pins versions, which freezes a
+# known vulnerability exactly as reliably as it freezes behaviour.
+#
+# The valuable half of this is not here. Dependabot *alerts*, which report published
+# advisories against what is pinned, are switched on in the repository settings rather
+# than in a file. This config only schedules version bumps.
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Caveat worth knowing: Dependabot edits requirements.txt directly and does not know
+    # about requirements.in. Its pull request is a signal, not the final form — rerun
+    # uv pip compile so the lockfile stays something the .in file actually produces.
+    commit-message:
+      prefix: build
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
