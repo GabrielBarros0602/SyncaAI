@@ -100,7 +100,10 @@ jobs:
         # checks it. GitHub truncates the subject at exactly this width, which is why the
         # limit is not arbitrary.
         run: |
-          long=$(git log --format='%s' origin/${{ github.base_ref }}..HEAD | awk 'length($0) > 72')
+          # --no-merges skips the synthetic merge commit that actions/checkout builds
+          # for a pull request. Its subject is "Merge <sha> into <sha>", always over the
+          # limit, and nobody wrote it.
+          long=$(git log --no-merges --format='%s' origin/${{ github.base_ref }}..HEAD | awk 'length($0) > 72')
           if [ -n "$long" ]; then
             echo "These subjects exceed 72 characters:"
             echo "$long" | while read -r subject; do
