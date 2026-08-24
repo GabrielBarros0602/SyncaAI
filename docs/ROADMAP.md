@@ -43,7 +43,7 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | Domínio próprio com SPF, DKIM e DMARC, e conta no provedor. Sem isso o envio fica restrito ao próprio dono da conta, então ninguém mais completa o cadastro. O código está pronto e testado contra o dublê — falta a decisão | antes de demonstrar ou publicar |
 | Cliente real do provedor de email. Um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
 | Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker | S6 |
-| Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar | S11, no deploy |
+| Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar. **O [ADR-0021](adr/0021-browser-session-and-origin.md) tornou isso certo em vez de hipotético:** uma origem só em desenvolvimento significa um proxy em produção | S11, no deploy |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S10 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S10 |
 | Eu não enxergo o CI de dentro das sessões de trabalho, então o resultado sempre precisa ser colado. O conector do GitHub resolveria; o `gh` já resolveu o atrito de abrir PR, que era a parte que incomodava você | quando incomodar |
@@ -244,6 +244,17 @@ algo de que degradar.
 Antecipado de propósito. Sem esta fatia, nada do produto é visível antes do S7, e o vazio
 entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada — nenhuma IA.
 
+- [x] **Decidido:** Vite + React + TypeScript, três telas, sem biblioteca de estado
+      → vitrine funcional, substituída no S8
+- [x] **Decidido:** o navegador fala com **uma origem só** — o Vite encaminha `/api/*` para a
+      API, e a API **não ganha CORS** → [ADR-0021](adr/0021-browser-session-and-origin.md)
+- [x] **Decidido:** access token **só em memória**, com refresh silencioso pelo cookie
+      `HttpOnly`. Nada em `localStorage` nem em `sessionStorage`
+      → [ADR-0021](adr/0021-browser-session-and-origin.md)
+- [ ] `vite.config.ts` com o proxy, e lint que proíbe qualquer acesso a storage do navegador
+- [ ] Estado de sessão com três valores; nada renderiza antes do refresh de boot resolver
+- [ ] Um único wrapper de HTTP dono do retry após `401`, com refresh em voo compartilhado
+- [ ] Teste: dois `401` simultâneos causam **exatamente uma** chamada a `/auth/refresh`
 - [ ] Tela de login e cadastro, consumindo os endpoints do S2
 - [ ] Sessão persistida no cliente e rota protegida
 - [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
