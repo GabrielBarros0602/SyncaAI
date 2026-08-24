@@ -251,10 +251,10 @@ entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada 
 - [x] **Decidido:** access token **só em memória**, com refresh silencioso pelo cookie
       `HttpOnly`. Nada em `localStorage` nem em `sessionStorage`
       → [ADR-0021](adr/0021-browser-session-and-origin.md)
-- [ ] `vite.config.ts` com o proxy, e lint que proíbe qualquer acesso a storage do navegador
-- [ ] Estado de sessão com três valores; nada renderiza antes do refresh de boot resolver
-- [ ] Um único wrapper de HTTP dono do retry após `401`, com refresh em voo compartilhado
-- [ ] Teste: dois `401` simultâneos causam **exatamente uma** chamada a `/auth/refresh`
+- [x] `vite.config.ts` com o proxy, e lint que proíbe qualquer acesso a storage do navegador
+- [x] Estado de sessão com três valores; nada renderiza antes do refresh de boot resolver
+- [x] Um único wrapper de HTTP dono do retry após `401`, com refresh em voo compartilhado
+- [x] Teste: dois `401` simultâneos causam **exatamente uma** chamada a `/auth/refresh`
 - [ ] Tela de login e cadastro, consumindo os endpoints do S2
 - [ ] Sessão persistida no cliente e rota protegida
 - [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
