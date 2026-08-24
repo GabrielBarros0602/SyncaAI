@@ -16,7 +16,7 @@ from syncaai.api.dependencies import limit_password_reset
 from syncaai.api.routes.auth import get_password_reset_service
 from syncaai.config import Settings
 from syncaai.db import get_session
-from syncaai.errors import InvalidVerificationTokenError
+from syncaai.errors import InvalidLinkTokenError
 from syncaai.mail import RecordingMailer
 from syncaai.models import PasswordResetToken, RefreshToken
 from syncaai.security.opaque import hash_token
@@ -148,7 +148,7 @@ def test_a_reset_token_works_only_once(settings: Settings, mailer: RecordingMail
     raw = _take_link(mailer, AN_EMAIL)
     service.reset(raw, A_NEW_PASSWORD)
 
-    with pytest.raises(InvalidVerificationTokenError):
+    with pytest.raises(InvalidLinkTokenError):
         service.reset(raw, "yet another password")
 
 
@@ -157,12 +157,28 @@ def test_an_expired_reset_token_is_refused(settings: Settings, mailer: Recording
     service.request(AN_EMAIL)
     tokens.rows[0].expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
 
-    with pytest.raises(InvalidVerificationTokenError):
+    with pytest.raises(InvalidLinkTokenError):
         service.reset(_take_link(mailer, AN_EMAIL), A_NEW_PASSWORD)
 
 
 def test_an_unknown_reset_token_is_refused(settings: Settings, mailer: RecordingMailer) -> None:
     service, _, _ = _service(FakeUsers(_existing()), mailer, settings)
 
-    with pytest.raises(InvalidVerificationTokenError):
+    with pytest.raises(InvalidLinkTokenError):
         service.reset("never issued", A_NEW_PASSWORD)
+
+
+def test_the_reset_response_does_not_talk_about_signing_up(
+    app: FastAPI, client: TestClient, settings: Settings, mailer: RecordingMailer
+) -> None:
+    """It used to. Somebody asking to reset a password was told to finish registering."""
+    users = FakeUsers(_existing())
+    service, _, _ = _service(users, mailer, settings)
+    app.dependency_overrides[limit_password_reset] = lambda: None
+    app.dependency_overrides[get_session] = lambda: _NoOpSession()
+    app.dependency_overrides[get_password_reset_service] = lambda: service
+
+    detail = client.post(FORGOT, json={"email": AN_EMAIL}).json()["detail"]
+
+    assert "password" in detail
+    assert "signing up" not in detail

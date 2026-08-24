@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from syncaai.errors import (
     AccountNotVerifiedError,
     InvalidCredentialsError,
-    InvalidVerificationTokenError,
+    InvalidLinkTokenError,
     RateLimitExceededError,
 )
 from syncaai.security.passwords import PasswordTooLongError
@@ -26,8 +26,8 @@ def register_error_handlers(app: FastAPI) -> None:
             content={"detail": "Confirm your address before signing in."},
         )
 
-    @app.exception_handler(InvalidVerificationTokenError)
-    async def _bad_verification(_: Request, __: InvalidVerificationTokenError) -> JSONResponse:
+    @app.exception_handler(InvalidLinkTokenError)
+    async def _bad_verification(_: Request, __: InvalidLinkTokenError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": "That confirmation link is not valid. Request a new one."},

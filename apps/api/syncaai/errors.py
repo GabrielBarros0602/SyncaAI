@@ -18,10 +18,15 @@ class AccountNotVerifiedError(DomainError):
     """
 
 
-class InvalidVerificationTokenError(DomainError):
-    """Raised for a verification token that is unknown, expired or already spent.
+class InvalidLinkTokenError(DomainError):
+    """Raised for a token from a mailed link that is unknown, expired or already spent.
 
-    One error for all three, so presenting a token cannot be used to learn which it was.
+    Covers confirmation and password reset alike: both arrive the same way, fail the same
+    way, and answer the same way. Naming it after only one of them sent whoever debugged a
+    reset failure looking in the wrong place.
+
+    One error for all three conditions, so presenting a token cannot be used to learn which
+    of them it hit.
     """
 
 
