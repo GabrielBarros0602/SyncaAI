@@ -44,6 +44,8 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | Cliente real do provedor de email. Um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
 | Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker | S6 |
 | Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar. **O [ADR-0021](adr/0021-browser-session-and-origin.md) tornou isso certo em vez de hipotético:** uma origem só em desenvolvimento significa um proxy em produção | S11, no deploy |
+| O caminho **logado** nunca foi exercitado de ponta a ponta: conta real, cookie real, token de 30 minutos que expirou de verdade. O que existe hoje prova o caminho **deslogado** — o `401` atravessando o proxy foi verificado com os dois processos no ar. Metade disso vira teste de CI permanente (cadastro → token do `RecordingMailer` → verificação → login `web` → `/refresh` **só com o cookie** → `/me`, tudo no `TestClient`, que guarda cookie). A outra metade exige navegador de verdade e fica manual: uma passada sua com `docker compose up -d db` | teste de CI **no PR das telas**; a passada manual, uma vez, no mesmo PR |
+| **Horário útil por usuário.** A capacidade livre é medida contra o dia inteiro, então às 3 da manhã existem 60 minutos livres e nada impede o agendador de usá-los. Numa demo isso não parece arredondamento errado, parece produto quebrado. Exige ADR quando chegar: muda schema (preferências por usuário) e muda o que "capacidade livre" significa. O `GET /me` já é a casa disso, e o ADR-0004 já lista as três preferências que o planejador precisa — duração de bloco preferida, dias de folga, horário útil | **S6**, antes do agendador |
 | Serviço `web` no `docker-compose.yml`. Hoje a demo exige dois terminais. Adiado de propósito: Vite em container costuma quebrar o HMR por sincronia de arquivos, e a decisão pertence à mesma conversa de proxy reverso que o [ADR-0021](adr/0021-browser-session-and-origin.md) empurrou para lá | S11, no deploy |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S10 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S10 |
@@ -292,6 +294,9 @@ errado.
 - [ ] Modelo Pydantic da resposta; JSON schema gerado a partir dele, fonte única
 - [ ] Validação de invariantes de domínio separada da validação de schema (ADR-0005)
 - [ ] Uma tentativa de reparo, alimentada pelos erros de validação
+- [ ] **Horário útil por usuário, antes do agendador.** Sem isso o agendador distribui nos
+      minutos livres que existirem, e às 3 da manhã existem 60. Precisa de ADR: muda schema e
+      muda o significado de "capacidade livre"
 - [ ] Agendador como função pura: itens e capacidades entram, atribuições saem. Fronteiras
       primeiro — capacidade insuficiente, zero dias livres, item maior que qualquer bloco
 - [ ] `plan_draft` e `draft_item`
