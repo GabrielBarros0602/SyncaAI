@@ -209,22 +209,24 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
       sobre `lower(email)`. **Se o `alembic check` passar a acusar divergência em todo PR, é
       porque ele não compara índice de expressão de forma confiável, e aí a exclusão entra
       no `env.py` com o motivo escrito**
-- [ ] Schemas Pydantic `Create` / `Update` / `Read` por entidade
-- [ ] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados
+- [x] Schemas Pydantic `Create` / `Update` / `Read` por entidade
+- [x] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados
       via `Depends` — nascem filtrados por `user_id`, sem retrofit
-- [ ] Teste que prova o isolamento em cada endpoint que recebe um id: usuário A
+- [x] Teste que prova o isolamento em cada endpoint que recebe um id: usuário A
       pedindo recurso de B não recebe o recurso
-- [ ] Serviços com as regras de verdade
-- [ ] Routers conectados em `api/v1/router.py`
-- [ ] Exceções de domínio mapeadas para status HTTP num lugar só — não `HTTPException`
+- [x] Serviços com as regras de verdade
+- [x] Routers conectados em `api/v1/router.py`
+- [x] Exceções de domínio mapeadas para status HTTP num lugar só — não `HTTPException`
       espalhado pelos serviços
-- [ ] Paginação nos endpoints de listagem
+- [x] Paginação nos endpoints de listagem
 - [ ] **A query de capacidade livre por dia numa janela** — por dia: minutos ocupados, minutos
       livres, contagem de tarefas. É a fundação da camada de IA (ADR-0004) e precisa estar
       testada antes de qualquer linha de código de IA existir
-- [ ] Violação da constraint de exclusão traduzida para erro de domínio legível
-- [ ] Regra de serviço recusando início no passado, com erro de domínio e teste na fronteira:
+- [x] Violação da constraint de exclusão traduzida para erro de domínio legível
+- [x] Regra de serviço recusando início no passado, com erro de domínio e teste na fronteira:
       um minuto atrás recusa, um minuto à frente aceita
+- [x] `PATCH` distingue campo ausente de `null` explícito — sem isso uma nota podia ser
+      escrita e nunca removida
 - [ ] Capacidade livre calculada com `minutes_in_local_day`, não com 1440, e com piso em zero
       — um dia pode reportar mais minutos ocupados do que tem
 - [ ] Testes de integração dos repositórios contra PostgreSQL real
