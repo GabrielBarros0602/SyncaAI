@@ -13,6 +13,7 @@ from syncaai.errors import (
     InvalidCredentialsError,
     InvalidLinkTokenError,
     InvertedWindowError,
+    NotAuthenticatedError,
     RateLimitExceededError,
     TaskNotFoundError,
     TaskOverlapsError,
@@ -39,10 +40,21 @@ def register_error_handlers(app: FastAPI) -> None:
             content={"detail": "That confirmation link is not valid. Request a new one."},
         )
 
+    @app.exception_handler(NotAuthenticatedError)
+    async def _not_authenticated(_: Request, __: NotAuthenticatedError) -> JSONResponse:
+        # No token, an unreadable one, or a session that is gone. All three say the same
+        # thing, and none of them says anything about any account.
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Not authenticated."},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     @app.exception_handler(InvalidCredentialsError)
     async def _bad_credentials(_: Request, __: InvalidCredentialsError) -> JSONResponse:
         # One message for a missing account and for a wrong password. The client cannot tell
-        # which, which is the point.
+        # which, which is the point. Reached only from the sign-in path — a request that
+        # simply has no session gets NotAuthenticatedError above.
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Incorrect email or password."},

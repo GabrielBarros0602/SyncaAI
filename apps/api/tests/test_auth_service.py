@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from syncaai.config import Settings
-from syncaai.errors import AccountNotVerifiedError, InvalidCredentialsError
+from syncaai.errors import AccountNotVerifiedError, InvalidCredentialsError, NotAuthenticatedError
 from syncaai.models import RefreshToken, User
 from syncaai.security import passwords
 from syncaai.security.passwords import hash_password
@@ -151,7 +151,7 @@ def test_a_live_session_resolves_to_its_owner() -> None:
 
 
 def test_an_unknown_session_is_refused() -> None:
-    with pytest.raises(InvalidCredentialsError):
+    with pytest.raises(NotAuthenticatedError):
         _service(_existing()).exchange_refresh_token("never issued")
 
 
@@ -163,7 +163,7 @@ def test_a_revoked_session_is_refused() -> None:
 
     service.revoke_refresh_token(raw)
 
-    with pytest.raises(InvalidCredentialsError):
+    with pytest.raises(NotAuthenticatedError):
         service.exchange_refresh_token(raw)
 
 
@@ -175,7 +175,7 @@ def test_an_expired_session_is_refused() -> None:
     raw = service.issue_refresh_token(user)
     sessions.rows[0].expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
 
-    with pytest.raises(InvalidCredentialsError):
+    with pytest.raises(NotAuthenticatedError):
         service.exchange_refresh_token(raw)
 
 

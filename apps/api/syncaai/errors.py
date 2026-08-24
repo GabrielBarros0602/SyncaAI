@@ -79,3 +79,16 @@ class InvertedWindowError(DomainError):
 
 class HorizonTooLongError(DomainError):
     """Raised when a caller asks for more days than the service will assemble at once."""
+
+
+class NotAuthenticatedError(DomainError):
+    """Raised when a request carries no usable session.
+
+    Separate from :class:`InvalidCredentialsError` for one reason: the message. Both answer
+    401 and both stay generic, but "Incorrect email or password" is a sentence about a form
+    the caller did not submit. A user whose token expired while the tab was open would read
+    it as a claim their password is wrong.
+
+    The distinction is not an information leak. This says only "you are not signed in",
+    which is already obvious to whoever sent no token.
+    """

@@ -14,7 +14,7 @@ from syncaai.api.dependencies import (
 )
 from syncaai.config import Settings, get_settings
 from syncaai.db import get_session
-from syncaai.errors import InvalidCredentialsError
+from syncaai.errors import NotAuthenticatedError
 from syncaai.repositories.password_reset_tokens import PasswordResetTokenRepository
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
 from syncaai.repositories.users import UserRepository
@@ -227,7 +227,7 @@ def refresh(
     """
     raw_refresh = (payload.refresh_token if payload else None) or cookie_token
     if raw_refresh is None:
-        raise InvalidCredentialsError
+        raise NotAuthenticatedError
 
     user = service.exchange_refresh_token(raw_refresh)
     session.commit()

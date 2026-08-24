@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from syncaai.config import Settings, get_settings
 from syncaai.db import get_session
-from syncaai.errors import InvalidCredentialsError
+from syncaai.errors import NotAuthenticatedError
 from syncaai.mail import ConsoleMailer, Mailer, RecordingMailer
 from syncaai.models import User
 from syncaai.repositories.users import UserRepository
@@ -39,12 +39,12 @@ def get_current_user_id(credentials: CredentialsDep, settings: SettingsDep) -> U
     ending a session sooner is what the revocable refresh token is for.
     """
     if credentials is None:
-        raise InvalidCredentialsError
+        raise NotAuthenticatedError
 
     try:
         return decode_access_token(credentials.credentials, settings)
     except InvalidTokenError as error:
-        raise InvalidCredentialsError from error
+        raise NotAuthenticatedError from error
 
 
 CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
@@ -62,7 +62,7 @@ def get_current_user(user_id: CurrentUserId, session: SessionDep) -> User:
     """
     user = UserRepository(session).get_by_id(user_id)
     if user is None:
-        raise InvalidCredentialsError
+        raise NotAuthenticatedError
     return user
 
 
