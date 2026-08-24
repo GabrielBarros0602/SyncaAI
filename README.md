@@ -8,9 +8,10 @@ free capacity of your week, decomposes a goal into concrete items, and a determi
 scheduler places those items on the days that actually have room. The output is reviewable
 data in the product's own vocabulary, never a block of text to copy by hand.
 
-> **Status:** in development. Accounts, sessions and per-owner isolation work; the
-> calendar domain and the AI layer do not exist yet. See the roadmap below for what is
-> built and what is next.
+> **Status:** in development. Accounts, sessions, the calendar domain and the day-capacity
+> query work. The AI layer does not exist yet — which is deliberate: ADR-0006 requires a
+> product that still functions when the provider is down, and that is easier to verify now
+> than after there is something to degrade from. See the roadmap below.
 
 ## Why this is not CRUD
 
@@ -80,12 +81,20 @@ Stack rationale, including the estimated cost of the alternative, is in
 | `POST /api/v1/auth/logout` | Revokes the session presented. |
 | `POST /api/v1/auth/forgot-password` | Answers `202` identically whether or not there is an account. |
 | `POST /api/v1/auth/reset-password` | Sets a new password and signs every device out. |
+| `POST /api/v1/tasks` | Schedules a block of time with an optional checklist and tag. Overlapping an existing task answers `409` — the refusal comes from a database exclusion constraint, so it holds for any code path including a manual `INSERT`. |
+| `GET /api/v1/tasks` | Your tasks, soonest first, paginated. |
+| `GET`, `PATCH`, `DELETE /api/v1/tasks/{id}` | An id that belongs to somebody else answers `404`, byte for byte identical to an id that never existed ([ADR-0016](docs/adr/0016-ownership-isolation.md)). |
+| `GET /api/v1/tags` | Read-only. A tag exists because a task named it ([ADR-0020](docs/adr/0020-domain-surface-choices.md)). |
+| `GET /api/v1/capacity` | **Free and booked minutes per local day.** The foundation of the AI layer ([ADR-0004](docs/adr/0004-context-assembly-policy.md)) — it is what a generated plan is placed against, and it exists and is tested before any AI code does. |
 | `GET /health`, `GET /health/ready` | Liveness and readiness, separate on purpose. |
 
 Interactive documentation is at `/docs` outside production.
 
-No calendar endpoints yet — the domain model and its constraints exist, and S4 puts an API
-in front of them.
+The capacity endpoint is the one worth reading the tests for. A day is not 1440 minutes on
+a daylight-saving transition, and a task starting at 23:30 books all of its minutes into
+the day it starts on ([ADR-0012](docs/adr/0012-task-time-business-rules.md)) — so a day can
+be booked past its own length, reports zero free minutes, and says `over_capacity` rather
+than returning a negative number.
 
 ## Running locally
 
@@ -172,8 +181,8 @@ written.
 | S1 | Domain model and database | done |
 | S2 | Authentication and owner-scoped repository base | done |
 | S3 | Email verification and generic authentication responses | done |
-| S4 | Domain CRUD and the day-capacity query | next |
-| S5 | First visible slice — login and the week's free capacity | |
+| S4 | Domain CRUD and the day-capacity query | done |
+| S5 | First visible slice — login and the week's free capacity | next |
 | S6 | AI pipeline against a test double, zero provider cost | |
 | S7 | Real provider, guardrails, degradation | |
 | S8 | Front end wired to the API — plan generation complete | |
@@ -232,8 +241,14 @@ exista ou não a conta — o que a resposta esconde, a caixa de entrada revela, 
 dono do endereço. Sessão é revogável, senha é hasheada com argon2id, e toda leitura de
 recurso passa por uma base de repositório que não expõe query sem filtro de dono.
 
-Ainda **não existe** endpoint de calendário. O modelo de domínio e suas restrições existem;
-o S4 põe uma API na frente deles.
+O calendário existe: tarefas com checklist e tag, e a **query de capacidade livre por dia**
+— minutos ocupados, minutos livres e contagem de tarefas por dia local. É a fundação da
+camada de IA e está pronta e testada antes de existir qualquer linha de IA.
+
+Dois detalhes que o teste cobre e a prosa esconderia: um dia não tem 1440 minutos na virada
+do horário de verão, e uma tarefa que começa às 23:30 lança todos os seus minutos no dia em
+que começa. Por isso um dia pode ficar acima da própria capacidade — reporta zero minutos
+livres e marca `over_capacity`, em vez de devolver número negativo.
 
 ### Rodando localmente
 
