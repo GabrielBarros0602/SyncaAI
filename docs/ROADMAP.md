@@ -44,6 +44,7 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 | Cliente real do provedor de email. Um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
 | Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker | S6 |
 | Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar. **O [ADR-0021](adr/0021-browser-session-and-origin.md) tornou isso certo em vez de hipotético:** uma origem só em desenvolvimento significa um proxy em produção | S11, no deploy |
+| Serviço `web` no `docker-compose.yml`. Hoje a demo exige dois terminais. Adiado de propósito: Vite em container costuma quebrar o HMR por sincronia de arquivos, e a decisão pertence à mesma conversa de proxy reverso que o [ADR-0021](adr/0021-browser-session-and-origin.md) empurrou para lá | S11, no deploy |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S10 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S10 |
 | Eu não enxergo o CI de dentro das sessões de trabalho, então o resultado sempre precisa ser colado. O conector do GitHub resolveria; o `gh` já resolveu o atrito de abrir PR, que era a parte que incomodava você | quando incomodar |
@@ -255,6 +256,11 @@ entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada 
 - [x] Estado de sessão com três valores; nada renderiza antes do refresh de boot resolver
 - [x] Um único wrapper de HTTP dono do retry após `401`, com refresh em voo compartilhado
 - [x] Teste: dois `401` simultâneos causam **exatamente uma** chamada a `/auth/refresh`
+- [x] `GET /me` — a tela precisa do fuso **armazenado**, não do fuso do navegador; os dois
+      podem divergir e a divergência é silenciosa
+- [x] Janela `first_day`/`last_day` em `GET /tasks`, mesmo vocabulário do `/capacity`
+- [x] Pedido sem token responde "Not authenticated." em vez de "Incorrect email or password."
+- [x] Cliente lê `detail` em lista, que é a forma que um erro de validação do Pydantic tem
 - [ ] Tela de login e cadastro, consumindo os endpoints do S2
 - [ ] Sessão persistida no cliente e rota protegida
 - [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
