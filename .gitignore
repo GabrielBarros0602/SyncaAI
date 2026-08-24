@@ -36,3 +36,8 @@ desktop.ini
 # Prototype archive (extracted contents are versioned under apps/web/)
 *.zip
 apps/web/.thumbnail
+
+# Front end
+node_modules/
+dist/
+*.tsbuildinfo
