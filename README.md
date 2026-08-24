@@ -45,7 +45,8 @@ Two design decisions carry most of the weight:
 | Sessions | short-lived JWT plus a revocable opaque refresh token ([ADR-0015](docs/adr/0015-session-model.md)) |
 | Mail | one interface, console and recording implementations ([ADR-0018](docs/adr/0018-email-delivery.md)) |
 | Dependencies | pip, with `uv` as the resolver ([why](CONTRIBUTING.md#dependencies)) |
-| Quality | ruff, mypy (strict), pytest |
+| Web | Vite, React 19, TypeScript strict ([ADR-0021](docs/adr/0021-browser-session-and-origin.md)) |
+| Quality | ruff, mypy (strict), pytest; eslint, tsc, vitest |
 | Runtime | Docker Compose |
 
 Planned but not built: the job queue on PostgreSQL with `SELECT ... FOR UPDATE SKIP LOCKED`
@@ -60,9 +61,10 @@ Stack rationale, including the estimated cost of the alternative, is in
 .
 ├── apps/
 │   ├── api/                  FastAPI service
-│   └── web/                  interface prototype (visual baseline, not wired up)
+│   └── web/                  Vite + React + TypeScript client
 ├── docs/
 │   ├── adr/                  architecture decision records
+│   ├── prototype/            the original static mockup, kept as a visual reference
 │   ├── ROADMAP.md            sprint checklist and open questions
 │   └── threat-model.md       assets, attackers, what is and is not mitigated
 ├── .github/                  CI, dependency scanning, pull request template
@@ -136,6 +138,29 @@ uv pip compile --universal --python-version 3.12 requirements-dev.in -o requirem
 
 Installation stays on pip — `uv` is used only as the resolver, because development happens on
 Windows while the runtime is Linux. See [CONTRIBUTING.md](CONTRIBUTING.md#dependencies).
+
+### Working on the web client
+
+```bash
+cd apps/web
+npm install
+npm run dev          # http://localhost:5173
+```
+
+The dev server proxies `/api` to `http://localhost:8000`, so the browser only ever sees one
+origin ([ADR-0021](docs/adr/0021-browser-session-and-origin.md)). The API therefore needs no
+CORS configuration, and the `SameSite=Strict` refresh cookie works untouched. Start the API
+first, or every call answers `404`.
+
+```bash
+npm run lint         # includes the ban on writing credentials to browser storage
+npm run typecheck
+npm test
+```
+
+The access token is held in memory and written to no browser storage, so a page reload
+renews it silently from the `HttpOnly` cookie. That is why the interface has a third state
+between "signed in" and "signed out", and why nothing renders until it resolves.
 
 ### Database migrations
 
