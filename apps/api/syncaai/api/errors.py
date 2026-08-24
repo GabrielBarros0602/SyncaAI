@@ -12,6 +12,9 @@ from syncaai.errors import (
     InvalidCredentialsError,
     InvalidLinkTokenError,
     RateLimitExceededError,
+    TaskNotFoundError,
+    TaskOverlapsError,
+    TaskStartsInThePastError,
 )
 from syncaai.security.passwords import PasswordTooLongError
 
@@ -53,11 +56,33 @@ def register_error_handlers(app: FastAPI) -> None:
             headers={"Retry-After": str(error.retry_after_seconds)},
         )
 
+    @app.exception_handler(TaskNotFoundError)
+    async def _task_missing(_: Request, __: TaskNotFoundError) -> JSONResponse:
+        # 404 for "does not exist" and for "is not yours" alike. The repository cannot tell
+        # them apart, which is the point (ADR-0016).
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such task."}
+        )
+
+    @app.exception_handler(TaskOverlapsError)
+    async def _task_overlaps(_: Request, __: TaskOverlapsError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "That time is already taken by another task."},
+        )
+
+    @app.exception_handler(TaskStartsInThePastError)
+    async def _task_in_the_past(_: Request, __: TaskStartsInThePastError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "A task cannot start in the past."},
+        )
+
     @app.exception_handler(PasswordTooLongError)
     async def _password_too_long(_: Request, __: PasswordTooLongError) -> JSONResponse:
         # The request schema bounds this first, so reaching here means an internal caller
         # bypassed the boundary. Answered rather than left to become a 500.
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": "Password is too long."},
         )
