@@ -82,6 +82,43 @@ jobs:
         # in S10 once a number has been chosen and justified.
         run: pytest --cov=syncaai --cov-report=term-missing --cov-fail-under=85
 
+  web:
+    name: Web checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      # ci, not install: it installs exactly what the lockfile says and fails if
+      # package.json and the lockfile disagree, which is the whole point of having one.
+      - name: Install
+        run: npm ci
+
+      # Runs the storage ban from ADR-0021. A credential written to localStorage fails
+      # here rather than in review.
+      - name: Lint
+        run: npm run lint
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # Catches what tsc and vitest do not: a broken import path, a plugin that cannot
+      # resolve, a config that only works in dev.
+      - name: Build
+        run: npm run build
+
   commits:
     name: Commit messages
     runs-on: ubuntu-latest
