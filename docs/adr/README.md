@@ -28,6 +28,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0017](0017-refresh-token-delivery.md) | Refresh token delivery: cookie for browsers, body for native | Accepted |
 | [0018](0018-email-delivery.md) | Send mail through a transactional provider, behind an abstraction | Accepted |
 | [0019](0019-account-verification.md) | Verify addresses, and make every authentication response generic | Accepted |
+| [0020](0020-domain-surface-choices.md) | Tags, checklist ordering and pagination | Accepted |
 
 ## Template
 
