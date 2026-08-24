@@ -1,7 +1,7 @@
 """Task payloads."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -142,3 +142,22 @@ class Page(BaseModel):
     items: list[TaskRead]
     limit: int
     offset: int
+
+
+class DayCapacityRead(BaseModel):
+    """One day's aggregate.
+
+    No task appears here. ADR-0004 sends the provider capacity and never content, and the
+    cheapest way to keep that true is for the shape carrying it to have nowhere to put a
+    title.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    day: date
+    weekday: int
+    total_minutes: int
+    occupied_minutes: int
+    free_minutes: int
+    task_count: int
+    over_capacity: bool
