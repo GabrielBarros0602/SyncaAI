@@ -9,14 +9,17 @@ from fastapi.responses import JSONResponse
 
 from syncaai.errors import (
     AccountNotVerifiedError,
+    HorizonTooLongError,
     InvalidCredentialsError,
     InvalidLinkTokenError,
+    InvertedWindowError,
     RateLimitExceededError,
     TaskNotFoundError,
     TaskOverlapsError,
     TaskStartsInThePastError,
 )
 from syncaai.security.passwords import PasswordTooLongError
+from syncaai.services.capacity import MAX_HORIZON_DAYS
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -54,6 +57,20 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={"detail": "Too many attempts. Try again later."},
             headers={"Retry-After": str(error.retry_after_seconds)},
+        )
+
+    @app.exception_handler(InvertedWindowError)
+    async def _inverted_window(_: Request, __: InvertedWindowError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "last_day cannot precede first_day."},
+        )
+
+    @app.exception_handler(HorizonTooLongError)
+    async def _horizon_too_long(_: Request, __: HorizonTooLongError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": f"Ask for at most {MAX_HORIZON_DAYS} days at a time."},
         )
 
     @app.exception_handler(TaskNotFoundError)
