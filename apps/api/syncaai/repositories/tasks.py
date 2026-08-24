@@ -6,7 +6,9 @@ base takes a join rather than assuming a column.
 
 import uuid
 from collections.abc import Sequence
+from datetime import date, datetime
 
+from sqlalchemy import Date, Row, Select, cast, func, literal, select
 from sqlalchemy.orm import selectinload
 
 from syncaai.models import ChecklistItem, Task
@@ -46,6 +48,60 @@ class TaskRepository(OwnedRepository[Task]):
             .offset(offset)
         )
         return self._session.scalars(statement).all()
+
+    def occupied_minutes_by_day(
+        self, *, window_start: datetime, window_end: datetime, zone_name: str
+    ) -> Sequence[Row[tuple[date, int, int]]]:
+        """Run :meth:`capacity_statement` and return its rows."""
+        return self._session.execute(
+            self.capacity_statement(
+                window_start=window_start, window_end=window_end, zone_name=zone_name
+            )
+        ).all()
+
+    def capacity_statement(
+        self, *, window_start: datetime, window_end: datetime, zone_name: str
+    ) -> Select[tuple[date, int, int]]:
+        """Minutes booked and task count, per local day, for one owner.
+
+        Built and executed separately so a test can run ``EXPLAIN`` over the statement the
+        application actually issues. A hand-written copy in the test would drift, and a
+        passing plan for a query nobody runs is worse than no test at all.
+
+        Rule 3 of ADR-0012: every minute of a task counts against the day it *starts* on,
+        even one that runs past midnight. That is why this is a ``GROUP BY`` over a derived
+        date with a plain ``SUM``, rather than a join that clips each task to each day it
+        touches — and it is also why a day can report more minutes than it has. The floor at
+        zero lives in the service, next to the flag that says so out loud.
+
+        Only days holding something come back. Filling the gaps belongs to the service,
+        because the length of an empty day still depends on the time zone and this query
+        does not know one.
+
+        The window is the half-open UTC range from ``utc_window``. Filtering on the stored
+        column is what lets the predicate ride ``ix_tasks_user_start_at``: an index over
+        ``(user_id, start_at)`` is useless to a filter on a *derived* local date, so the
+        conversion appears in the grouping and never in the ``WHERE``.
+        """
+        # AT TIME ZONE on a timestamptz yields the wall clock in that zone; the cast then
+        # drops the time. Naming the zone here rather than relying on the session's setting
+        # keeps the answer independent of whatever connection happens to run it.
+        local_day = cast(func.timezone(literal(zone_name), Task.start_at), Date).label("day")
+        statement: Select[tuple[date, int, int]] = (
+            select(
+                local_day,
+                func.sum(Task.duration_minutes).label("occupied_minutes"),
+                func.count().label("task_count"),
+            )
+            .where(
+                Task.user_id == self._owner_id,
+                Task.start_at >= window_start,
+                Task.start_at < window_end,
+            )
+            .group_by(local_day)
+            .order_by(local_day)
+        )
+        return statement
 
 
 class ChecklistItemRepository(OwnedRepository[ChecklistItem]):
