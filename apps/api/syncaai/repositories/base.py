@@ -35,15 +35,36 @@ class OwnedRepository(Generic[ModelT]):
     - ``model`` — what is being read
     - ``owner_column`` — the column holding the owner's id, wherever it lives
     - ``owner_join`` — how to reach that column, when it is not on ``model`` itself
+
+    A fourth is optional: ``default_order``, the sort a listing uses when the caller does not
+    ask for one.
     """
 
     model: ClassVar[Any]
     owner_column: ClassVar[Any]
     owner_join: ClassVar[Any] = None
 
+    # Empty means "order by primary key". Something has to be here: LIMIT/OFFSET over an
+    # unordered result is undefined in PostgreSQL, and the practical shape of that is a
+    # caller paging through a list and seeing one row twice while never seeing another.
+    default_order: ClassVar[tuple[Any, ...]] = ()
+
     def __init__(self, session: Session, owner_id: UUID) -> None:
         self._session = session
         self._owner_id = owner_id
+
+    @property
+    def owner_id(self) -> UUID:
+        """The owner every query here is scoped to.
+
+        Exposed so a service can stamp a new row with it, rather than being handed the id
+        separately and possibly a different one.
+        """
+        return self._owner_id
+
+    def flush(self) -> None:
+        """Send pending changes so the database can refuse them now rather than at commit."""
+        self._session.flush()
 
     def _scoped(self) -> Select[tuple[ModelT]]:
         """Every read starts here. There is no variant of this without the filter."""
@@ -70,8 +91,11 @@ class OwnedRepository(Generic[ModelT]):
         return self._session.scalar(self._scoped().where(type(self).model.id == entity_id))
 
     def list(self, *, limit: int = 100, offset: int = 0) -> Sequence[ModelT]:
-        """Return this owner's entities, a page at a time."""
-        return self._session.scalars(self._scoped().limit(limit).offset(offset)).all()
+        """Return this owner's entities, a page at a time, in a defined order."""
+        declared = type(self)
+        order = declared.default_order or (declared.model.id,)
+        statement = self._scoped().order_by(*order).limit(limit).offset(offset)
+        return self._session.scalars(statement).all()
 
     def add(self, entity: ModelT) -> None:
         self._session.add(entity)
