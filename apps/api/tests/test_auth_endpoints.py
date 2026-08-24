@@ -220,3 +220,53 @@ def test_logging_out_with_an_unknown_token_answers_the_same(
     _wire(app, FakeUsers(_existing()), settings)
 
     assert client.post(LOGOUT, json={"refresh_token": "never issued"}).status_code == 204
+
+
+def test_a_request_with_no_token_is_not_told_its_password_is_wrong(
+    app: FastAPI, client: TestClient
+) -> None:
+    """Both answers are 401 and both are generic. The difference is that one of them is a
+    sentence about a form the caller never submitted, and a user whose token expired with
+    the tab open would read it as a claim their password is wrong."""
+    app.dependency_overrides[get_session] = lambda: _NoOpSession()
+
+    response = client.get("/api/v1/tasks")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Not authenticated."
+
+
+def test_an_unreadable_token_says_the_same_thing(app: FastAPI, client: TestClient) -> None:
+    """A forged token and a missing one are the same event as far as the answer goes."""
+    app.dependency_overrides[get_session] = lambda: _NoOpSession()
+
+    response = client.get("/api/v1/tasks", headers={"Authorization": "Bearer not-a-token"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Not authenticated."
+
+
+def test_signing_in_with_the_wrong_password_still_says_so(
+    app: FastAPI, client: TestClient, settings: Settings
+) -> None:
+    """The sign-in path keeps its own message. It is still one message for a missing
+    account and a wrong password, which is what closes enumeration (ADR-0019)."""
+    _wire(app, FakeUsers(_existing()), settings)
+
+    response = client.post(LOGIN, json={"email": AN_EMAIL, "password": "not the password"})
+
+    assert response.json()["detail"] == "Incorrect email or password."
+
+
+def test_an_unknown_address_and_a_wrong_password_are_still_indistinguishable(
+    app: FastAPI, client: TestClient, settings: Settings
+) -> None:
+    """Guarding the split above: separating the two 401 messages must not have opened a
+    channel on the path where it would matter."""
+    _wire(app, FakeUsers(_existing()), settings)
+
+    wrong_password = client.post(LOGIN, json={"email": AN_EMAIL, "password": "wrong"})
+    unknown_address = client.post(LOGIN, json={"email": "nobody@example.com", "password": "wrong"})
+
+    assert wrong_password.status_code == unknown_address.status_code
+    assert wrong_password.json() == unknown_address.json()

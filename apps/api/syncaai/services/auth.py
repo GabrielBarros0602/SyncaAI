@@ -3,7 +3,11 @@
 from datetime import datetime, timedelta, timezone
 
 from syncaai.config import Settings
-from syncaai.errors import AccountNotVerifiedError, InvalidCredentialsError
+from syncaai.errors import (
+    AccountNotVerifiedError,
+    InvalidCredentialsError,
+    NotAuthenticatedError,
+)
 from syncaai.models import RefreshToken, User
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
 from syncaai.repositories.users import UserRepository
@@ -68,9 +72,9 @@ class AuthService:
         """
         session = self._sessions.get_by_hash(hash_refresh_token(raw))
         if session is None or session.revoked_at is not None:
-            raise InvalidCredentialsError
+            raise NotAuthenticatedError
         if session.expires_at <= datetime.now(timezone.utc):
-            raise InvalidCredentialsError
+            raise NotAuthenticatedError
         return session.user
 
     def revoke_refresh_token(self, raw: str) -> None:
