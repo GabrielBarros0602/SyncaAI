@@ -63,3 +63,29 @@ def test_a_signing_secret_at_the_minimum_is_accepted(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("JWT_SECRET", "x" * MIN_JWT_SECRET_LENGTH)
 
     assert Settings(_env_file=None).jwt_secret == "x" * MIN_JWT_SECRET_LENGTH
+
+
+def test_production_refuses_a_mailer_that_discards_every_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Otherwise the deployment accepts registrations and delivers nothing, silently.
+
+    ADR-0018 names silence as the failure mode that matters, so this is refused at boot
+    rather than discovered by a user who never received a link.
+    """
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/d")
+    monkeypatch.setenv("JWT_SECRET", "x" * MIN_JWT_SECRET_LENGTH)
+
+    with pytest.raises(ValidationError, match="not allowed in production"):
+        Settings(app_env="production", mail_backend="recording", _env_file=None)
+
+
+def test_local_development_may_record_instead_of_sending(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/d")
+    monkeypatch.setenv("JWT_SECRET", "x" * MIN_JWT_SECRET_LENGTH)
+
+    assert Settings(app_env="local", mail_backend="recording", _env_file=None).mail_backend == (
+        "recording"
+    )

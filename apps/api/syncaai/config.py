@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ROOT_MARKERS = (".git", "docker-compose.yml")
@@ -100,6 +100,19 @@ class Settings(BaseSettings):
 
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+
+    @model_validator(mode="after")
+    def _refuse_a_mailer_that_discards_in_production(self) -> "Settings":
+        """A production deployment that records mail instead of sending it accepts every
+        registration and delivers nothing, and nobody finds out.
+
+        ADR-0018 calls silence the failure mode that matters, so this one is refused at
+        boot rather than discovered by a user who never got their link.
+        """
+        if self.app_env == "production" and self.mail_backend == "recording":
+            message = "mail_backend 'recording' discards every message; not allowed in production"
+            raise ValueError(message)
+        return self
 
 
 @lru_cache

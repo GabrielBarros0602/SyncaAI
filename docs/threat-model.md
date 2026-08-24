@@ -7,7 +7,7 @@ points at where it lives, and every gap says when it is dealt with.
 Most of the reasoning already exists inside individual ADRs. What did not exist was the
 single view, and a decision looks different next to the others than it does alone.
 
-**Reviewed at:** end of S2, 46 commits.
+**Reviewed at:** end of S3, 53 commits.
 **Next review:** end of S5, when a browser front end adds a surface this document does not
 yet cover.
 
@@ -54,8 +54,8 @@ otherwise would make the rest of this document less trustworthy.
 | # | Threat | Status | Where |
 |---|---|---|---|
 | 1 | Password database leak turns into account takeover | mitigated | argon2id, memory-hard, [ADR-0014](adr/0014-password-hashing-with-argon2id.md) |
-| 2 | Credential stuffing from public breach dumps | partial | rate limited per address; no breach-list check on chosen passwords |
-| 3 | Account enumeration | **open** | login and refresh answer identically; **registration answers 409**, closed in S3 |
+| 2 | Credential stuffing from public breach dumps | partial | rate limited per address; no breach-list check on chosen passwords. Verification now stops an account being opened on an address nobody controls |
+| 3 | Account enumeration | mitigated | registration, resend and password reset all answer identically whether or not the address exists; the mail carries what the response withholds ([ADR-0019](adr/0019-account-verification.md)) |
 | 4 | Session theft through cross-site scripting | partial | refresh token is `HttpOnly` and unreadable by script ([ADR-0017](adr/0017-refresh-token-delivery.md)); the access token depends on S5 keeping it in memory |
 | 5 | Database leak yields live sessions | mitigated | only the digest is stored, [ADR-0015](adr/0015-session-model.md) |
 | 6 | A compromised session cannot be ended | mitigated | refresh tokens are revocable rows |
@@ -80,9 +80,10 @@ Each of these is a choice, not an oversight.
 an address can lock its owner out by failing logins on purpose. Rate limiting per caller
 slows guessing without handing anyone that lever.
 
-**Registration reveals whether an address has an account**, until S3. Closing it needs a
-generic response, and a generic response is dishonest until there is an email to carry the
-real answer.
+**A user who never receives the mail cannot get in.** Blocking an unverified account is
+what stops an address nobody controls from spending the AI budget, and it converts a
+delivery problem directly into a support problem. The resend path is the only way out, and
+the user has to think to ask for it.
 
 **A token outlives the account it names by up to thirty minutes.** The price of not touching
 the database on every request. Ending a session sooner is what the revocable refresh token
@@ -103,7 +104,8 @@ surface, which is why the next review is scheduled there rather than at a date.
 
 ## What to do, in order
 
-1. **S3 closes threat 3.** Already scheduled and specified.
+1. ~~S3 closes threat 3.~~ **Done.** Registration, resend and reset all answer identically,
+   and a test asserts the two registration responses are byte for byte the same.
 2. **S5 must decide CORS in an ADR**, not by copying a snippet. With an `HttpOnly` cookie in
    play, a permissive policy lets any site make authenticated requests as the user. Reflecting
    the request's origin is the common form of this mistake.
@@ -132,9 +134,10 @@ provável do projeto.
 ataque de cadeia de suprimentos mirado neste projeto. Fingir que estão cobertos tornaria o
 resto menos confiável.
 
-**Três brechas abertas:** enumeração de conta no cadastro, fechada no S3; ausência de política
-de CORS, que o S5 precisa decidir em ADR e não copiando trecho pronto; e nenhuma varredura de
-dependência vulnerável, que é o único item da lista que não precisa de sprint.
+**Brechas abertas agora são duas:** ausência de política de CORS, que o S5 precisa decidir em
+ADR e não copiando trecho pronto; e a ameaça 7 — isolamento por dono — que está mitigada mas
+**não exercitada**, porque nenhum endpoint a usa até o S4. A enumeração de conta foi fechada
+no S3.
 
 **Aceito de propósito, com motivo:** não há bloqueio de conta, porque bloqueio é alavanca para
 travar a vítima; o token sobrevive à conta apagada por até 30 minutos, que é o preço de não

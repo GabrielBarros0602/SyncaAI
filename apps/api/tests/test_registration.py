@@ -14,7 +14,7 @@ from syncaai.api.dependencies import limit_registration
 from syncaai.api.routes.auth import get_registration_service
 from syncaai.config import Settings
 from syncaai.db import get_session
-from syncaai.errors import InvalidVerificationTokenError
+from syncaai.errors import InvalidLinkTokenError
 from syncaai.mail import RecordingMailer
 from syncaai.models import VerificationToken
 from syncaai.security.opaque import hash_token
@@ -172,7 +172,7 @@ def test_a_token_works_only_once(settings: Settings, mailer: RecordingMailer) ->
     raw = _register_and_take_token(service, mailer)
     service.verify(raw)
 
-    with pytest.raises(InvalidVerificationTokenError):
+    with pytest.raises(InvalidLinkTokenError):
         service.verify(raw)
 
 
@@ -183,12 +183,12 @@ def test_an_expired_token_is_refused(settings: Settings, mailer: RecordingMailer
     raw = _register_and_take_token(service, mailer)
     tokens.rows[0].expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
 
-    with pytest.raises(InvalidVerificationTokenError):
+    with pytest.raises(InvalidLinkTokenError):
         service.verify(raw)
 
 
 def test_an_unknown_token_is_refused(settings: Settings, mailer: RecordingMailer) -> None:
-    with pytest.raises(InvalidVerificationTokenError):
+    with pytest.raises(InvalidLinkTokenError):
         _service(FakeUsers(), mailer, settings).verify("never issued")
 
 

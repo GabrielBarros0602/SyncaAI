@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 from syncaai.config import Settings
-from syncaai.errors import InvalidVerificationTokenError
+from syncaai.errors import InvalidLinkTokenError
 from syncaai.mail import Mailer, send_or_log
 from syncaai.mail.messages import registration_attempted, verification_requested
 from syncaai.models import User, VerificationToken
@@ -63,7 +63,7 @@ class RegistrationService:
         now = datetime.now(timezone.utc)
 
         if token is None or token.used_at is not None or token.expires_at <= now:
-            raise InvalidVerificationTokenError
+            raise InvalidLinkTokenError
 
         token.used_at = now
         token.user.verified_at = now

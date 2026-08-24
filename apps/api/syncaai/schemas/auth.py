@@ -91,13 +91,23 @@ class ResetPasswordRequest(BaseModel):
     password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
 
-class AcceptedResponse(BaseModel):
-    """The one answer registration gives, whatever happened behind it."""
+# What has to be identical is the answer *within* a flow — the two registration cases, the
+# two reset cases. Reusing one message across flows told someone asking to reset a password
+# to go and finish signing up.
+REGISTRATION_ACCEPTED = (
+    "If that address is new, a confirmation link is on its way. "
+    "Check your inbox to finish signing up."
+)
+VERIFICATION_RESEND_ACCEPTED = "If that address still needs confirming, a new link is on its way."
+PASSWORD_RESET_ACCEPTED = (
+    "If that address has an account, a link to set a new password is on its way."
+)
 
-    detail: str = (
-        "If that address is new, a confirmation link is on its way. "
-        "Check your inbox to finish signing up."
-    )
+
+class AcceptedResponse(BaseModel):
+    """The one answer a flow gives, whatever happened behind it."""
+
+    detail: str
 
 
 class UserRead(BaseModel):

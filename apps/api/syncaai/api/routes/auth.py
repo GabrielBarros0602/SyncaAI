@@ -20,6 +20,9 @@ from syncaai.repositories.refresh_tokens import RefreshTokenRepository
 from syncaai.repositories.users import UserRepository
 from syncaai.repositories.verification_tokens import VerificationTokenRepository
 from syncaai.schemas.auth import (
+    PASSWORD_RESET_ACCEPTED,
+    REGISTRATION_ACCEPTED,
+    VERIFICATION_RESEND_ACCEPTED,
     AcceptedResponse,
     ForgotPasswordRequest,
     LoginRequest,
@@ -111,7 +114,7 @@ def register(
     """
     service.register(payload.email, payload.password, payload.timezone)
     session.commit()
-    return AcceptedResponse()
+    return AcceptedResponse(detail=REGISTRATION_ACCEPTED)
 
 
 @router.post("/verify", status_code=status.HTTP_204_NO_CONTENT, summary="Confirm an address")
@@ -141,7 +144,7 @@ def resend_verification(
     """
     service.resend(payload.email)
     session.commit()
-    return AcceptedResponse()
+    return AcceptedResponse(detail=VERIFICATION_RESEND_ACCEPTED)
 
 
 @router.post(
@@ -160,7 +163,7 @@ def forgot_password(
     """
     service.request(payload.email)
     session.commit()
-    return AcceptedResponse()
+    return AcceptedResponse(detail=PASSWORD_RESET_ACCEPTED)
 
 
 @router.post(
