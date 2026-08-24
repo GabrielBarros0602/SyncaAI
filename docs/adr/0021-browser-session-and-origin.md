@@ -4,6 +4,14 @@
 **Date:** 2026-08-24
 **Deciders:** Gabriel Barros
 
+> **Correction.** This record says refresh tokens are single-use and that a second
+> concurrent exchange would revoke the first. That is wrong today: `POST /auth/refresh`
+> does not rotate the token, and [ADR-0015](0015-session-model.md) explicitly leaves
+> "rotation with reuse detection" as a later step. A second concurrent exchange is
+> currently wasteful, not destructive. The decision to share one in-flight refresh stands,
+> for a different reason: it is what keeps the client correct on the day rotation lands,
+> when the second exchange *would* present a consumed token and sign the user out.
+
 ## Context
 
 S5 is the first sprint with a browser in it. Two questions have to be answered before a
@@ -112,7 +120,7 @@ certain rather than hypothetical, which is an argument for it being written down
 - A page refresh costs a round trip before anything renders, and the "session unknown" state
   has to be handled or the login screen flashes on every reload.
 - Two concurrent requests failing on the same expired token must not trigger two refreshes.
-  Refresh tokens are single-use, so the second would revoke the first and sign the user out.
+  See the correction above: harmless today, a forced sign-out once rotation exists.
 - Development now depends on a proxy being configured correctly. A misconfigured one fails
   as a 404 on `/api/...`, which reads like a missing endpoint rather than a missing rewrite.
 
