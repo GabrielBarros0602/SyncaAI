@@ -71,3 +71,11 @@ class TaskNotFoundError(DomainError):
     One error for both. The repository cannot tell the two apart, which is exactly what lets
     the API answer 404 rather than confirming a resource exists (ADR-0016).
     """
+
+
+class InvertedWindowError(DomainError):
+    """Raised when a capacity window ends before it starts."""
+
+
+class HorizonTooLongError(DomainError):
+    """Raised when a caller asks for more days than the service will assemble at once."""
