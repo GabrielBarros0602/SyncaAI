@@ -161,3 +161,19 @@ def test_deleting_your_own_entity_removes_it_and_its_items() -> None:
         )
 
         session.rollback()
+
+
+def test_a_listing_is_ordered_so_paging_cannot_skip_or_repeat() -> None:
+    """LIMIT/OFFSET over an unordered result is undefined in PostgreSQL. The practical
+    shape of that is a caller paging through a list, seeing one row twice and never seeing
+    another — so every repository declares an order or inherits one."""
+    from syncaai.repositories.tags import TagRepository
+
+    for repository in (TagRepository(None, AN_OWNER), TaskRepository(None, AN_OWNER)):  # type: ignore[arg-type]
+        assert "ORDER BY" in _sql(repository._scoped().order_by(*repository.default_order))
+
+    assert "ORDER BY tasks.start_at, tasks.id" in _sql(
+        TaskRepository(None, AN_OWNER)  # type: ignore[arg-type]
+        ._scoped()
+        .order_by(*TaskRepository.default_order)
+    )
