@@ -6,17 +6,22 @@ the owner filter, never trusted on its own.
 """
 
 import uuid
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 
-from syncaai.api.dependencies import CurrentUserId
+from syncaai.api.dependencies import CurrentUser, CurrentUserId
 from syncaai.db import get_session
+from syncaai.errors import HorizonTooLongError, InvertedWindowError
 from syncaai.repositories.tags import TagRepository
 from syncaai.repositories.tasks import TaskRepository
 from syncaai.schemas.tasks import Page, TagRead, TaskCreate, TaskRead, TaskUpdate
+from syncaai.services.capacity import MAX_HORIZON_DAYS
 from syncaai.services.tasks import MAX_PAGE_SIZE, TaskService
+from syncaai.time_windows import utc_window
 
 router = APIRouter(tags=["tasks"])
 
@@ -37,13 +42,46 @@ def create_task(payload: TaskCreate, service: ServiceDep, session: SessionDep) -
     return TaskRead.model_validate(task)
 
 
+def _window_for(
+    user: CurrentUser, first_day: date | None, last_day: date | None
+) -> tuple[datetime, datetime] | None:
+    """Turn a pair of local days into the UTC range they cover.
+
+    Both or neither. One alone is almost certainly a bug in the caller — an open-ended range
+    that looks like a filter — and answering it as if it were intentional would hide that
+    for as long as the data happened to be small.
+    """
+    if first_day is None and last_day is None:
+        return None
+    if first_day is None or last_day is None:
+        message = "first_day and last_day are given together or not at all"
+        raise RequestValidationError([{"loc": ("query", "first_day"), "msg": message}])
+    if last_day < first_day:
+        raise InvertedWindowError
+    if (last_day - first_day).days + 1 > MAX_HORIZON_DAYS:
+        raise HorizonTooLongError
+
+    # Same conversion, same helper and same zone as the capacity endpoint. Two screens
+    # asking about "this week" have to agree on which instants that is.
+    return utc_window(first_day, last_day, user.timezone)
+
+
 @router.get("/tasks", summary="List your tasks, soonest first")
 def list_tasks(
     service: ServiceDep,
+    user: CurrentUser,
+    first_day: Annotated[date | None, Query(description="First local day, inclusive.")] = None,
+    last_day: Annotated[date | None, Query(description="Last local day, inclusive.")] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page:
-    tasks = service.list(limit=limit, offset=offset)
+    """Optionally narrowed to a window of local days.
+
+    The dates are the same vocabulary as ``/capacity``, on purpose: a week view asks both
+    for the same seven days and gets answers that line up.
+    """
+    window = _window_for(user, first_day, last_day)
+    tasks = service.list(limit=limit, offset=offset, window=window)
     return Page(items=[TaskRead.model_validate(task) for task in tasks], limit=limit, offset=offset)
 
 

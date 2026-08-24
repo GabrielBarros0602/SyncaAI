@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
-from syncaai.api.dependencies import get_current_user_id
+from syncaai.api.dependencies import get_current_user, get_current_user_id
 from syncaai.api.routes.tasks import get_task_service
 from syncaai.config import Settings
 from syncaai.db import get_session
@@ -28,6 +28,15 @@ from syncaai.services.tasks import OVERLAP_CONSTRAINT, TaskService
 TASKS = "/api/v1/tasks"
 TAGS = "/api/v1/tags"
 AN_OWNER = uuid.UUID("11111111-1111-1111-1111-111111111111")
+SAO_PAULO = "America/Sao_Paulo"
+
+
+class _FakeUser:
+    """The listing endpoint needs a zone to convert a local window (ADR-0009), so it takes
+    the user row rather than only the id."""
+
+    id = AN_OWNER
+    timezone = SAO_PAULO
 
 
 def _parsed(value: str) -> datetime:
@@ -47,6 +56,7 @@ class _FakeTasks:
         self.rows: dict[uuid.UUID, Task] = {}
         self.on_write = on_write
         self.last_page: tuple[int, int] | None = None
+        self.last_window: tuple[datetime, datetime | None] | None = None
 
     owner_id = AN_OWNER
 
@@ -73,8 +83,18 @@ class _FakeTasks:
     def get_with_items(self, task_id: uuid.UUID) -> Task | None:
         return self.rows.get(task_id)
 
-    def list_with_items(self, *, limit: int, offset: int) -> list[Task]:
+    def list_with_items(
+        self,
+        *,
+        limit: int,
+        offset: int,
+        starts_at_or_after: datetime | None = None,
+        starts_before: datetime | None = None,
+    ) -> list[Task]:
         self.last_page = (limit, offset)
+        self.last_window = (
+            None if starts_at_or_after is None else (starts_at_or_after, starts_before)
+        )
         ordered = sorted(self.rows.values(), key=lambda task: task.start_at)
         return ordered[offset : offset + limit]
 
@@ -115,6 +135,7 @@ def _overlap_error() -> IntegrityError:
 def _wire(app: FastAPI, tasks: _FakeTasks, tags: _FakeTags | None = None) -> _FakeTags:
     tags = tags or _FakeTags()
     app.dependency_overrides[get_current_user_id] = lambda: AN_OWNER
+    app.dependency_overrides[get_current_user] = lambda: _FakeUser()
     app.dependency_overrides[get_session] = lambda: _NoOpSession()
     app.dependency_overrides[get_task_service] = lambda: TaskService(tasks, tags)  # type: ignore[arg-type]
     return tags
@@ -382,3 +403,63 @@ def test_every_endpoint_needs_a_token(
     app.dependency_overrides[get_session] = lambda: _NoOpSession()
 
     assert client.request(method, path, json={}).status_code == 401
+
+
+def test_a_window_narrows_the_listing_to_those_local_days(app: FastAPI, client: TestClient) -> None:
+    """The week view asks for seven days and must not receive an eighth."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+
+    client.get(TASKS, params={"first_day": "2030-06-01", "last_day": "2030-06-07"})
+
+    assert tasks.last_window == (
+        datetime(2030, 6, 1, 3, tzinfo=timezone.utc),
+        datetime(2030, 6, 8, 3, tzinfo=timezone.utc),
+    )
+
+
+def test_the_window_is_half_open_so_two_weeks_side_by_side_neither_overlap_nor_gap(
+    app: FastAPI, client: TestClient
+) -> None:
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+
+    client.get(TASKS, params={"first_day": "2030-06-01", "last_day": "2030-06-07"})
+    first_end = tasks.last_window[1] if tasks.last_window else None
+    client.get(TASKS, params={"first_day": "2030-06-08", "last_day": "2030-06-14"})
+    second_start = tasks.last_window[0] if tasks.last_window else None
+
+    assert first_end == second_start
+
+
+def test_one_day_of_the_window_without_the_other_is_refused(
+    app: FastAPI, client: TestClient
+) -> None:
+    """An open-ended range that looks like a filter is almost certainly a caller bug, and
+    answering it as if it were deliberate hides that until the data gets big."""
+    _wire(app, _FakeTasks())
+
+    assert client.get(TASKS, params={"first_day": "2030-06-01"}).status_code == 422
+    assert client.get(TASKS, params={"last_day": "2030-06-07"}).status_code == 422
+
+
+def test_an_inverted_or_oversized_window_is_refused_the_same_way_capacity_refuses_it(
+    app: FastAPI, client: TestClient
+) -> None:
+    _wire(app, _FakeTasks())
+
+    inverted = client.get(TASKS, params={"first_day": "2030-06-02", "last_day": "2030-06-01"})
+    oversized = client.get(TASKS, params={"first_day": "2030-01-01", "last_day": "2031-01-01"})
+
+    assert inverted.status_code == 422
+    assert inverted.json()["detail"] == "last_day cannot precede first_day."
+    assert oversized.status_code == 422
+
+
+def test_no_window_still_lists_everything(app: FastAPI, client: TestClient) -> None:
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+
+    client.get(TASKS)
+
+    assert tasks.last_window is None
