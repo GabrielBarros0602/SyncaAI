@@ -96,7 +96,7 @@ class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Null until the address is proven reachable. An account cannot log in before this is
@@ -112,6 +112,32 @@ class User(Base, TimestampMixin):
     tasks: Mapped[list[Task]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
+
+
+# Declared after the class because the mapped attribute only becomes an expression once the
+# class exists. Unique on the normalised value rather than on the column: the service
+# lowercases before writing, but a writer that skipped it could store a case variant and a
+# plain constraint would accept it as a different address. ``lower()`` is IMMUTABLE, so
+# unlike the local date in ADR-0009 this expression can be indexed.
+Index("uq_users_email_lower", func.lower(User.email), unique=True)
+
+
+class Tag(Base, TimestampMixin):
+    """A label a user puts on tasks.
+
+    Created when a task first names it, and never deleted — there is no CRUD for tags
+    (ADR-0020). Names are stored normalised, so ``Deep Work`` and ``deep work`` are one tag
+    rather than two, which is the whole reason this is a row instead of a string.
+    """
+
+    __tablename__ = "tags"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
 class Day(Base, TimestampMixin):
@@ -195,7 +221,14 @@ class Task(Base, TimestampMixin):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Optional, and cleared rather than cascading if the tag ever goes: losing a task
+    # because its label was removed would be the wrong loss.
+    tag_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tags.id", ondelete="SET NULL"), nullable=True
+    )
+
     user: Mapped[User] = relationship(back_populates="tasks")
+    tag: Mapped[Tag | None] = relationship()
     items: Mapped[list[ChecklistItem]] = relationship(
         back_populates="task",
         cascade="all, delete-orphan",
@@ -218,6 +251,10 @@ class ChecklistItem(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_checklist_items_task_position", "task_id", "position"),
         CheckConstraint("position >= 0", name="position_non_negative"),
+        # Deferred to commit, so reordering is one batch update inside a transaction rather
+        # than a shuffle through temporary values. Deferral only holds within a transaction:
+        # a reorder split across two requests still collides (ADR-0020).
+        UniqueConstraint("task_id", "position", deferrable=True, initially="DEFERRED"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

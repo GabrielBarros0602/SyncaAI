@@ -202,10 +202,13 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
       → [ADR-0020](adr/0020-domain-surface-choices.md)
 - [x] **Decidido:** paginação por `LIMIT` e `OFFSET`, com teto de tamanho de página
       → [ADR-0020](adr/0020-domain-surface-choices.md)
-- [ ] Unicidade de email sobre o valor normalizado, imposta pelo schema e não só pelo
-      serviço — hoje um escritor que passe por fora gravaria variante de caixa. Índice
-      funcional sobre `lower(email)`, conferindo que o `alembic check` não passa a acusar
-      divergência em todo PR
+- [x] Tabela `tags` por usuário, única em `(user_id, name)`, e a relação opcional com `Task`
+      que limpa em vez de cascatear
+- [x] `UNIQUE (task_id, position) DEFERRABLE INITIALLY DEFERRED` aplicada no schema
+- [x] Unicidade de email sobre o valor normalizado, imposta pelo schema — índice funcional
+      sobre `lower(email)`. **Se o `alembic check` passar a acusar divergência em todo PR, é
+      porque ele não compara índice de expressão de forma confiável, e aí a exclusão entra
+      no `env.py` com o motivo escrito**
 - [ ] Schemas Pydantic `Create` / `Update` / `Read` por entidade
 - [ ] Repositórios SQLAlchemy herdando a base com escopo por dono do S2, injetados
       via `Depends` — nascem filtrados por `user_id`, sem retrofit
