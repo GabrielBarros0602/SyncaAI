@@ -45,3 +45,29 @@ class RateLimitExceededError(DomainError):
     def __init__(self, retry_after_seconds: int) -> None:
         super().__init__(retry_after_seconds)
         self.retry_after_seconds = retry_after_seconds
+
+
+class TaskOverlapsError(DomainError):
+    """Raised when a task would occupy time another already occupies.
+
+    The database refuses this through an exclusion constraint (ADR-0008), which is what
+    makes the guarantee absolute. This exists so the refusal reaches the caller as a rule
+    they broke rather than as a driver exception.
+    """
+
+
+class TaskStartsInThePastError(DomainError):
+    """Raised when a task would be scheduled before now.
+
+    A service rule rather than a CHECK, because ``now()`` is not IMMUTABLE and cannot appear
+    in one (ADR-0012). Recording something that already happened is a different feature and
+    does not exist.
+    """
+
+
+class TaskNotFoundError(DomainError):
+    """Raised for a task that does not exist, or belongs to somebody else.
+
+    One error for both. The repository cannot tell the two apart, which is exactly what lets
+    the API answer 404 rather than confirming a resource exists (ADR-0016).
+    """
