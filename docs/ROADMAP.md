@@ -194,7 +194,7 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 
 ---
 
-## S4 — CRUD do domínio e a query de capacidade · ⏳ Próximo
+## S4 — CRUD do domínio e a query de capacidade · ✅ Concluído
 
 - [x] **Decidido:** tags são linhas por usuário, criadas sob demanda, **sem CRUD próprio**
       → [ADR-0020](adr/0020-domain-surface-choices.md)
@@ -219,7 +219,7 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 - [x] Exceções de domínio mapeadas para status HTTP num lugar só — não `HTTPException`
       espalhado pelos serviços
 - [x] Paginação nos endpoints de listagem
-- [ ] **A query de capacidade livre por dia numa janela** — por dia: minutos ocupados, minutos
+- [x] **A query de capacidade livre por dia numa janela** — por dia: minutos ocupados, minutos
       livres, contagem de tarefas. É a fundação da camada de IA (ADR-0004) e precisa estar
       testada antes de qualquer linha de código de IA existir
 - [x] Violação da constraint de exclusão traduzida para erro de domínio legível
@@ -227,10 +227,10 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
       um minuto atrás recusa, um minuto à frente aceita
 - [x] `PATCH` distingue campo ausente de `null` explícito — sem isso uma nota podia ser
       escrita e nunca removida
-- [ ] Capacidade livre calculada com `minutes_in_local_day`, não com 1440, e com piso em zero
+- [x] Capacidade livre calculada com `minutes_in_local_day`, não com 1440, e com piso em zero
       — um dia pode reportar mais minutos ocupados do que tem
-- [ ] Testes de integração dos repositórios contra PostgreSQL real
-- [ ] Query de capacidade medida com `EXPLAIN ANALYZE` numa janela de 14 dias, com os índices
+- [x] Testes de integração dos repositórios contra PostgreSQL real
+- [x] Query de capacidade medida com `EXPLAIN ANALYZE` numa janela de 14 dias, com os índices
       do S1 confirmados em uso
 
 **Marco:** ao fim do S4 existe um produto que já funciona sem nenhuma IA. Isso não é efeito
