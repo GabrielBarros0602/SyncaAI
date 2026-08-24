@@ -196,11 +196,12 @@ autenticação fique genérica. Se uma escapar, o vazamento só muda de porta.
 
 ## S4 — CRUD do domínio e a query de capacidade · ⏳ Próximo
 
-- [ ] **Decidir: `tag` na tarefa.** O protótipo mostra uma por tarefa. String livre convida
-      dado inconsistente; tabela de tags é desenho que ainda não foi feito
-- [ ] **Decidir: `(task_id, position)` é único?** Sem unicidade, dois itens dividem a mesma
-      posição e a ordem do checklist fica não determinística. Com ela, reordenar exige
-      constraint adiada ou valores temporários
+- [x] **Decidido:** tags são linhas por usuário, criadas sob demanda, **sem CRUD próprio**
+      → [ADR-0020](adr/0020-domain-surface-choices.md)
+- [x] **Decidido:** `(task_id, position)` é único com verificação adiada ao commit
+      → [ADR-0020](adr/0020-domain-surface-choices.md)
+- [x] **Decidido:** paginação por `LIMIT` e `OFFSET`, com teto de tamanho de página
+      → [ADR-0020](adr/0020-domain-surface-choices.md)
 - [ ] Unicidade de email sobre o valor normalizado, imposta pelo schema e não só pelo
       serviço — hoje um escritor que passe por fora gravaria variante de caixa. Índice
       funcional sobre `lower(email)`, conferindo que o `alembic check` não passa a acusar
