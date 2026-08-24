@@ -98,8 +98,26 @@ class TaskService:
             raise TaskNotFoundError
         return task
 
-    def list(self, *, limit: int, offset: int) -> Sequence[Task]:
-        return self._tasks.list_with_items(limit=min(limit, MAX_PAGE_SIZE), offset=offset)
+    def list(
+        self,
+        *,
+        limit: int,
+        offset: int,
+        window: tuple[datetime, datetime] | None = None,
+    ) -> Sequence[Task]:
+        """A page of tasks, optionally narrowed to a UTC window.
+
+        The window arrives already converted. This service has no business knowing about
+        time zones — the route that has the user's zone does the conversion once, which is
+        the same division ``CapacityService`` uses.
+        """
+        starts_at_or_after, starts_before = window if window is not None else (None, None)
+        return self._tasks.list_with_items(
+            limit=min(limit, MAX_PAGE_SIZE),
+            offset=offset,
+            starts_at_or_after=starts_at_or_after,
+            starts_before=starts_before,
+        )
 
     def list_tags(self, *, limit: int) -> Sequence[Tag]:
         return self._tags.list(limit=min(limit, MAX_PAGE_SIZE))

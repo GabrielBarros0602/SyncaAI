@@ -38,8 +38,23 @@ class TaskRepository(OwnedRepository[Task]):
         )
         return self._session.scalar(statement)
 
-    def list_with_items(self, *, limit: int = 50, offset: int = 0) -> Sequence[Task]:
-        """A page of this owner's tasks, soonest first."""
+    def list_with_items(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        starts_at_or_after: datetime | None = None,
+        starts_before: datetime | None = None,
+    ) -> Sequence[Task]:
+        """A page of this owner's tasks, soonest first, optionally inside a window.
+
+        The bounds are instants, not dates. Converting a local day into a UTC range happens
+        once, at the edge (ADR-0009), and arrives here already done — which also keeps the
+        predicate on the stored column, where ``ix_tasks_user_start_at`` can serve it.
+
+        Half-open, matching ``utc_window``: a task starting exactly at ``starts_before`` is
+        the next window's, so two adjacent windows neither overlap nor drop a row.
+        """
         statement = (
             self._scoped()
             .options(selectinload(Task.items), selectinload(Task.tag))
@@ -47,6 +62,10 @@ class TaskRepository(OwnedRepository[Task]):
             .limit(limit)
             .offset(offset)
         )
+        if starts_at_or_after is not None:
+            statement = statement.where(Task.start_at >= starts_at_or_after)
+        if starts_before is not None:
+            statement = statement.where(Task.start_at < starts_before)
         return self._session.scalars(statement).all()
 
     def occupied_minutes_by_day(
