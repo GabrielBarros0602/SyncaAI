@@ -227,3 +227,60 @@ describe("errors that are not about the session", () => {
     await expect(refreshSession()).resolves.toBeNull();
   });
 });
+
+
+describe("validation errors from FastAPI", () => {
+  it("reads the per-field list a sign-up form actually hits", async () => {
+    // The shape that broke this: FastAPI answers a failed validation with a list of
+    // objects, not a sentence. Reading only the string case rendered "Unprocessable
+    // Content", which tells a user nothing about which field to fix.
+    routeFetch({
+      "/auth/register": () =>
+        jsonResponse(422, {
+          detail: [
+            {
+              type: "value_error",
+              loc: ["body", "email"],
+              msg: "value is not a valid email address",
+            },
+          ],
+        }),
+    });
+
+    await expect(api.post("/auth/register", {})).rejects.toThrow(
+      "email: value is not a valid email address",
+    );
+  });
+
+  it("reports every field that failed, not only the first", async () => {
+    routeFetch({
+      "/auth/register": () =>
+        jsonResponse(422, {
+          detail: [
+            { loc: ["body", "email"], msg: "value is not a valid email address" },
+            { loc: ["body", "password"], msg: "String should have at least 8 characters" },
+          ],
+        }),
+    });
+
+    const error = await api.post("/auth/register", {}).catch((problem: unknown) => problem);
+
+    expect((error as ApiError).detail).toContain("email:");
+    expect((error as ApiError).detail).toContain("password:");
+  });
+
+  it("still reads a plain sentence, which is what a domain error sends", async () => {
+    routeFetch({ "/tasks": () => jsonResponse(422, { detail: "A task cannot start in the past." }) });
+
+    await expect(api.post("/tasks", {})).rejects.toThrow("A task cannot start in the past.");
+  });
+
+  it("falls back to the status text when detail is a shape nobody planned for", async () => {
+    routeFetch({ "/tasks": () => jsonResponse(500, { detail: { unexpected: true } }) });
+
+    const error = await api.post("/tasks", {}).catch((problem: unknown) => problem);
+
+    expect((error as ApiError).status).toBe(500);
+    expect(typeof (error as ApiError).detail).toBe("string");
+  });
+});

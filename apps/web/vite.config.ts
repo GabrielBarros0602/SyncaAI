@@ -20,7 +20,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        // 127.0.0.1 rather than localhost, deliberately. Since Node 17 the resolver no
+        // longer reorders DNS results, so on Windows `localhost` can answer ::1 first
+        // while uvicorn listens only on 127.0.0.1. The symptom is ECONNREFUSED, which
+        // reads like the API being down rather than like a name resolving to the wrong
+        // address.
+        target: "http://127.0.0.1:8000",
         changeOrigin: false,
       },
     },

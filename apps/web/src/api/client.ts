@@ -100,13 +100,55 @@ function send(path: string, init: RequestInit, token: string | null): Promise<Re
   return fetch(`${BASE}${path}`, { ...init, headers, credentials: "same-origin" });
 }
 
+/** One field's complaint, as FastAPI reports it for a failed validation. */
+interface FieldProblem {
+  loc?: unknown;
+  msg?: unknown;
+}
+
+function isFieldProblem(value: unknown): value is FieldProblem {
+  return typeof value === "object" && value !== null && "msg" in value;
+}
+
+/**
+ * The API answers with `detail` in two different shapes, and a form needs both.
+ *
+ * Domain errors send a sentence: `{"detail": "That time is already taken by another
+ * task."}`. But FastAPI's own request validation sends a *list* of per-field objects, and
+ * that is the shape a sign-up form hits first — an address without an at-sign, a password
+ * under eight characters. Reading only the string case leaves those rendering as
+ * "Unprocessable Content", which tells the user nothing about which field to fix.
+ */
 async function detailOf(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { detail?: unknown };
-    return typeof body.detail === "string" ? body.detail : response.statusText;
+    const { detail } = body;
+
+    if (typeof detail === "string") return detail;
+
+    if (Array.isArray(detail)) {
+      const messages = detail.filter(isFieldProblem).map(describeProblem);
+      if (messages.length > 0) return messages.join(" ");
+    }
+
+    return response.statusText;
   } catch {
     return response.statusText;
   }
+}
+
+function describeProblem(problem: FieldProblem): string {
+  const message = typeof problem.msg === "string" ? problem.msg : "is not valid";
+  const field = fieldNameOf(problem.loc);
+  return field === null ? message : `${field}: ${message}`;
+}
+
+function fieldNameOf(loc: unknown): string | null {
+  // `loc` is a path like ["body", "email"] or ["query", "first_day"]. The last element is
+  // the field; the first only says where it came from, which the user cannot act on.
+  if (!Array.isArray(loc) || loc.length === 0) return null;
+  const last: unknown = loc[loc.length - 1];
+  return typeof last === "string" && last !== "body" && last !== "query" ? last : null;
 }
 
 /**
