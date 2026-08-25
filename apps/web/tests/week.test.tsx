@@ -19,17 +19,42 @@ import { SessionProvider } from "../src/auth/session";
 
 const SAO_PAULO = "America/Sao_Paulo";
 
+const USABLE = 16 * 60;
+
 function aDay(overrides: Partial<DayCapacity> = {}): DayCapacity {
   const base: DayCapacity = {
     day: "2026-08-24",
     weekday: 1,
     total_minutes: 1440,
+    usable_minutes: USABLE,
     occupied_minutes: 120,
-    free_minutes: 1320,
+    free_minutes: USABLE - 120,
+    unbooked_minutes: 1440 - 120,
     task_count: 2,
     over_capacity: false,
+    load: "fine",
   };
   return { ...base, ...overrides };
+}
+
+/** A day booked for `minutes`, with every derived figure kept consistent. */
+function booked(minutes: number, overrides: Partial<DayCapacity> = {}): DayCapacity {
+  const load =
+    minutes > 20 * 60
+      ? "unsustainable"
+      : minutes > 18 * 60
+        ? "strained"
+        : minutes > USABLE
+          ? "heavy"
+          : "fine";
+  return aDay({
+    occupied_minutes: minutes,
+    free_minutes: Math.max(0, USABLE - minutes),
+    unbooked_minutes: Math.max(0, 1440 - minutes),
+    over_capacity: minutes > USABLE,
+    load,
+    ...overrides,
+  });
 }
 
 const NOOP = {
@@ -40,10 +65,15 @@ const NOOP = {
   onToggle: () => undefined,
 };
 
-function renderDay(capacity: DayCapacity, tasks: Task[] = []): HTMLElement {
+function renderDay(
+  capacity: DayCapacity,
+  tasks: Task[] = [],
+  lighter: DayCapacity | null = null,
+): HTMLElement {
   const { container } = render(
     <DayColumn
       capacity={capacity}
+      lighter={lighter}
       tasks={tasks}
       index={0}
       weekday="Mon"
@@ -90,18 +120,53 @@ it("an ordinary day does not shout about being ordinary", () => {
   expect(screen.queryByText(/DST/)).toBeNull();
 });
 
-it("a day booked past its own length reports zero and says by how much", () => {
-  // Never a negative number. Rule 3 of ADR-0012 puts every minute on the starting day, so a
-  // task at 23:30 books an hour into a day with half of one left, and the overflow is real.
-  const container = renderDay(
-    aDay({ occupied_minutes: 1560, free_minutes: 0, task_count: 12, over_capacity: true }),
-  );
+it("a day booked past the usable budget reports zero and says by how much", () => {
+  // Against sixteen hours, not against the calendar day. Measured against the day this flag
+  // would be unreachable now that minutes are clipped at midnight (ADR-0022).
+  const container = renderDay(booked(18 * 60, { task_count: 12 }));
 
   expect(container.textContent).toContain("0m");
   expect(container.textContent).not.toContain("-");
   expect(screen.getByText("over by 2h")).toBeDefined();
-  // The bar cannot spill past its track; the overflow gets its own mark instead.
-  expect((container.querySelector("[data-bar]") as HTMLElement).style.width).toBe("100%");
+});
+
+it("a full day is measured against sixteen hours, not twenty-four", () => {
+  // The complaint that started ADR-0022: "why is it only full at 24 hours — doesn't he
+  // sleep?"
+  const container = renderDay(booked(0));
+
+  expect(container.textContent).toContain("16h");
+  expect(container.textContent).not.toContain("24h");
+});
+
+it("a heavy day names the consequence rather than the day", () => {
+  renderDay(booked(17 * 60));
+
+  expect(screen.getByText("No margin for anything running late.")).toBeDefined();
+});
+
+it("the two loudest levels count what is left of the whole day", () => {
+  // Against the budget the figure would read zero at both levels and say nothing.
+  renderDay(booked(19 * 60));
+  expect(screen.getByText("Extremely heavy day. 5h unbooked.")).toBeDefined();
+
+  renderDay(booked(21 * 60));
+  expect(screen.getByText("Unsustainable. 3h unbooked.")).toBeDefined();
+});
+
+it("an ordinary day says nothing about its load", () => {
+  const container = renderDay(booked(8 * 60));
+
+  expect(container.textContent).not.toMatch(/margin|heavy|unsustainable/i);
+});
+
+it("a heavy day points at the lightest day in the week", () => {
+  // Deterministic and true today: the screen already has all seven days' capacity, so this
+  // is data rather than a model.
+  renderDay(booked(19 * 60), [], aDay({ weekday: 2, free_minutes: 9 * 60 }));
+
+  expect(screen.getByText(/This day is heavier than the rest of your week/)).toBeDefined();
+  expect(screen.getByText("Tue has 9h free.")).toBeDefined();
 });
 
 it("a day whose tasks failed to arrive does not claim to be empty", () => {
@@ -143,7 +208,8 @@ function week(days: Partial<DayCapacity>[]): DayCapacity[] {
       day: `2026-08-${String(24 + index).padStart(2, "0")}`,
       weekday: index + 1,
       occupied_minutes: 0,
-      free_minutes: 1440,
+      free_minutes: USABLE,
+      unbooked_minutes: 1440,
       task_count: 0,
       ...day,
     }),
@@ -210,7 +276,8 @@ it("an empty week still reports its capacity", async () => {
   await waitFor(() => {
     expect(screen.getByText("Nothing booked this week.")).toBeDefined();
   });
-  expect(screen.getByText(/168h free across seven days/)).toBeDefined();
+  // Seven days of sixteen usable hours, not seven calendar days.
+  expect(screen.getByText(/112h free across seven days/)).toBeDefined();
 });
 
 it("a week with a day over capacity says so in the summary", async () => {
@@ -223,7 +290,14 @@ it("a week with a day over capacity says so in the summary", async () => {
         week([
           {},
           {},
-          { occupied_minutes: 1560, free_minutes: 0, task_count: 12, over_capacity: true },
+          {
+            occupied_minutes: 18 * 60,
+            free_minutes: 0,
+            unbooked_minutes: 6 * 60,
+            task_count: 12,
+            over_capacity: true,
+            load: "heavy",
+          },
           {},
           {},
           {},
