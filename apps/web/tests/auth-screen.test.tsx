@@ -318,3 +318,46 @@ it("reveals and hides the password without losing what was typed", async () => {
   await userEvent.click(screen.getByRole("button", { name: /hide password/i }));
   expect(field.type).toBe("password");
 });
+
+it("keeps the unconfirmed alert on screen after sending another link", async () => {
+  // The account is still unconfirmed after the link goes out, so the message saying so is
+  // still true. Clearing it would take a fact that did not change off the screen and
+  // replace it with a grey line under the button.
+  route({
+    "/auth/refresh": NO_SESSION,
+    "/auth/login": () => json(403, { detail: "Confirm your address before signing in." }),
+    "/auth/resend-verification": () => json(202, { detail: "If that address needs it, a link is on its way." }),
+  });
+  renderScreen();
+
+  await fill(/email/i, "gabriel@example.com");
+  await fill(/^password$/i, "a-real-password");
+  await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /send the link again/i }));
+
+  const alert = await screen.findByRole("alert");
+  await waitFor(() => {
+    expect(alert.textContent).toContain("Another link is on its way.");
+  });
+  expect(alert.textContent).toContain("Confirm your address before signing in.");
+});
+
+it("replaces the resend button rather than leaving it clickable twice", async () => {
+  // Each resend costs somebody else an email, and the endpoint is rate limited more tightly
+  // than login for exactly that reason.
+  route({
+    "/auth/refresh": NO_SESSION,
+    "/auth/login": () => json(403, { detail: "Confirm your address before signing in." }),
+    "/auth/resend-verification": () => json(202, { detail: "sent" }),
+  });
+  renderScreen();
+
+  await fill(/email/i, "gabriel@example.com");
+  await fill(/^password$/i, "a-real-password");
+  await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /send the link again/i }));
+
+  await waitFor(() => {
+    expect(screen.queryByRole("button", { name: /send the link again/i })).toBeNull();
+  });
+});
