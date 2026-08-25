@@ -234,6 +234,46 @@
   padding: 4px 6px;
 }
 
+/*
+ * What a heavy day says.
+ *
+ * Two weights, not four. `heavy` and `strained` share the quiet one; only
+ * `unsustainable` gets the accent's full attention, because a screen where three levels
+ * shout is a screen where none of them is heard.
+ */
+.warning {
+  margin-top: 12px;
+  border-left: 2px solid var(--rule2);
+  padding-left: 10px;
+  border-radius: 0;
+}
+
+.warningLoud {
+  border-left-color: var(--accent);
+}
+
+.warningText {
+  margin: 0;
+  font: 500 11px/1.45 var(--sans);
+  color: var(--dim);
+  text-wrap: pretty;
+}
+
+.warningLoud .warningText {
+  color: var(--chip-ink);
+}
+
+.warningMove {
+  margin: 6px 0 0;
+  font: 400 11px/1.45 var(--sans);
+  color: var(--faint);
+  text-wrap: pretty;
+}
+
+.warningMoveDay {
+  color: var(--dim);
+}
+
 .trackRow {
   margin-top: 15px;
   display: flex;
