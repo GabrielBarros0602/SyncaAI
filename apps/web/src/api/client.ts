@@ -25,6 +25,14 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly detail: string,
+    /**
+     * Seconds until the caller may try again, from the server's own `Retry-After`.
+     *
+     * Carried rather than dropped because the alternative is a client guessing, and a
+     * guessed countdown is worse than none: it is either wrong and the retry fails, or it
+     * is cautious and the person waits longer than they had to.
+     */
+    readonly retryAfter: number | null = null,
   ) {
     super(detail);
     this.name = "ApiError";
@@ -190,7 +198,15 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     }
   }
 
-  if (!response.ok) throw new ApiError(response.status, await detailOf(response));
+  if (!response.ok) {
+    const header = response.headers.get("Retry-After");
+    const retryAfter = header === null ? null : Number.parseInt(header, 10);
+    throw new ApiError(
+      response.status,
+      await detailOf(response),
+      Number.isFinite(retryAfter) ? retryAfter : null,
+    );
+  }
   if (response.status === 204) return undefined as T;
 
   return (await response.json()) as T;
