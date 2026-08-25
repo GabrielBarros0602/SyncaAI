@@ -263,8 +263,8 @@ entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada 
 - [x] Janela `first_day`/`last_day` em `GET /tasks`, mesmo vocabulário do `/capacity`
 - [x] Pedido sem token responde "Not authenticated." em vez de "Incorrect email or password."
 - [x] Cliente lê `detail` em lista, que é a forma que um erro de validação do Pydantic tem
-- [ ] Tela de login e cadastro, consumindo os endpoints do S2
-- [ ] Sessão persistida no cliente e rota protegida
+- [x] Tela de login e cadastro, consumindo os endpoints do S2
+- [x] Sessão persistida no cliente e rota protegida
 - [x] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
 - [x] Criar e concluir tarefa pela interface
 - [x] Estados vazios e de erro visíveis, não tela branca
