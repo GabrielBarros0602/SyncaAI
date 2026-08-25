@@ -37,6 +37,13 @@ export async function register(credentials: Credentials & { timezone: string }):
   await api.post<{ detail: string }>("/auth/register", credentials);
 }
 
+export async function resendVerification(email: string): Promise<void> {
+  // Answers 202 whether or not there is anything to send, and is rate limited more tightly
+  // than login — the cost of abuse falls on whoever owns the address, who never asked.
+  await api.post<{ detail: string }>("/auth/resend-verification", { email });
+}
+
+
 export async function verify(token: string): Promise<void> {
   // A POST rather than following a link, because mail scanners follow links and would spend
   // the single-use token before the person ever clicked it (ADR-0019).
