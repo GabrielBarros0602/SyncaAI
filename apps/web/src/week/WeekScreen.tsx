@@ -6,6 +6,7 @@ import type { NewTask } from "../api/types";
 import { DayColumn } from "./DayColumn";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
+import { lightestDay } from "./load";
 import { useWeek } from "./useWeek";
 import styles from "./Week.module.css";
 
@@ -47,7 +48,9 @@ export function WeekScreen(): React.ReactNode {
   }
 
   const dates = daysFrom(week.monday);
-  const totalMinutes = week.days.reduce((sum, day) => sum + day.total_minutes, 0);
+  // Against the usable budget, so the week's headline figure means the same thing as each
+  // day's. Summing the calendar days here would put 168h on a screen whose columns say 16h.
+  const usableMinutes = week.days.reduce((sum, day) => sum + day.usable_minutes, 0);
   const bookedMinutes = week.days.reduce((sum, day) => sum + day.occupied_minutes, 0);
   const taskCount = week.days.reduce((sum, day) => sum + day.task_count, 0);
   const overDays = week.days.filter((day) => day.over_capacity).length;
@@ -106,10 +109,10 @@ export function WeekScreen(): React.ReactNode {
       <div className={styles.summary}>
         <div className={styles.summaryFigures}>
           <span className={styles.figureStrong}>
-            {formatMinutes(Math.max(0, totalMinutes - bookedMinutes))} free
+            {formatMinutes(Math.max(0, usableMinutes - bookedMinutes))} free
           </span>
           <span className={styles.figure}>
-            {formatMinutes(bookedMinutes)} booked of {formatMinutes(totalMinutes)}
+            {formatMinutes(bookedMinutes)} booked of {formatMinutes(usableMinutes)}
           </span>
           <span className={styles.figure}>
             {taskCount} {taskCount === 1 ? "task" : "tasks"}
@@ -132,6 +135,7 @@ export function WeekScreen(): React.ReactNode {
           <DayColumn
             key={capacity.day}
             capacity={capacity}
+            lighter={capacity.load === "fine" ? null : lightestDay(week.days, capacity.day)}
             tasks={week.byDay.get(capacity.day) ?? []}
             index={index}
             weekday={weekdayName(capacity.weekday)}
@@ -174,7 +178,7 @@ export function WeekScreen(): React.ReactNode {
         <div className={styles.emptyWeek}>
           <span className={styles.emptyWeekHead}>Nothing booked this week.</span>
           <span className={styles.emptyWeekFigure}>
-            {formatMinutes(totalMinutes)} free across seven days.
+            {formatMinutes(usableMinutes)} free across seven days.
           </span>
           <span className={styles.emptyWeekNote}>
             Capacity is known before anything is on it.

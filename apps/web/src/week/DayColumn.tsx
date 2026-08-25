@@ -1,5 +1,6 @@
-import { formatMinutes, zonedMinutes } from "../lib/time";
+import { formatMinutes, weekdayName, zonedMinutes } from "../lib/time";
 import type { DayCapacity, NewTask, Task } from "../api/types";
+import { warningFor } from "./load";
 import { TaskRow } from "./TaskRow";
 import { NewTaskForm } from "./NewTaskForm";
 import { useDirectionalFill } from "./useDirectionalFill";
@@ -15,6 +16,8 @@ const LONGEST_DAY = 1500;
 
 interface Props {
   capacity: DayCapacity;
+  /** The day in the week with the most room, when this one is heavy enough to say so. */
+  lighter: DayCapacity | null;
   tasks: Task[];
   index: number;
   weekday: string;
@@ -32,6 +35,7 @@ interface Props {
 
 export function DayColumn({
   capacity,
+  lighter,
   tasks,
   index,
   weekday,
@@ -49,13 +53,18 @@ export function DayColumn({
   const { onMouseEnter, onMouseLeave, fillRef } = useDirectionalFill();
   const dayNumber = String(index + 1).padStart(2, "0");
   const over = capacity.over_capacity;
-  const overBy = capacity.occupied_minutes - capacity.total_minutes;
+  // Against the budget, the same thing `over_capacity` is measured against. Against the
+  // calendar day this would be negative on every day that flag is ever true.
+  const overBy = capacity.occupied_minutes - capacity.usable_minutes;
 
   // Against the longest possible day, not against this one. Scaling each day to itself
   // would make every track full width and quietly throw away the fact this screen exists
   // to be honest about: days are not all the same length.
   const trackWidth = `${String(Math.round((capacity.total_minutes / LONGEST_DAY) * 100))}%`;
+  // Against the real day, so the bar means "how much of this day is spoken for". The budget
+  // decides the numbers; the geometry stays honest about the day itself.
   const barWidth = `${String(Math.min(100, Math.round((capacity.occupied_minutes / capacity.total_minutes) * 100)))}%`;
+  const warning = warningFor(capacity);
 
   return (
     <div className={cx(styles.day, over && styles.dayOver)}>
@@ -86,10 +95,31 @@ export function DayColumn({
         </div>
         <div className={cx(styles.layer, styles.freeOf)}>
           free of{" "}
-          <span className={styles.freeOfValue}>{formatMinutes(capacity.total_minutes)}</span>
+          <span className={styles.freeOfValue}>{formatMinutes(capacity.usable_minutes)}</span>
         </div>
         {over && (
           <div className={cx(styles.layer, styles.overChip)}>over by {formatMinutes(overBy)}</div>
+        )}
+        {warning.message !== null && (
+          <div
+            className={cx(
+              styles.layer,
+              styles.warning,
+              warning.level === "unsustainable" && styles.warningLoud,
+            )}
+          >
+            <p className={styles.warningText}>{warning.message}</p>
+            {lighter !== null && (
+              // Deterministic, and true today. The AI adds *which* task should move, later
+              // — the sentence does not need it to be honest (ADR-0022).
+              <p className={styles.warningMove}>
+                This day is heavier than the rest of your week.{" "}
+                <span className={styles.warningMoveDay}>
+                  {weekdayName(lighter.weekday)} has {formatMinutes(lighter.free_minutes)} free.
+                </span>
+              </p>
+            )}
+          </div>
         )}
         <div className={cx(styles.layer, styles.trackRow)}>
           <div data-track className={styles.track} style={{ width: trackWidth }}>
