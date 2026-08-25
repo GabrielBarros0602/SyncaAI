@@ -14,6 +14,7 @@ from sqlalchemy import (
     Row,
     Select,
     and_,
+    case,
     column,
     func,
     select,
@@ -126,12 +127,20 @@ class TaskRepository(OwnedRepository[Task]):
             Task.start_at, day_windows.c.window_start
         )
 
+        # `LEAST` and `GREATEST` skip NULLs in PostgreSQL, unlike almost every other
+        # function. On the outer join's unmatched row that means LEAST(NULL, window_end)
+        # is window_end and GREATEST(NULL, window_start) is window_start — so an empty day
+        # reports the whole window as occupied. COALESCE around the SUM does not help: the
+        # sum is not null, it is 1440. The absent task has to be excluded explicitly.
+        minutes = case(
+            (Task.id.is_(None), 0),
+            else_=func.extract("epoch", overlap) / SECONDS_IN_A_MINUTE,
+        )
+
         statement: Select[tuple[date, int, int]] = (
             select(
                 day_windows.c.day,
-                func.coalesce(
-                    func.sum(func.extract("epoch", overlap) / SECONDS_IN_A_MINUTE), 0
-                ).label("occupied_minutes"),
+                func.coalesce(func.sum(minutes), 0).label("occupied_minutes"),
                 func.count(Task.id).label("task_count"),
             )
             .select_from(day_windows)

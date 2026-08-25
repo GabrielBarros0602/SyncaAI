@@ -270,10 +270,10 @@ def _explain(
 ) -> str:
     """EXPLAIN ANALYZE over the statement the repository actually builds."""
     statement = TaskRepository(session, owner_id).capacity_statement(windows=windows)
-    # literal_binds because EXPLAIN is issued as raw text; the values are a uuid and two
-    # timestamps that the application produced, never anything a caller typed.
-    compiled = statement.compile(
-        dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-    )
-    rows = session.execute(text(f"EXPLAIN ANALYZE {compiled}")).all()
+    # Parameters are bound rather than inlined. `literal_binds` renders the VALUES rows as
+    # bare strings, so PostgreSQL types the columns as text and refuses to compare them with
+    # a timestamptz — and, more importantly, it would mean measuring a plan for SQL the
+    # application never sends.
+    compiled = statement.compile(dialect=postgresql.dialect())
+    rows = session.execute(text(f"EXPLAIN ANALYZE {compiled}"), compiled.params).all()
     return "\n".join(str(row[0]) for row in rows)
