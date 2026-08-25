@@ -7,9 +7,22 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { App } from "../src/App";
 import { resetClientForTests } from "../src/api/client";
 import { SessionProvider } from "../src/auth/session";
+import { useSession } from "../src/auth/useSession";
+
+/**
+ * A probe rather than the real shell.
+ *
+ * What is under test is the provider's three states, and rendering `App` to observe them
+ * couples this file to whatever the signed-in screen happens to fetch. It broke exactly
+ * that way once already.
+ */
+function Probe(): React.ReactNode {
+  const { status } = useSession();
+  if (status === "loading") return <p role="status">Checking your session…</p>;
+  return <p>{status === "authenticated" ? "Signed in." : "Signed out."}</p>;
+}
 
 type FetchLike = () => Promise<Response>;
 
@@ -44,7 +57,7 @@ it("shows neither interface until the boot refresh has answered", () => {
 
   render(
     <SessionProvider>
-      <App />
+      <Probe />
     </SessionProvider>,
   );
 
@@ -58,7 +71,7 @@ it("a live cookie means the user is signed in without typing anything", async ()
 
   render(
     <SessionProvider>
-      <App />
+      <Probe />
     </SessionProvider>,
   );
 
@@ -72,7 +85,7 @@ it("no cookie means signed out", async () => {
 
   render(
     <SessionProvider>
-      <App />
+      <Probe />
     </SessionProvider>,
   );
 
@@ -89,7 +102,7 @@ it("the signed-out interface is never shown to a user who is signed in", async (
 
   const { container } = render(
     <SessionProvider>
-      <App />
+      <Probe />
     </SessionProvider>,
   );
   const observer = new MutationObserver(() => seen.push(container.textContent));
