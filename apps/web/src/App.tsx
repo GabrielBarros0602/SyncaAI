@@ -1,28 +1,28 @@
 /**
- * The shell. Screens land here in the next pull request; for now this proves the three
- * session states are reachable and that nothing renders before the boot refresh answers.
+ * The shell.
+ *
+ * Three session states, and the third is the whole reason it is not a boolean: with the
+ * access token in memory, a reload starts knowing nothing, and guessing "signed out" would
+ * flash the login screen at somebody who is perfectly well signed in (ADR-0021).
  */
 import { useSession } from "./auth/useSession";
+import { WeekScreen } from "./week/WeekScreen";
+import { WeekSkeleton } from "./week/WeekSkeleton";
 
 export function App(): React.ReactNode {
-  const { status, signOut } = useSession();
-
-  if (status === "loading") {
-    // Not a spinner yet, and deliberately not the login screen: showing that here is the
-    // flash-on-every-reload bug the third state exists to prevent (ADR-0021).
-    return <p role="status">Checking your session…</p>;
-  }
-
-  if (status === "anonymous") {
-    return <p>Signed out.</p>;
-  }
+  const { status } = useSession();
 
   return (
-    <div>
-      <p>Signed in.</p>
-      <button type="button" onClick={() => void signOut()}>
-        Sign out
-      </button>
+    <div
+      data-theme="dark"
+      data-density="default"
+      data-accent="default"
+      data-motion="default"
+      style={{ minHeight: "100vh", padding: "56px 64px 96px" }}
+    >
+      {status === "loading" && <WeekSkeleton />}
+      {status === "anonymous" && <p>Signed out.</p>}
+      {status === "authenticated" && <WeekScreen />}
     </div>
   );
 }
