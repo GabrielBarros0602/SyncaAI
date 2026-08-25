@@ -69,6 +69,13 @@ consume day capacity. It is outside the minimum scope and recorded as a pending 
 
 ### Rule 3 — tasks crossing midnight
 
+> **Superseded by [ADR-0022](0022-capacity-against-a-usable-day.md).** Minutes now count
+> against the day they actually fall in, clipped at midnight. The consequence this record
+> accepted — that a day can report more than 1440 minutes occupied — no longer happens, and
+> `over_capacity` now means something else entirely: booked past a *usable* day of sixteen
+> hours, rather than past the calendar day. The rest of ADR-0012 stands.
+
+
 | Option | Assessment |
 |---|---|
 | All minutes on the start day — **chosen** | Matches how a user reasons: what matters for planning is when something begins. Simple `GROUP BY` on the local date of `start_at`. |
