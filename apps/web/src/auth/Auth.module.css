@@ -94,6 +94,12 @@
   text-wrap: pretty;
 }
 
+.alertNote {
+  font: 400 12px/1.4 var(--sans);
+  color: var(--dim);
+  flex: none;
+}
+
 .fields {
   margin-top: 40px;
   display: flex;

@@ -61,6 +61,7 @@ export function AuthScreen(): React.ReactNode {
   const [revealed, setRevealed] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const [retryIn, setRetryIn] = useState(0);
@@ -83,12 +84,14 @@ export function AuthScreen(): React.ReactNode {
     setMode(next);
     setProblem(null);
     setNote(null);
+    setResent(false);
   }
 
   async function run(work: () => Promise<void>): Promise<void> {
     setBusy(true);
     setProblem(null);
     setNote(null);
+    setResent(false);
     try {
       await work();
     } catch (cause) {
@@ -122,11 +125,29 @@ export function AuthScreen(): React.ReactNode {
     });
   };
 
+  /**
+   * Deliberately not routed through `run`.
+   *
+   * `run` clears the current problem before it starts, which is right for a submission and
+   * wrong here: the account is still unconfirmed after the link is sent, so the alert saying
+   * so is still true. Clearing it would take a message that still applies off the screen and
+   * replace it with a grey line under the button — a demotion for a fact that did not change.
+   */
   const resend = (): void => {
-    void run(async () => {
-      await auth.resendVerification(email);
-      setNote("Another link is on its way.");
-    });
+    setBusy(true);
+    void auth
+      .resendVerification(email)
+      .then(() => {
+        setResent(true);
+      })
+      .catch((cause: unknown) => {
+        const failure = problemOf(cause);
+        setProblem(failure);
+        setRetryIn(failure.retryAfter);
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   };
 
   const signingIn = mode === "signIn";
@@ -160,11 +181,20 @@ export function AuthScreen(): React.ReactNode {
           {problem !== null && (
             <div role="alert" className={styles.alert}>
               <span className={styles.alertText}>{problem.message}</span>
-              {problem.message === UNVERIFIED && email !== "" && (
-                <button type="button" className={styles.link} onClick={resend}>
-                  Send the link again
-                </button>
-              )}
+              {problem.message === UNVERIFIED &&
+                email !== "" &&
+                (resent ? (
+                  <span className={styles.alertNote}>Another link is on its way.</span>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.link}
+                    onClick={resend}
+                    disabled={busy}
+                  >
+                    Send the link again
+                  </button>
+                ))}
             </div>
           )}
 
