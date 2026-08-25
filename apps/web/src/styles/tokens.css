@@ -1,0 +1,177 @@
+/*
+ * The design's tokens, as they arrived from Claude Design.
+ *
+ * Four axes are exposed as data attributes on the root: theme, density, accent weight and
+ * motion. They are attributes rather than classes because they are exclusive states, and
+ * because a stylesheet can then reach them without a naming convention to remember.
+ *
+ * Dark is the default, not the alternative. The design established that and the values are
+ * tuned for it — the light theme is a genuine second set, not a filter.
+ */
+
+:root {
+  --bg: #0a0a0b;
+  --ink: #f4f1ee;
+  --dim: rgba(244, 241, 238, 0.58);
+  --faint: rgba(244, 241, 238, 0.36);
+  --rule: rgba(244, 241, 238, 0.12);
+  --rule2: rgba(244, 241, 238, 0.26);
+  --fill: rgba(244, 241, 238, 0.1);
+  --hover: rgba(244, 241, 238, 0.07);
+
+  /* One accent, and it means trouble: over capacity, a conflict, a failed request. It is
+     absent from a healthy week on purpose — a colour that is everywhere is not a signal. */
+  --accent: #ff5a3c;
+  --accent-ink: #0a0a0b;
+  --accent-tint: rgba(255, 90, 60, 0.1);
+  --chip-bg: transparent;
+  --chip-ink: var(--accent);
+
+  --pad: 16px;
+  --rowpad: 11px;
+  --num: 34px;
+  --dur: 0.18s;
+  --rev: 0.55s;
+
+  --sans: Archivo, system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+[data-theme="light"] {
+  --bg: #f4f3f2;
+  --ink: #1c1a19;
+  --dim: rgba(28, 26, 25, 0.66);
+  --faint: rgba(28, 26, 25, 0.42);
+  --rule: rgba(28, 26, 25, 0.16);
+  --rule2: rgba(28, 26, 25, 0.32);
+  --fill: rgba(28, 26, 25, 0.11);
+  --hover: rgba(28, 26, 25, 0.06);
+  --accent: #c9280c;
+  --accent-ink: #f4f3f2;
+  --accent-tint: rgba(201, 40, 12, 0.09);
+}
+
+[data-density="compact"] {
+  --pad: 11px;
+  --rowpad: 7px;
+  --num: 29px;
+}
+
+[data-density="roomy"] {
+  --pad: 22px;
+  --rowpad: 15px;
+  --num: 40px;
+}
+
+[data-accent="subtle"] {
+  --accent-tint: transparent;
+}
+
+[data-accent="loud"] {
+  --accent-tint: rgba(255, 90, 60, 0.2);
+  --chip-bg: var(--accent);
+  --chip-ink: var(--accent-ink);
+}
+
+[data-accent="loud"][data-theme="light"] {
+  --accent-tint: rgba(201, 40, 12, 0.16);
+}
+
+[data-motion="off"] {
+  --dur: 0s;
+  --rev: 0.001s;
+}
+
+[data-motion="full"] {
+  --dur: 0.3s;
+  --rev: 0.85s;
+}
+
+/* The setting wins over the props. Somebody who asked their operating system for less
+   motion is not asking to be talked out of it. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0s;
+    --rev: 0.001s;
+  }
+
+  .skeleton {
+    animation: none !important;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule2);
+}
+
+a:hover {
+  border-bottom-color: var(--ink);
+}
+
+input,
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+/* Half the use of this screen is by keyboard, so the focus ring is part of the design
+   rather than a browser default nobody looked at. */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--fill);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+
+  50% {
+    opacity: 0.62;
+  }
+}
+
+/* The one moment of motion that is not a hover: the week's numbers arriving, once. */
+.rise {
+  animation: rise var(--rev) cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.skeleton {
+  animation: pulse 1.6s ease-in-out infinite;
+}
