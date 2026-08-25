@@ -41,6 +41,16 @@ export class SessionExpiredError extends Error {
 
 const BASE = "/api/v1";
 
+/**
+ * The endpoints where a 401 is an answer rather than an expired session.
+ *
+ * Signing in with the wrong password answers 401. Without this, the client would read that
+ * as "the session died", try to refresh, fail, and report a network problem for what was
+ * actually a typo — while also telling the application the session was lost, on a screen
+ * where there was never a session to lose.
+ */
+const AUTHENTICATION = /^\/auth\//;
+
 // A refresh already in flight. Every caller that arrives while this is set awaits the same
 // promise instead of starting a second exchange.
 let refreshInFlight: Promise<string | null> | null = null;
@@ -158,7 +168,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const tokenUsed = getAccessToken();
   let response = await send(path, init, tokenUsed);
 
-  if (response.status === 401) {
+  if (response.status === 401 && !AUTHENTICATION.test(path)) {
     // While this request was in the air, another one may have already renewed the session.
     // Reusing that result is not just an optimisation: refreshing again would spend a
     // second single-use token for nothing.
