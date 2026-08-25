@@ -298,6 +298,8 @@ errado.
 - [ ] Uma tentativa de reparo, alimentada pelos erros de validação
 - [x] **Decidido:** capacidade é ocupação real medida contra um dia útil de 16h, com quatro
       níveis de carga e nada bloqueado → [ADR-0022](adr/0022-capacity-against-a-usable-day.md)
+- [x] Implementado: trigger, query com recorte por dia, `usable_minutes`, `load` e as três
+      mensagens. Falta só o botão de mover, que precisa da interação, não do dado
 - [ ] **Horário útil por usuário, antes do agendador.** Sem isso o agendador distribui nos
       minutos livres que existirem, e às 3 da manhã existem 60. Precisa de ADR: muda schema e
       muda o significado de "capacidade livre"

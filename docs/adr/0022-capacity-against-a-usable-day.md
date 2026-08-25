@@ -202,14 +202,14 @@ carried by a figure that makes it arithmetic.
 
 ## Action Items
 
-1. [ ] Trigger derives `end_at` as the lesser of planned and completed, never negative.
-2. [ ] Capacity sums the clipped range per local day, windows built at the edge.
-3. [ ] The window keeps `start_at >= first - 1 day` so the index is still usable.
-4. [ ] `DayCapacity` gains `usable_minutes` and `load`; `total_minutes` stays.
-5. [ ] Un-completing into occupied time answers a readable 409.
-6. [ ] The "move something" box, from capacity the screen already has.
-7. [ ] A test that a 23:00 task lasting two hours books one hour on each of two days.
-8. [ ] A test that completing at 13:30 makes 13:30–15:00 bookable.
+1. [x] Trigger derives `end_at` as the lesser of planned and completed, never negative.
+2. [x] Capacity sums the clipped range per local day, windows built at the edge.
+3. [x] The window keeps `start_at >= first - 1 day` so the index is still usable.
+4. [x] `DayCapacity` gains `usable_minutes` and `load`; `total_minutes` stays.
+5. [x] Un-completing into occupied time answers a readable 409.
+6. [x] The "move something" box, from capacity the screen already has.
+7. [x] A test that a 23:00 task lasting two hours books one hour on each of two days.
+8. [x] A test that completing at 13:30 makes 13:30–15:00 bookable.
 
 ---
 
