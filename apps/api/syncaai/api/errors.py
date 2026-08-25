@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from syncaai.errors import (
     AccountNotVerifiedError,
+    CannotReopenTaskError,
     HorizonTooLongError,
     InvalidCredentialsError,
     InvalidLinkTokenError,
@@ -91,6 +92,15 @@ def register_error_handlers(app: FastAPI) -> None:
         # them apart, which is the point (ADR-0016).
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such task."}
+        )
+
+    @app.exception_handler(CannotReopenTaskError)
+    async def _cannot_reopen(_: Request, __: CannotReopenTaskError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "detail": "Something else took that time while this task was done.",
+            },
         )
 
     @app.exception_handler(TaskOverlapsError)

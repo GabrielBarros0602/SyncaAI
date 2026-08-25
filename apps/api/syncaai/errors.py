@@ -92,3 +92,12 @@ class NotAuthenticatedError(DomainError):
     The distinction is not an information leak. This says only "you are not signed in",
     which is already obvious to whoever sent no token.
     """
+
+
+class CannotReopenTaskError(DomainError):
+    """Raised when un-completing a task would collide with something booked meanwhile.
+
+    New with ADR-0022. Completing early gives the remaining time back, and something else can
+    take it; marking the task unfinished tries to grow its range into that time, and the
+    exclusion constraint refuses. Correct, and it needs a sentence rather than a driver error.
+    """
