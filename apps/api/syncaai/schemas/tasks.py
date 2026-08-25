@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -156,8 +157,16 @@ class DayCapacityRead(BaseModel):
 
     day: date
     weekday: int
+    #: The real length of the local day. Drives the geometry, and is the reason a
+    #: daylight-saving day still looks different from its neighbours.
     total_minutes: int
+    #: What the day actually offers. Every figure below is measured against this.
+    usable_minutes: int
     occupied_minutes: int
     free_minutes: int
+    #: What is left of the whole day, which is what the heaviest two messages report. Against
+    #: the budget it would read zero at every level that shows it.
+    unbooked_minutes: int
     task_count: int
     over_capacity: bool
+    load: Literal["fine", "heavy", "strained", "unsustainable"]
