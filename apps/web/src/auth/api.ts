@@ -37,6 +37,13 @@ export async function register(credentials: Credentials & { timezone: string }):
   await api.post<{ detail: string }>("/auth/register", credentials);
 }
 
+export async function verify(token: string): Promise<void> {
+  // A POST rather than following a link, because mail scanners follow links and would spend
+  // the single-use token before the person ever clicked it (ADR-0019).
+  await api.post<undefined>("/auth/verify", { token });
+}
+
+
 export async function logout(): Promise<void> {
   try {
     // 204, so there is no body to type. `undefined` says that; `void` is a return

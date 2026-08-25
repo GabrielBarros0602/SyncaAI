@@ -1,0 +1,185 @@
+/*
+ * Entering. Same tokens as the week — this is the same product, and the first screen
+ * anybody sees should say so before the second one confirms it.
+ */
+
+.screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.panel {
+  width: 100%;
+  max-width: 420px;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.wordmark {
+  font: 800 19px/1 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  font: 400 12px/1 var(--sans);
+  color: var(--faint);
+}
+
+.step {
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--faint);
+}
+
+.title {
+  font: 600 13px/1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+}
+
+.lede {
+  font: 400 13px/1.6 var(--sans);
+  color: var(--dim);
+  margin: 0 0 24px;
+  text-wrap: pretty;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font: 500 10px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--rule2);
+  padding: 11px 12px;
+  font: 400 13px/1.2 var(--sans);
+  caret-color: var(--ink);
+  transition: border-color var(--dur);
+}
+
+.input:hover {
+  border-color: var(--ink);
+}
+
+.inputMono {
+  composes: input;
+  font: 400 13px/1.2 var(--mono);
+}
+
+.hint {
+  font: 400 11px/1.5 var(--sans);
+  color: var(--faint);
+}
+
+.error {
+  border: 1px solid var(--accent);
+  background: var(--accent-tint);
+  padding: 10px 12px;
+  font: 400 12px/1.5 var(--sans);
+  color: var(--chip-ink);
+  text-wrap: pretty;
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  padding: 12px;
+  cursor: pointer;
+  font: 600 12px/1 var(--sans);
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+.submit:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.submitKey {
+  font: 500 10px/1 var(--mono);
+  opacity: 0.65;
+}
+
+.switch {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: 400 12px/1.5 var(--sans);
+  color: var(--dim);
+  flex-wrap: wrap;
+}
+
+.link {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule2);
+  padding: 0;
+  font: 400 12px/1.5 var(--sans);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--dur);
+}
+
+.link:hover {
+  border-bottom-color: var(--ink);
+}
+
+.sent {
+  border: 1px solid var(--rule2);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.sentHead {
+  font: 500 15px/1.4 var(--sans);
+  margin: 0 0 8px;
+}
+
+.sentNote {
+  font: 400 12px/1.6 var(--sans);
+  color: var(--dim);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.local {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--rule);
+  font: 400 11px/1.6 var(--mono);
+  color: var(--faint);
+  text-wrap: pretty;
+}
