@@ -2,21 +2,25 @@
  * Entering, in three states and no router.
  *
  * Three screens' worth of behaviour with two forms, because a router for two forms is
- * machinery with nothing to route. It arrives when there is a URL worth having.
+ * machinery with nothing to route. It arrives when there is a URL worth having — the
+ * password reset link will be the first, since it carries a token in the address.
  *
- * The third state — check your inbox — is not a dead end. It takes the confirmation token,
- * so an account can be created and confirmed without leaving this screen. That matters more
- * than it looks in development, where the token arrives in the API's log rather than in a
- * mailbox.
+ * The confirm state is not a dead end: it takes the code, so an account can be created and
+ * confirmed without leaving the screen. That matters most in development, where the mail
+ * goes to the API's log rather than to a mailbox.
  */
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 
 import { ApiError } from "../api/client";
 import * as auth from "./api";
+import { cx } from "../lib/cx";
 import { useSession } from "./useSession";
 import styles from "./Auth.module.css";
 
 type Mode = "signIn" | "signUp" | "confirm";
+
+/** The one error whose answer is an action rather than a correction. */
+const UNVERIFIED = "Confirm your address before signing in.";
 
 /** The browser's zone, offered as a default the user can change. */
 function browserZone(): string {
@@ -27,12 +31,24 @@ function browserZone(): string {
   }
 }
 
-function messageOf(problem: unknown): string {
+interface Problem {
+  message: string;
+  /** Seconds the server asked the caller to wait, from its own `Retry-After`. */
+  retryAfter: number;
+}
+
+function problemOf(cause: unknown): Problem {
   // The API's own sentence when it has one. It already decided what is safe to say —
-  // "Incorrect email or password" is one message for a missing account and a wrong password,
-  // and rewording it here would risk splitting them apart again (ADR-0019).
-  if (problem instanceof ApiError) return problem.detail;
-  return "Couldn't reach the server.";
+  // "Incorrect email or password" is one message for a missing account and a wrong
+  // password, and rewording here would risk splitting them apart again (ADR-0019).
+  if (cause instanceof ApiError) {
+    return { message: cause.detail, retryAfter: cause.retryAfter ?? 0 };
+  }
+  return { message: "Couldn't reach the server.", retryAfter: 0 };
+}
+
+function asClock(seconds: number): string {
+  return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
 export function AuthScreen(): React.ReactNode {
@@ -42,21 +58,43 @@ export function AuthScreen(): React.ReactNode {
   const [password, setPassword] = useState("");
   const [timezone, setTimezone] = useState(browserZone);
   const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [retryIn, setRetryIn] = useState(0);
+  const blocked = busy || retryIn > 0;
+
+  // Counted down one second at a time from the server's own Retry-After. The write happens
+  // in the timer's callback rather than in the effect body, so the remaining seconds are
+  // never a second copy of something else that could drift from it.
+  useEffect(() => {
+    if (retryIn <= 0) return;
+    const timer = setTimeout(() => {
+      setRetryIn(retryIn - 1);
+    }, 1000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [retryIn]);
 
   function go(next: Mode): void {
     setMode(next);
-    setError(null);
+    setProblem(null);
+    setNote(null);
   }
 
   async function run(work: () => Promise<void>): Promise<void> {
     setBusy(true);
-    setError(null);
+    setProblem(null);
+    setNote(null);
     try {
       await work();
-    } catch (problem) {
-      setError(messageOf(problem));
+    } catch (cause) {
+      const failure = problemOf(cause);
+      setProblem(failure);
+      setRetryIn(failure.retryAfter);
     } finally {
       setBusy(false);
     }
@@ -64,7 +102,7 @@ export function AuthScreen(): React.ReactNode {
 
   const submit = (event: SyntheticEvent): void => {
     event.preventDefault();
-    if (busy) return;
+    if (blocked) return;
 
     void run(async () => {
       if (mode === "signIn") {
@@ -79,147 +117,210 @@ export function AuthScreen(): React.ReactNode {
         setToken("");
         setPassword("");
         setMode("signIn");
+        setNote("Confirmed. Sign in below.");
       }
     });
   };
 
+  const resend = (): void => {
+    void run(async () => {
+      await auth.resendVerification(email);
+      setNote("Another link is on its way.");
+    });
+  };
+
+  const signingIn = mode === "signIn";
+  const signingUp = mode === "signUp";
+  const confirming = mode === "confirm";
+
   return (
     <div className={styles.screen}>
-      <div className={styles.panel}>
-        <div className={styles.head}>
+      <div className={styles.form}>
+        <div className={cx(styles.top, styles.step)}>
           <span className={styles.wordmark}>SyncaAI</span>
-          <span className={styles.tagline}>your week, in minutes you actually have</span>
+          <span className={styles.status}>
+            {busy ? "working" : confirming ? "one code, used once" : "no session"}
+          </span>
         </div>
 
-        {mode === "confirm" && (
-          <div className={styles.sent}>
-            <p className={styles.sentHead}>Check your inbox.</p>
-            <p className={styles.sentNote}>
-              If that address needs an account, a confirmation link is on its way. Paste the
-              code below to finish.
-            </p>
-            <p className={styles.local}>
-              Running locally? The mail goes to the API&rsquo;s log — look for the block
-              starting <span style={{ color: "var(--dim)" }}>--- mail ---</span> in the
-              terminal.
+        <div key={mode} className={styles.swap}>
+          <div className={cx(styles.lead, styles.step, styles.step1)}>
+            <h1 className={styles.headline}>
+              {signingIn ? "Welcome back" : signingUp ? "Start the week" : "Check your inbox"}
+            </h1>
+            <p className={styles.lede}>
+              {signingIn
+                ? "A day's capacity is a number the database knows, not a suggestion. Sign in to see what this week actually holds."
+                : signingUp
+                  ? "The time zone decides which day a task lands on, so it is the one field worth reading twice."
+                  : "If that address needs an account, a confirmation link is on its way. Paste the code to finish."}
             </p>
           </div>
-        )}
 
-        <p className={styles.step}>{mode === "signUp" ? "02" : mode === "confirm" ? "03" : "01"}</p>
-        <h1 className={styles.title}>
-          {mode === "signIn" ? "Sign in" : mode === "signUp" ? "Create an account" : "Confirm"}
-        </h1>
-        <p className={styles.lede}>
-          {mode === "signIn"
-            ? "Your week is waiting where you left it."
-            : mode === "signUp"
-              ? "The time zone decides which day a task lands on, so it is worth getting right."
-              : "One code, used once."}
-        </p>
-
-        <form className={styles.form} onSubmit={submit}>
-          {mode !== "confirm" && (
-            <>
-              <label className={styles.field}>
-                <span className={styles.label}>Email</span>
-                <input
-                  className={styles.input}
-                  type="email"
-                  value={email}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                  }}
-                  autoComplete="email"
-                  required
-                  autoFocus
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.label}>Password</span>
-                <input
-                  className={styles.input}
-                  type="password"
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value);
-                  }}
-                  autoComplete={mode === "signIn" ? "current-password" : "new-password"}
-                  required
-                />
-                {mode === "signUp" && (
-                  <span className={styles.hint}>
-                    Eight characters or more. No other rules — what makes this expensive to
-                    attack is the hashing, not a symbol you had to invent.
-                  </span>
-                )}
-              </label>
-            </>
-          )}
-
-          {mode === "signUp" && (
-            <label className={styles.field}>
-              <span className={styles.label}>Time zone</span>
-              <input
-                className={styles.inputMono}
-                value={timezone}
-                onChange={(event) => {
-                  setTimezone(event.target.value);
-                }}
-                required
-              />
-            </label>
-          )}
-
-          {mode === "confirm" && (
-            <label className={styles.field}>
-              <span className={styles.label}>Confirmation code</span>
-              <input
-                className={styles.inputMono}
-                value={token}
-                onChange={(event) => {
-                  setToken(event.target.value);
-                }}
-                required
-                autoFocus
-              />
-            </label>
-          )}
-
-          {error !== null && (
-            <div role="alert" className={styles.error}>
-              {error}
+          {problem !== null && (
+            <div role="alert" className={styles.alert}>
+              <span className={styles.alertText}>{problem.message}</span>
+              {problem.message === UNVERIFIED && email !== "" && (
+                <button type="button" className={styles.link} onClick={resend}>
+                  Send the link again
+                </button>
+              )}
             </div>
           )}
 
-          <button type="submit" className={styles.submit} disabled={busy}>
-            <span>
-              {busy
-                ? "working…"
-                : mode === "signIn"
-                  ? "sign in"
-                  : mode === "signUp"
-                    ? "create account"
-                    : "confirm"}
-            </span>
-            <span className={styles.submitKey}>&#9166;</span>
-          </button>
-        </form>
+          <form onSubmit={submit}>
+            <div className={cx(styles.fields, styles.step, styles.step2)}>
+              {!confirming && (
+                <>
+                  <div>
+                    <div className={styles.fieldHead}>
+                      <span className={styles.fieldIndex}>01</span>
+                      <label htmlFor="auth-email" className={styles.label}>
+                        Email
+                      </label>
+                    </div>
+                    <input
+                      id="auth-email"
+                      className={styles.input}
+                      type="email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                      }}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      required
+                      autoFocus
+                    />
+                  </div>
 
-        <div className={styles.switch}>
-          {mode === "signIn" ? (
-            <>
-              <span>No account yet?</span>
+                  <div>
+                    <div className={styles.fieldHead}>
+                      <span className={styles.fieldIndex}>02</span>
+                      <label htmlFor="auth-password" className={styles.label}>
+                        Password
+                      </label>
+                      {signingUp && (
+                        <span className={styles.fieldProblem} style={{ color: "var(--faint)" }}>
+                          eight or more
+                        </span>
+                      )}
+                    </div>
+                    <div className={styles.secret}>
+                      <input
+                        id="auth-password"
+                        className={styles.input}
+                        type={revealed ? "text" : "password"}
+                        value={password}
+                        onChange={(event) => {
+                          setPassword(event.target.value);
+                        }}
+                        placeholder="&#183;&#183;&#183;&#183;&#183;&#183;&#183;&#183;"
+                        autoComplete={signingIn ? "current-password" : "new-password"}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className={styles.reveal}
+                        aria-pressed={revealed}
+                        aria-label={revealed ? "Hide password" : "Show password"}
+                        onClick={() => {
+                          setRevealed(!revealed);
+                        }}
+                      >
+                        {revealed ? "hide" : "show"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {signingUp && (
+                <div>
+                  <div className={styles.fieldHead}>
+                    <span className={styles.fieldIndex}>03</span>
+                    <label htmlFor="auth-zone" className={styles.label}>
+                      Time zone
+                    </label>
+                  </div>
+                  <input
+                    id="auth-zone"
+                    className={styles.input}
+                    value={timezone}
+                    onChange={(event) => {
+                      setTimezone(event.target.value);
+                    }}
+                    required
+                  />
+                </div>
+              )}
+
+              {confirming && (
+                <div>
+                  <div className={styles.fieldHead}>
+                    <span className={styles.fieldIndex}>01</span>
+                    <label htmlFor="auth-code" className={styles.label}>
+                      Confirmation code
+                    </label>
+                  </div>
+                  <input
+                    id="auth-code"
+                    className={styles.input}
+                    value={token}
+                    onChange={(event) => {
+                      setToken(event.target.value);
+                    }}
+                    required
+                    autoFocus
+                  />
+                  <div className={styles.afterField}>
+                    <span className={styles.status}>
+                      running locally? the mail is in the API&rsquo;s log
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={cx(styles.act, styles.step, styles.step3)}>
+              <button type="submit" className={styles.submit} disabled={blocked}>
+                <span>
+                  {busy
+                    ? "working…"
+                    : signingIn
+                      ? "sign in"
+                      : signingUp
+                        ? "create account"
+                        : "confirm"}
+                </span>
+                <span className={styles.submitKey}>&#9166;</span>
+              </button>
+              <div className={styles.under}>
+                <span>{note ?? (signingIn ? "your week is where you left it" : "")}</span>
+                {retryIn > 0 && (
+                  // The server's own Retry-After, not a guess. A guessed countdown either
+                  // fails on retry or makes somebody wait longer than they had to.
+                  <span className={styles.countdown}>retry in {asClock(retryIn)}</span>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div className={cx(styles.foot, styles.step, styles.step4)}>
+          {signingIn ? (
+            <span>
+              New here?{" "}
               <button
                 type="button"
-                className={styles.link}
+                className={styles.linkStrong}
                 onClick={() => {
                   go("signUp");
                 }}
               >
-                Create one
-              </button>
-              <span>·</span>
+                Create an account
+              </button>{" "}
+              ·{" "}
               <button
                 type="button"
                 className={styles.link}
@@ -229,21 +330,34 @@ export function AuthScreen(): React.ReactNode {
               >
                 I have a code
               </button>
-            </>
+            </span>
           ) : (
-            <>
-              <span>Already have an account?</span>
+            <span>
+              Already have an account?{" "}
               <button
                 type="button"
-                className={styles.link}
+                className={styles.linkStrong}
                 onClick={() => {
                   go("signIn");
                 }}
               >
                 Sign in
               </button>
-            </>
+            </span>
           )}
+          <span className={styles.zone}>{timezone}</span>
+        </div>
+      </div>
+
+      <div className={styles.hero}>
+        <div className={cx(styles.heroInner, styles.step, styles.step2)}>
+          <p className={styles.heroLine}>
+            Your Tuesday has <span className={styles.heroNumber}>90</span> minutes free.
+          </p>
+          <p className={styles.heroNote}>
+            Seven days, the minutes each one holds, and what is left of them. Time as a
+            contract, not a suggestion.
+          </p>
         </div>
       </div>
     </div>
