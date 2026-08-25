@@ -1,0 +1,613 @@
+/*
+ * The week screen.
+ *
+ * CSS modules rather than inline styles: the design arrived as inline everything, which is
+ * how a design tool writes, but it makes a hover state impossible to express and a diff
+ * impossible to read. Every value here is a token from `styles/tokens.css`; nothing is a
+ * literal colour.
+ */
+
+.screen {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+.frame {
+  border: 1px solid var(--rule2);
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--rule2);
+}
+
+.wordmark {
+  font: 800 15px/1 var(--sans);
+  letter-spacing: -0.01em;
+}
+
+.meta {
+  font: 400 11px/1 var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.identity {
+  text-align: right;
+  font-family: var(--mono);
+}
+
+.identityEmail {
+  font: 400 11px/1.5 var(--mono);
+  color: var(--dim);
+}
+
+.identityZone {
+  font: 400 10px/1.5 var(--mono);
+  color: var(--faint);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range {
+  font: 500 13px/1 var(--mono);
+  letter-spacing: 0.02em;
+  min-width: 190px;
+  text-align: center;
+}
+
+.ghost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background var(--dur);
+  font: 400 11px/1 var(--sans);
+  color: var(--dim);
+}
+
+.ghost:hover {
+  background: var(--hover);
+}
+
+/* The keyboard hint next to every action. Not decoration: on a screen opened every day, a
+   shortcut is a feature, and showing it is what makes it discoverable. */
+.key {
+  font: 500 10px/1 var(--mono);
+  border: 1px solid var(--rule2);
+  padding: 2px 4px;
+  color: var(--faint);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+
+.summaryFigures {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+}
+
+.figureStrong {
+  font: 500 12px/1 var(--mono);
+}
+
+.figure {
+  font: 400 12px/1 var(--mono);
+  color: var(--dim);
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font: 400 11px/1 var(--sans);
+  color: var(--faint);
+}
+
+.chip {
+  font: 500 11px/1 var(--mono);
+  color: var(--chip-ink);
+  background: var(--chip-bg);
+  border: 1px solid var(--accent);
+  padding: 4px 6px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.day {
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.day:last-child {
+  border-right: 0;
+}
+
+.dayOver {
+  background: var(--accent-tint);
+}
+
+.head {
+  position: relative;
+  padding: var(--pad);
+  overflow: hidden;
+}
+
+/* The directional fill. It starts flat and grows from whichever edge the pointer crossed,
+   which is the one interaction worth keeping from the references — a list that answers
+   without asking for attention. */
+.fill {
+  position: absolute;
+  inset: 0;
+  background: var(--hover);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur) cubic-bezier(0.2, 0.75, 0.2, 1);
+  pointer-events: none;
+}
+
+.over .fill {
+  background: transparent;
+}
+
+.layer {
+  position: relative;
+}
+
+.dayIndex {
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.dayTotalNote {
+  font: 400 10px/1 var(--mono);
+  letter-spacing: 0.03em;
+  color: var(--faint);
+}
+
+.weekday {
+  margin-top: 13px;
+  font: 600 12px/1 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.date {
+  margin-top: 5px;
+  font: 400 12px/1 var(--mono);
+  color: var(--dim);
+}
+
+/* The number the product exists to report. Scale carries it, not colour. */
+.free {
+  margin-top: 16px;
+  font: 500 var(--num) / 1 var(--mono);
+  letter-spacing: -0.02em;
+}
+
+.freeOf {
+  margin-top: 7px;
+  font: 400 11px/1 var(--sans);
+  color: var(--dim);
+}
+
+.freeOfValue {
+  font-family: var(--mono);
+}
+
+.overChip {
+  margin-top: 10px;
+  display: inline-block;
+  font: 500 11px/1 var(--mono);
+  color: var(--chip-ink);
+  background: var(--chip-bg);
+  border: 1px solid var(--accent);
+  padding: 4px 6px;
+}
+
+.trackRow {
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/*
+ * The track's width is the length of the day, scaled against the longest a day can be.
+ * This is the one place the data model changes geometry: a 1380-minute day is visibly
+ * shorter than a 1440, without a caption saying so. Encoding it in the column's height
+ * would have been prettier and impossible, because the column also has to hold tasks.
+ */
+.track {
+  height: 3px;
+  background: var(--fill);
+}
+
+.bar {
+  height: 3px;
+  background: var(--ink);
+}
+
+.dayOver .bar {
+  background: var(--accent);
+}
+
+.overflow {
+  height: 3px;
+  width: 10px;
+  background: var(--accent);
+}
+
+.dayMeta {
+  margin-top: 9px;
+  font: 400 11px/1 var(--mono);
+  color: var(--faint);
+}
+
+.task {
+  position: relative;
+  border-top: 1px solid var(--rule);
+  padding: var(--rowpad) var(--pad);
+  cursor: pointer;
+  overflow: hidden;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.taskTop {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.taskIndex {
+  font: 400 10px/1 var(--mono);
+  color: var(--faint);
+}
+
+.taskRange {
+  font: 400 11px/1 var(--mono);
+  color: var(--dim);
+}
+
+.taskDuration {
+  margin-left: auto;
+  font: 500 11px/1 var(--mono);
+  color: var(--dim);
+}
+
+.taskTitle {
+  position: relative;
+  margin-top: 7px;
+  font: 500 13px/1.35 var(--sans);
+  letter-spacing: -0.005em;
+  text-wrap: pretty;
+}
+
+.taskDone .taskTitle {
+  color: var(--dim);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.taskFoot {
+  position: relative;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font: 400 10px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border: 1px solid var(--rule2);
+  padding: 3px 5px;
+}
+
+.taskNote {
+  font: 400 10px/1 var(--mono);
+  color: var(--faint);
+}
+
+.taskDoneAt {
+  margin-left: auto;
+  font: 400 10px/1 var(--mono);
+  color: var(--faint);
+}
+
+.emptyDay {
+  border-top: 1px solid var(--rule);
+  padding: var(--pad);
+  font: 400 12px/1.55 var(--sans);
+  color: var(--faint);
+  text-wrap: pretty;
+}
+
+.emptyDayValue {
+  font-family: var(--mono);
+  color: var(--dim);
+}
+
+.newTask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  padding: var(--rowpad) var(--pad);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--dur), color var(--dur);
+  font: 500 11px/1 var(--sans);
+  letter-spacing: 0.03em;
+  width: 100%;
+}
+
+.newTask:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.form {
+  border-top: 1px solid var(--rule2);
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.formHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.formTitle {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.formWhen {
+  font: 400 10px/1 var(--mono);
+  color: var(--faint);
+}
+
+.input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--rule2);
+  padding: 8px;
+  font: 500 12px/1.2 var(--sans);
+  caret-color: var(--ink);
+}
+
+.inputMono {
+  composes: input;
+  font: 400 12px/1.2 var(--mono);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemBox {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border: 1px solid var(--rule2);
+}
+
+.itemInput {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  padding: 5px 0;
+  font: 400 11px/1.2 var(--sans);
+  caret-color: var(--ink);
+}
+
+.addItem {
+  align-self: flex-start;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: 400 11px/1 var(--sans);
+  color: var(--dim);
+  cursor: pointer;
+  border-bottom: 1px solid var(--rule2);
+}
+
+.error {
+  border: 1px solid var(--accent);
+  background: var(--accent-tint);
+  padding: 8px;
+  font: 400 11px/1.45 var(--sans);
+  color: var(--chip-ink);
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  padding: 8px 10px;
+  cursor: pointer;
+  font: 600 11px/1 var(--sans);
+  letter-spacing: 0.03em;
+}
+
+.submit:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.submitKey {
+  font: 500 10px/1 var(--mono);
+  opacity: 0.65;
+}
+
+.cancel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  cursor: pointer;
+  font: 400 11px/1 var(--sans);
+  color: var(--dim);
+}
+
+.emptyWeek {
+  border-top: 1px solid var(--rule2);
+  padding: 28px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.emptyWeekHead {
+  font: 500 21px/1 var(--sans);
+  letter-spacing: -0.015em;
+}
+
+.emptyWeekFigure {
+  font: 400 13px/1 var(--mono);
+  color: var(--dim);
+}
+
+.emptyWeekNote {
+  font: 400 13px/1 var(--sans);
+  color: var(--faint);
+}
+
+.banner {
+  border-bottom: 1px solid var(--rule);
+  background: var(--accent-tint);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.bannerHead {
+  font: 500 15px/1.3 var(--sans);
+  color: var(--chip-ink);
+}
+
+.bannerNote {
+  margin-top: 7px;
+  font: 400 11px/1.4 var(--mono);
+  color: var(--dim);
+}
+
+.retry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background var(--dur);
+  font: 600 11px/1 var(--sans);
+  letter-spacing: 0.03em;
+  color: var(--chip-ink);
+}
+
+.retry:hover {
+  background: var(--hover);
+}
+
+.retryKey {
+  font: 500 10px/1 var(--mono);
+  border: 1px solid var(--accent);
+  padding: 2px 4px;
+  color: var(--chip-ink);
+}
+
+.shellBar {
+  display: block;
+  height: 11px;
+  background: var(--fill);
+}
+
+.shellFree {
+  margin-top: 16px;
+  font: 500 var(--num) / 1 var(--mono);
+  color: var(--faint);
+}
+
+.shellNote {
+  margin-top: 7px;
+  font: 400 11px/1 var(--sans);
+  color: var(--faint);
+}
