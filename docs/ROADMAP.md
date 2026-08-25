@@ -265,9 +265,9 @@ entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada 
 - [x] Cliente lê `detail` em lista, que é a forma que um erro de validação do Pydantic tem
 - [ ] Tela de login e cadastro, consumindo os endpoints do S2
 - [ ] Sessão persistida no cliente e rota protegida
-- [ ] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
-- [ ] Criar e concluir tarefa pela interface
-- [ ] Estados vazios e de erro visíveis, não tela branca
+- [x] Tela única: a semana com capacidade livre por dia, alimentada pela query do S4
+- [x] Criar e concluir tarefa pela interface
+- [x] Estados vazios e de erro visíveis, não tela branca
 
 **Marco:** ao fim do S5 o projeto é apresentável para qualquer pessoa, não só para quem lê
 código. Login de verdade, dado de verdade, a tese do produto na tela — "sua terça tem 90
