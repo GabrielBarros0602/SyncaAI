@@ -270,10 +270,18 @@ def _explain(
 ) -> str:
     """EXPLAIN ANALYZE over the statement the repository actually builds."""
     statement = TaskRepository(session, owner_id).capacity_statement(windows=windows)
-    # Parameters are bound rather than inlined. `literal_binds` renders the VALUES rows as
-    # bare strings, so PostgreSQL types the columns as text and refuses to compare them with
-    # a timestamptz — and, more importantly, it would mean measuring a plan for SQL the
-    # application never sends.
+    # Sent to the driver rather than through `text()`, and that is the whole trick.
+    #
+    # A compiled statement already carries the driver's own placeholders — `%(name)s` for
+    # psycopg. `text()` is for SQL a human wrote, so it escapes the percent signs and the
+    # database receives `%%(name)s` and refuses it. `exec_driver_sql` hands the string
+    # straight to psycopg, which is what produced the placeholders in the first place.
+    #
+    # Binding rather than inlining also matters for what is being measured: `literal_binds`
+    # renders the VALUES rows as bare strings, PostgreSQL types those columns as text, and
+    # the plan would be for SQL the application never sends.
     compiled = statement.compile(dialect=postgresql.dialect())
-    rows = session.execute(text(f"EXPLAIN ANALYZE {compiled}"), compiled.params).all()
+    rows = (
+        session.connection().exec_driver_sql(f"EXPLAIN ANALYZE {compiled}", compiled.params).all()
+    )
     return "\n".join(str(row[0]) for row in rows)
