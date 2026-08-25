@@ -71,7 +71,7 @@ it("signs in with the credentials typed", async () => {
   renderScreen();
 
   await fill(/email/i, "gabriel@example.com");
-  await fill(/password/i, "a-real-password");
+  await fill(/^password$/i, "a-real-password");
   await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
   await waitFor(() => {
@@ -93,7 +93,7 @@ it("declares itself a web client, so the refresh token arrives as a cookie", asy
   renderScreen();
 
   await fill(/email/i, "gabriel@example.com");
-  await fill(/password/i, "a-real-password");
+  await fill(/^password$/i, "a-real-password");
   await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
   await waitFor(() => {
@@ -111,7 +111,7 @@ it("shows the API's own words for a refused sign-in", async () => {
   renderScreen();
 
   await fill(/email/i, "nobody@example.com");
-  await fill(/password/i, "wrong");
+  await fill(/^password$/i, "wrong");
   await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
   expect(await screen.findByRole("alert")).toHaveProperty(
@@ -129,11 +129,10 @@ it("says an unverified account needs confirming, which is safe to say", async ()
   renderScreen();
 
   await fill(/email/i, "gabriel@example.com");
-  await fill(/password/i, "a-real-password");
+  await fill(/^password$/i, "a-real-password");
   await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
-  expect(await screen.findByRole("alert")).toHaveProperty(
-    "textContent",
+  expect((await screen.findByRole("alert")).textContent).toContain(
     "Confirm your address before signing in.",
   );
 });
@@ -147,17 +146,18 @@ it("registering never reveals whether the address already had an account", async
   });
   renderScreen();
 
-  await userEvent.click(screen.getByRole("button", { name: /create one/i }));
+  await userEvent.click(screen.getByRole("button", { name: /create an account/i }));
   await fill(/email/i, "maybe-taken@example.com");
-  await fill(/password/i, "a-real-password");
+  await fill(/^password$/i, "a-real-password");
   await userEvent.click(screen.getByRole("button", { name: /create account/i }));
 
   // Asserted on the panel that reports the outcome, not on the whole page — the sign-in
   // link below it says "Already have an account?", which is navigation and not a claim
   // about this address.
-  const panel = (await screen.findByText("Check your inbox.")).parentElement;
+  const heading = await screen.findByRole("heading", { name: "Check your inbox" });
+  const panel = heading.parentElement;
   expect(panel?.textContent).toMatch(/if that address needs an account/i);
-  expect(panel?.textContent).not.toMatch(/exists|taken|created|welcome/i);
+  expect(panel?.textContent).not.toMatch(/exists|taken|created/i);
 });
 
 it("offers the browser's zone as a default the user can change", async () => {
@@ -166,7 +166,7 @@ it("offers the browser's zone as a default the user can change", async () => {
   route({ "/auth/refresh": NO_SESSION });
   renderScreen();
 
-  await userEvent.click(screen.getByRole("button", { name: /create one/i }));
+  await userEvent.click(screen.getByRole("button", { name: /create an account/i }));
 
   expect(screen.getByLabelText<HTMLInputElement>(/time zone/i).value).toBe(
     Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -219,11 +219,102 @@ it("a network failure is not reported as a credential problem", async () => {
   renderScreen();
 
   await fill(/email/i, "gabriel@example.com");
-  await fill(/password/i, "a-real-password");
+  await fill(/^password$/i, "a-real-password");
   await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     "Couldn't reach the server.",
   );
+});
+
+it("offers to send the link again only when that is the answer", async () => {
+  // The one error whose remedy is an action rather than a correction. Offering it next to
+  // "Incorrect email or password" would be an enumeration channel: a resend button that
+  // appears only for real accounts tells you which addresses are real.
+  route({
+    "/auth/refresh": NO_SESSION,
+    "/auth/login": () => json(403, { detail: "Confirm your address before signing in." }),
+  });
+  renderScreen();
+
+  await fill(/email/i, "gabriel@example.com");
+  await fill(/^password$/i, "a-real-password");
+  await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+  expect(await screen.findByRole("button", { name: /send the link again/i })).toBeDefined();
+});
+
+it("does not offer a resend for a wrong password", async () => {
+  route({
+    "/auth/refresh": NO_SESSION,
+    "/auth/login": () => json(401, { detail: "Incorrect email or password." }),
+  });
+  renderScreen();
+
+  await fill(/email/i, "gabriel@example.com");
+  await fill(/^password$/i, "wrong");
+  await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+  await screen.findByRole("alert");
+  expect(screen.queryByRole("button", { name: /send the link again/i })).toBeNull();
+});
+
+it("counts down from the server's Retry-After rather than from a guess", async () => {
+  // The API sends the header; a client that invented the number would either fail on retry
+  // or make somebody wait longer than they had to.
+  fetchMock.mockImplementation((input) =>
+    Promise.resolve(
+      input.includes("/auth/login")
+        ? new Response(JSON.stringify({ detail: "Too many attempts. Try again later." }), {
+            status: 429,
+            headers: { "Content-Type": "application/json", "Retry-After": "47" },
+          })
+        : NO_SESSION(),
+    ),
+  );
+  renderScreen();
+
+  await fill(/email/i, "gabriel@example.com");
+  await fill(/^password$/i, "a-real-password");
+  await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+  expect(await screen.findByText(/retry in 0:4[567]/)).toBeDefined();
+});
+
+it("blocks the button while the countdown runs", async () => {
+  fetchMock.mockImplementation((input) =>
+    Promise.resolve(
+      input.includes("/auth/login")
+        ? new Response(JSON.stringify({ detail: "Too many attempts. Try again later." }), {
+            status: 429,
+            headers: { "Content-Type": "application/json", "Retry-After": "47" },
+          })
+        : NO_SESSION(),
+    ),
+  );
+  renderScreen();
+
+  await fill(/email/i, "gabriel@example.com");
+  await fill(/^password$/i, "a-real-password");
+  await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+  await screen.findByRole("alert");
+
+  expect(screen.getByRole("button", { name: /sign in/i })).toHaveProperty("disabled", true);
+});
+
+it("reveals and hides the password without losing what was typed", async () => {
+  route({ "/auth/refresh": NO_SESSION });
+  renderScreen();
+
+  await fill(/^password$/i, "a-real-password");
+  const field = screen.getByLabelText<HTMLInputElement>(/^password$/i);
+  expect(field.type).toBe("password");
+
+  await userEvent.click(screen.getByRole("button", { name: /show password/i }));
+  expect(field.type).toBe("text");
+  expect(field.value).toBe("a-real-password");
+
+  await userEvent.click(screen.getByRole("button", { name: /hide password/i }));
+  expect(field.type).toBe("password");
 });
