@@ -284,3 +284,52 @@ describe("validation errors from FastAPI", () => {
     expect(typeof (error as ApiError).detail).toBe("string");
   });
 });
+
+describe("401 from an authentication endpoint", () => {
+  it("is an answer, not an expired session", async () => {
+    // Signing in with the wrong password answers 401. Treating that as a dead session sends
+    // the client off to refresh, fail, and report a network problem for a typo.
+    let refreshCalls = 0;
+    routeFetch({
+      "/auth/login": () => jsonResponse(401, { detail: "Incorrect email or password." }),
+      "/auth/refresh": () => {
+        refreshCalls += 1;
+        return refreshed();
+      },
+    });
+
+    const error = await api.post("/auth/login", {}).catch((problem: unknown) => problem);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).detail).toBe("Incorrect email or password.");
+    expect(refreshCalls).toBe(0);
+  });
+
+  it("does not tell the application a session was lost when there was none", async () => {
+    const lost = vi.fn();
+    onSessionExpired(lost);
+    routeFetch({ "/auth/login": () => jsonResponse(401, { detail: "Incorrect email or password." }) });
+
+    await api.post("/auth/login", {}).catch(() => undefined);
+
+    expect(lost).not.toHaveBeenCalled();
+  });
+
+  it("still renews for an ordinary endpoint", async () => {
+    // Guarding the fix: the exemption is scoped to /auth/, and everything else keeps the
+    // retry the whole session model depends on.
+    setAccessToken(AN_EXPIRED_TOKEN);
+    let taskCalls = 0;
+    routeFetch({
+      "/tasks": () => {
+        taskCalls += 1;
+        return taskCalls === 1 ? unauthorised() : jsonResponse(200, { ok: true });
+      },
+      "/auth/refresh": refreshed,
+    });
+
+    await api.get("/tasks");
+
+    expect(taskCalls).toBe(2);
+  });
+});
