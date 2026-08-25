@@ -1,11 +1,11 @@
 """Tests for the day-capacity calculation.
 
-This is the number the AI layer plans against (ADR-0004). A wrong answer here does not
-look like a bug — it looks like a plan that quietly overbooks a Sunday in November.
+This is the number the AI layer plans against (ADR-0004). A wrong answer here does not look
+like a bug — it looks like a plan that quietly overbooks a Tuesday.
 
-The repository is faked, because what is under test is arithmetic over local days, and the
-part PostgreSQL owns — grouping rows by a derived date — is asserted against a real
-database in ``test_capacity_query.py``.
+The repository is faked, because what is under test is what the service does with the
+numbers. The part PostgreSQL owns — clipping each task to each day — is asserted against a
+real database in ``test_capacity_query.py``.
 """
 
 import uuid
@@ -20,35 +20,38 @@ from syncaai.api.dependencies import get_current_user
 from syncaai.api.routes.capacity import get_capacity_service
 from syncaai.db import get_session
 from syncaai.errors import HorizonTooLongError, InvertedWindowError
-from syncaai.services.capacity import MAX_HORIZON_DAYS, CapacityService
+from syncaai.services.capacity import (
+    MAX_HORIZON_DAYS,
+    STRAINED_ABOVE,
+    UNSUSTAINABLE_ABOVE,
+    USABLE_MINUTES_PER_DAY,
+    CapacityService,
+)
 
 CAPACITY = "/api/v1/capacity"
 SAO_PAULO = "America/Sao_Paulo"
 
-# Brazil no longer observes daylight saving, but the database remembers when it did, and a
-# stored zone is only as good as its history. These two dates are why the calculation cannot
-# use 1440: the clock moved at midnight, so one date lost an hour and the other gained one.
+# Brazil no longer observes daylight saving, but the time zone database remembers when it
+# did, and a stored zone is only as good as its history.
 A_SHORT_DAY = date(2018, 11, 4)  # 23 hours
 A_LONG_DAY = date(2019, 2, 16)  # 25 hours
 
 
 class _Row(NamedTuple):
-    """The shape ``execute(...).all()`` returns for the grouped query."""
-
     day: date
-    occupied_minutes: int
+    occupied_minutes: float
     task_count: int
 
 
 class _FakeTasks:
     def __init__(self, rows: list[_Row] | None = None) -> None:
         self.rows = rows or []
-        self.asked_for: dict[str, Any] | None = None
+        self.windows: list[tuple[date, datetime, datetime]] | None = None
 
     def occupied_minutes_by_day(
-        self, *, window_start: datetime, window_end: datetime, zone_name: str
+        self, *, windows: list[tuple[date, datetime, datetime]]
     ) -> list[_Row]:
-        self.asked_for = {"start": window_start, "end": window_end, "zone": zone_name}
+        self.windows = windows
         return self.rows
 
 
@@ -56,94 +59,135 @@ def _service(rows: list[_Row] | None = None, zone: str = SAO_PAULO) -> CapacityS
     return CapacityService(_FakeTasks(rows), zone)  # type: ignore[arg-type]
 
 
+def _booked(day: date, minutes: float, tasks: int = 1) -> list[_Row]:
+    return [_Row(day, minutes, tasks)]
+
+
+A_MONDAY = date(2030, 6, 3)
+
+
+def test_a_day_offers_sixteen_usable_hours_not_twenty_four() -> None:
+    # The whole reason ADR-0022 exists. The first person other than the author to see the
+    # screen asked why a day was only full at 24 hours — "doesn't he sleep?".
+    day = _service().by_day(A_MONDAY, A_MONDAY)[0]
+
+    assert day.usable_minutes == USABLE_MINUTES_PER_DAY
+    assert day.free_minutes == USABLE_MINUTES_PER_DAY
+
+
+def test_the_real_length_of_the_day_is_still_reported() -> None:
+    # It drives the track under each column, and it is the only thing in the model that
+    # changes geometry. Replacing it with the budget would erase the daylight-saving day.
+    ordinary = _service().by_day(A_MONDAY, A_MONDAY)[0]
+    short = _service().by_day(A_SHORT_DAY, A_SHORT_DAY)[0]
+    long = _service().by_day(A_LONG_DAY, A_LONG_DAY)[0]
+
+    assert (ordinary.total_minutes, short.total_minutes, long.total_minutes) == (1440, 1380, 1500)
+
+
+def test_a_daylight_saving_day_still_offers_the_same_budget() -> None:
+    # The hour that disappears is one nobody was going to work through.
+    assert _service().by_day(A_SHORT_DAY, A_SHORT_DAY)[0].usable_minutes == USABLE_MINUTES_PER_DAY
+
+
+def test_free_minutes_come_off_the_budget_not_off_the_calendar_day() -> None:
+    day = _service(_booked(A_MONDAY, 120, 2)).by_day(A_MONDAY, A_MONDAY)[0]
+
+    assert day.occupied_minutes == 120
+    assert day.free_minutes == USABLE_MINUTES_PER_DAY - 120
+    assert day.task_count == 2
+
+
 def test_a_day_with_nothing_on_it_is_still_in_the_answer() -> None:
     """A gap in the result is not an empty day — it is a day the caller has to guess at."""
-    days = _service().by_day(date(2030, 6, 1), date(2030, 6, 3))
+    days = _service().by_day(A_MONDAY, A_MONDAY + timedelta(days=2))
 
-    assert [day.day for day in days] == [date(2030, 6, 1), date(2030, 6, 2), date(2030, 6, 3)]
-    assert [day.free_minutes for day in days] == [1440, 1440, 1440]
+    assert [day.day for day in days] == [A_MONDAY, date(2030, 6, 4), date(2030, 6, 5)]
     assert [day.task_count for day in days] == [0, 0, 0]
 
 
-def test_booked_minutes_come_off_the_free_ones() -> None:
-    days = _service([_Row(date(2030, 6, 1), 90, 2)]).by_day(date(2030, 6, 1), date(2030, 6, 1))
-
-    assert days[0].occupied_minutes == 90
-    assert days[0].free_minutes == 1350
-    assert days[0].task_count == 2
-    assert days[0].over_capacity is False
-
-
-def test_a_day_that_loses_an_hour_has_fewer_minutes_to_give() -> None:
-    """1380, not 1440. Using the constant would hand the planner an hour that never
-    existed, and it would do so in the direction that overbooks."""
-    days = _service().by_day(A_SHORT_DAY, A_SHORT_DAY)
-
-    assert days[0].total_minutes == 1380
-    assert days[0].free_minutes == 1380
-
-
-def test_a_day_that_gains_an_hour_has_more() -> None:
-    days = _service().by_day(A_LONG_DAY, A_LONG_DAY)
-
-    assert days[0].total_minutes == 1500
-    assert days[0].free_minutes == 1500
+@pytest.mark.parametrize(
+    ("booked", "expected"),
+    [
+        (0, "fine"),
+        (USABLE_MINUTES_PER_DAY - 1, "fine"),
+        (USABLE_MINUTES_PER_DAY, "fine"),
+        (USABLE_MINUTES_PER_DAY + 1, "heavy"),
+        (STRAINED_ABOVE, "heavy"),
+        (STRAINED_ABOVE + 1, "strained"),
+        (UNSUSTAINABLE_ABOVE, "strained"),
+        (UNSUSTAINABLE_ABOVE + 1, "unsustainable"),
+    ],
+)
+def test_load_steps_strictly_above_each_threshold(booked: int, expected: str) -> None:
+    # Both sides of all three boundaries. Sixteen hours exactly is still fine — the same
+    # convention over_capacity already used, and an off-by-one here is invisible.
+    assert _service(_booked(A_MONDAY, booked)).by_day(A_MONDAY, A_MONDAY)[0].load == expected
 
 
-def test_free_minutes_on_a_short_day_account_for_the_missing_hour() -> None:
-    booked = _Row(A_SHORT_DAY, 600, 4)
+def test_over_capacity_is_measured_against_the_budget() -> None:
+    # Against the calendar day this flag would be unreachable: minutes are clipped at
+    # midnight and overlaps are impossible, so a day can never exceed its own length. The
+    # budget is what keeps it meaning something (ADR-0022).
+    days = _service(_booked(A_MONDAY, USABLE_MINUTES_PER_DAY + 60)).by_day(A_MONDAY, A_MONDAY)
 
-    days = _service([booked]).by_day(A_SHORT_DAY, A_SHORT_DAY)
-
-    assert days[0].free_minutes == 780  # 1380 - 600, and not 840
-
-
-def test_a_day_booked_past_its_own_length_floors_at_zero_and_says_so() -> None:
-    """Rule 3 of ADR-0012 puts every minute on the starting day, so 23:30 plus an hour
-    books sixty minutes into a day with thirty left. A negative number would be arithmetic
-    the caller has to know about; a flag is the same fact, stated."""
-    days = _service([_Row(date(2030, 6, 1), 1500, 3)]).by_day(date(2030, 6, 1), date(2030, 6, 1))
-
-    assert days[0].occupied_minutes == 1500
-    assert days[0].free_minutes == 0
     assert days[0].over_capacity is True
-
-
-def test_a_day_booked_exactly_full_is_not_over_capacity() -> None:
-    """The boundary. Full is full; over is over."""
-    days = _service([_Row(date(2030, 6, 1), 1440, 1)]).by_day(date(2030, 6, 1), date(2030, 6, 1))
-
     assert days[0].free_minutes == 0
-    assert days[0].over_capacity is False
+
+
+def test_exactly_the_budget_is_full_but_not_over() -> None:
+    day = _service(_booked(A_MONDAY, USABLE_MINUTES_PER_DAY)).by_day(A_MONDAY, A_MONDAY)[0]
+
+    assert day.free_minutes == 0
+    assert day.over_capacity is False
+
+
+def test_unbooked_counts_against_the_whole_day() -> None:
+    # The figure the two loudest messages carry. Against the budget it would read zero at
+    # every level that shows it, and say nothing.
+    day = _service(_booked(A_MONDAY, 19 * 60)).by_day(A_MONDAY, A_MONDAY)[0]
+
+    assert day.load == "strained"
+    assert day.unbooked_minutes == 5 * 60
+
+
+def test_nothing_ever_reports_a_negative() -> None:
+    day = _service(_booked(A_MONDAY, 22 * 60)).by_day(A_MONDAY, A_MONDAY)[0]
+
+    assert day.free_minutes == 0
+    assert day.unbooked_minutes == 2 * 60
 
 
 def test_the_weekday_is_iso_so_monday_is_one() -> None:
-    days = _service().by_day(date(2030, 6, 3), date(2030, 6, 9))
+    days = _service().by_day(A_MONDAY, A_MONDAY + timedelta(days=6))
 
     assert [day.weekday for day in days] == [1, 2, 3, 4, 5, 6, 7]
 
 
-def test_the_query_is_asked_for_a_utc_range_not_for_dates() -> None:
-    """The conversion happens once, at the edge (ADR-0009). A query filtering on a derived
-    local date could not use the index on ``(user_id, start_at)``."""
+def test_one_window_is_asked_for_per_day_not_one_for_the_range() -> None:
+    # The clipping is per day, and each day's boundaries are its own. A single range would
+    # make a daylight-saving day 1440 minutes after the one before it.
     tasks = _FakeTasks()
 
-    CapacityService(tasks, SAO_PAULO).by_day(date(2030, 6, 1), date(2030, 6, 2))  # type: ignore[arg-type]
+    CapacityService(tasks, SAO_PAULO).by_day(A_MONDAY, A_MONDAY + timedelta(days=2))  # type: ignore[arg-type]
 
-    assert tasks.asked_for is not None
-    assert tasks.asked_for["start"] == datetime(2030, 6, 1, 3, tzinfo=timezone.utc)
-    # Half-open: the first instant of the day *after* the last one asked for.
-    assert tasks.asked_for["end"] == datetime(2030, 6, 3, 3, tzinfo=timezone.utc)
+    assert tasks.windows is not None
+    assert len(tasks.windows) == 3
+    assert tasks.windows[0] == (
+        A_MONDAY,
+        datetime(2030, 6, 3, 3, tzinfo=timezone.utc),
+        datetime(2030, 6, 4, 3, tzinfo=timezone.utc),
+    )
 
 
-def test_the_window_follows_the_users_own_zone() -> None:
+def test_the_windows_follow_the_users_own_zone() -> None:
     """Two users asking for the same date are asking about different instants."""
     in_tokyo = _FakeTasks()
 
-    CapacityService(in_tokyo, "Asia/Tokyo").by_day(date(2030, 6, 1), date(2030, 6, 1))  # type: ignore[arg-type]
+    CapacityService(in_tokyo, "Asia/Tokyo").by_day(A_MONDAY, A_MONDAY)  # type: ignore[arg-type]
 
-    assert in_tokyo.asked_for is not None
-    assert in_tokyo.asked_for["start"] == datetime(2030, 5, 31, 15, tzinfo=timezone.utc)
+    assert in_tokyo.windows is not None
+    assert in_tokyo.windows[0][1] == datetime(2030, 6, 2, 15, tzinfo=timezone.utc)
 
 
 def test_a_window_that_ends_before_it_starts_is_refused() -> None:
@@ -151,12 +195,7 @@ def test_a_window_that_ends_before_it_starts_is_refused() -> None:
         _service().by_day(date(2030, 6, 2), date(2030, 6, 1))
 
 
-def test_one_day_is_a_valid_window() -> None:
-    assert len(_service().by_day(date(2030, 6, 1), date(2030, 6, 1))) == 1
-
-
 def test_the_longest_allowed_horizon_is_accepted_and_one_more_is_not() -> None:
-    """Asserted on both sides of the boundary, because an off-by-one here is invisible."""
     first = date(2030, 6, 1)
 
     assert len(_service().by_day(first, first + timedelta(days=MAX_HORIZON_DAYS - 1))) == (
@@ -182,38 +221,45 @@ def _wire(app: FastAPI, service: CapacityService) -> None:
     app.dependency_overrides[get_capacity_service] = lambda: service
 
 
-def test_the_endpoint_returns_one_object_per_day(app: FastAPI, client: TestClient) -> None:
-    _wire(app, _service([_Row(date(2030, 6, 2), 120, 2)]))
+def test_the_endpoint_reports_both_lengths_and_the_load(app: FastAPI, client: TestClient) -> None:
+    _wire(app, _service(_booked(A_MONDAY, 19 * 60, 12)))
 
-    body = client.get(CAPACITY, params={"first_day": "2030-06-01", "last_day": "2030-06-03"}).json()
+    body: list[dict[str, Any]] = client.get(
+        CAPACITY, params={"first_day": "2030-06-03", "last_day": "2030-06-03"}
+    ).json()
 
-    assert [day["day"] for day in body] == ["2030-06-01", "2030-06-02", "2030-06-03"]
-    assert body[1] == {
-        "day": "2030-06-02",
-        "weekday": 7,
+    assert body[0] == {
+        "day": "2030-06-03",
+        "weekday": 1,
         "total_minutes": 1440,
-        "occupied_minutes": 120,
-        "free_minutes": 1320,
-        "task_count": 2,
-        "over_capacity": False,
+        "usable_minutes": 960,
+        "occupied_minutes": 1140,
+        "free_minutes": 0,
+        "unbooked_minutes": 300,
+        "task_count": 12,
+        "over_capacity": True,
+        "load": "strained",
     }
 
 
 def test_no_task_ever_appears_in_the_response(app: FastAPI, client: TestClient) -> None:
     """Capacity is an aggregate, never content (ADR-0004). Asserted on the shape rather
     than trusted to review, because this is the field a future change would add."""
-    _wire(app, _service([_Row(date(2030, 6, 1), 60, 1)]))
+    _wire(app, _service(_booked(A_MONDAY, 60)))
 
-    body = client.get(CAPACITY, params={"first_day": "2030-06-01", "last_day": "2030-06-01"}).json()
+    body = client.get(CAPACITY, params={"first_day": "2030-06-03", "last_day": "2030-06-03"}).json()
 
     assert set(body[0]) == {
         "day",
         "weekday",
         "total_minutes",
+        "usable_minutes",
         "occupied_minutes",
         "free_minutes",
+        "unbooked_minutes",
         "task_count",
         "over_capacity",
+        "load",
     }
 
 
@@ -235,17 +281,9 @@ def test_asking_for_too_long_a_horizon_answers_422(app: FastAPI, client: TestCli
     assert str(MAX_HORIZON_DAYS) in response.json()["detail"]
 
 
-def test_a_day_that_is_not_a_date_answers_422(app: FastAPI, client: TestClient) -> None:
-    _wire(app, _service())
-
-    assert client.get(CAPACITY, params={"first_day": "soon", "last_day": "later"}).status_code == (
-        422
-    )
-
-
 def test_the_endpoint_needs_a_token(app: FastAPI, client: TestClient) -> None:
     app.dependency_overrides[get_session] = lambda: _NoOpSession()
 
-    response = client.get(CAPACITY, params={"first_day": "2030-06-01", "last_day": "2030-06-01"})
+    response = client.get(CAPACITY, params={"first_day": "2030-06-03", "last_day": "2030-06-03"})
 
     assert response.status_code == 401

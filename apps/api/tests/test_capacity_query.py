@@ -82,40 +82,92 @@ def owner() -> Iterator[Session]:
         session.rollback()
 
 
-def test_a_task_is_grouped_by_the_local_day_not_the_utc_one(owner: Session) -> None:
-    """22:00 in São Paulo is 01:00 the next day in UTC. Grouping on the stored instant
-    would move a Monday evening onto Tuesday, and the whole calendar with it."""
+def _windows(first: date, last: date) -> list[tuple[date, datetime, datetime]]:
+    days = [first + timedelta(days=n) for n in range((last - first).days + 1)]
+    return [(day, *utc_window(day, day, SAO_PAULO)) for day in days]
+
+
+def _minutes(session: Session, user_id: uuid.UUID, first: date, last: date) -> dict[date, int]:
+    rows = TaskRepository(session, user_id).occupied_minutes_by_day(windows=_windows(first, last))
+    return {row.day: round(float(row.occupied_minutes)) for row in rows}
+
+
+def test_a_task_is_counted_on_the_local_day_not_the_utc_one(owner: Session) -> None:
+    """22:00 in São Paulo is 01:00 the next day in UTC. Counting on the stored instant would
+    move a Monday evening onto Tuesday, and the whole calendar with it."""
     user = _a_user(owner)
     owner.add(
         Task(user_id=user.id, title="late", start_at=_local(A_MONDAY, 22), duration_minutes=60)
     )
     owner.flush()
 
-    window_start, window_end = utc_window(A_MONDAY, A_MONDAY, SAO_PAULO)
-    rows = TaskRepository(owner, user.id).occupied_minutes_by_day(
-        window_start=window_start, window_end=window_end, zone_name=SAO_PAULO
-    )
-
-    assert [(row.day, row.occupied_minutes, row.task_count) for row in rows] == [(A_MONDAY, 60, 1)]
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 60}
 
 
-def test_a_task_crossing_midnight_lands_entirely_on_the_day_it_starts(owner: Session) -> None:
-    """Rule 3 of ADR-0012, in the database rather than in prose. 23:30 plus ninety minutes
-    books all ninety against Monday, and Tuesday is left untouched."""
+def test_a_task_crossing_midnight_is_split_between_the_two_days(owner: Session) -> None:
+    """ADR-0022 in the database rather than in prose. 23:00 plus two hours gives one hour to
+    Monday and one to Tuesday — the behaviour rule 3 of ADR-0012 got wrong, and the reason
+    that rule was superseded."""
     user = _a_user(owner)
     owner.add(
-        Task(
-            user_id=user.id, title="across", start_at=_local(A_MONDAY, 23, 30), duration_minutes=90
-        )
+        Task(user_id=user.id, title="across", start_at=_local(A_MONDAY, 23), duration_minutes=120)
     )
     owner.flush()
+    tuesday = A_MONDAY + timedelta(days=1)
 
-    window_start, window_end = utc_window(A_MONDAY, A_MONDAY + timedelta(days=1), SAO_PAULO)
-    rows = TaskRepository(owner, user.id).occupied_minutes_by_day(
-        window_start=window_start, window_end=window_end, zone_name=SAO_PAULO
+    assert _minutes(owner, user.id, A_MONDAY, tuesday) == {A_MONDAY: 60, tuesday: 60}
+
+
+def test_completing_early_gives_the_remaining_minutes_back(owner: Session) -> None:
+    """Booked 12:00 to 15:00, finished at 13:30. The day gets ninety minutes back, and the
+    query never asks whether the task was completed — end_at already knows."""
+    user = _a_user(owner)
+    task = Task(user_id=user.id, title="long", start_at=_local(A_MONDAY, 12), duration_minutes=180)
+    owner.add(task)
+    owner.flush()
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 180}
+
+    task.completed_at = _local(A_MONDAY, 13, 30)
+    owner.flush()
+
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 90}
+
+
+def test_the_freed_time_becomes_bookable(owner: Session) -> None:
+    """The exclusion constraint follows end_at, so nothing has to be told the time is free."""
+    user = _a_user(owner)
+    task = Task(user_id=user.id, title="long", start_at=_local(A_MONDAY, 12), duration_minutes=180)
+    owner.add(task)
+    owner.flush()
+    task.completed_at = _local(A_MONDAY, 13, 30)
+    owner.flush()
+
+    owner.add(
+        Task(
+            user_id=user.id,
+            title="the freed slot",
+            start_at=_local(A_MONDAY, 14),
+            duration_minutes=60,
+        )
     )
 
-    assert [(row.day, row.occupied_minutes) for row in rows] == [(A_MONDAY, 90)]
+    owner.flush()  # raises if the range had not shrunk
+
+
+def test_completing_late_does_not_extend_the_booking(owner: Session) -> None:
+    """LEAST, not the elapsed time. A grown range could collide with a neighbour, and a
+    completion that fails is worse than one that is merely imprecise."""
+    user = _a_user(owner)
+    task = Task(
+        user_id=user.id, title="ran over", start_at=_local(A_MONDAY, 9), duration_minutes=60
+    )
+    owner.add(task)
+    owner.flush()
+
+    task.completed_at = _local(A_MONDAY, 12)
+    owner.flush()
+
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 60}
 
 
 def test_only_the_owners_own_minutes_are_counted(owner: Session) -> None:
@@ -126,17 +178,19 @@ def test_only_the_owners_own_minutes_are_counted(owner: Session) -> None:
         )
     owner.flush()
 
-    window_start, window_end = utc_window(A_MONDAY, A_MONDAY, SAO_PAULO)
-    rows = TaskRepository(owner, user.id).occupied_minutes_by_day(
-        window_start=window_start, window_end=window_end, zone_name=SAO_PAULO
-    )
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 60}
 
-    assert [row.occupied_minutes for row in rows] == [60]
+
+def test_a_day_with_nothing_on_it_comes_back_as_zero(owner: Session) -> None:
+    """The outer join answers every window, so a day inside the range is reported rather
+    than absent — the service has nothing left to invent."""
+    user = _a_user(owner)
+
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 0}
 
 
 def test_the_service_reports_the_same_totals_over_a_real_query(owner: Session) -> None:
-    """End to end without the endpoint: two tasks on one day, one on another, and an empty
-    day in between that only the service knows to include."""
+    """End to end without the endpoint, and free is measured against the usable day."""
     user = _a_user(owner)
     for hour in (9, 14):
         owner.add(
@@ -150,7 +204,7 @@ def test_the_service_reports_the_same_totals_over_a_real_query(owner: Session) -
     owner.add(
         Task(
             user_id=user.id,
-            title="thursday",
+            title="wednesday",
             start_at=_local(A_MONDAY + timedelta(days=2), 10),
             duration_minutes=30,
         )
@@ -162,9 +216,9 @@ def test_the_service_reports_the_same_totals_over_a_real_query(owner: Session) -
     )
 
     assert [(day.occupied_minutes, day.free_minutes, day.task_count) for day in days] == [
-        (120, 1320, 2),
-        (0, 1440, 0),
-        (30, 1410, 1),
+        (120, 840, 2),
+        (0, 960, 0),
+        (30, 930, 1),
     ]
 
 
@@ -202,22 +256,20 @@ def test_the_capacity_query_reaches_the_rows_through_the_index(
     """``ix_tasks_user_start_at`` covers ``(user_id, start_at)``, which is exactly the
     predicate. If a future change moves the time zone conversion into the WHERE clause, the
     index stops being usable and this test is what says so."""
-    window_start, window_end = utc_window(A_MONDAY, A_MONDAY + timedelta(days=6), SAO_PAULO)
-
     with get_session_factory()() as session:
-        plan = _explain(session, a_populated_table, window_start, window_end)
+        plan = _explain(
+            session, a_populated_table, _windows(A_MONDAY, A_MONDAY + timedelta(days=6))
+        )
 
     assert "ix_tasks_user_start_at" in plan, plan
     assert "Seq Scan on tasks" not in plan, plan
 
 
 def _explain(
-    session: Session, owner_id: uuid.UUID, window_start: datetime, window_end: datetime
+    session: Session, owner_id: uuid.UUID, windows: list[tuple[date, datetime, datetime]]
 ) -> str:
     """EXPLAIN ANALYZE over the statement the repository actually builds."""
-    statement = TaskRepository(session, owner_id).capacity_statement(
-        window_start=window_start, window_end=window_end, zone_name=SAO_PAULO
-    )
+    statement = TaskRepository(session, owner_id).capacity_statement(windows=windows)
     # literal_binds because EXPLAIN is issued as raw text; the values are a uuid and two
     # timestamps that the application produced, never anything a caller typed.
     compiled = statement.compile(
