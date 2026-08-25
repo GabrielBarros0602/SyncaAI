@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
 
-from syncaai.errors import TaskNotFoundError, TaskOverlapsError, TaskStartsInThePastError
+from syncaai.errors import (
+    CannotReopenTaskError,
+    TaskNotFoundError,
+    TaskOverlapsError,
+    TaskStartsInThePastError,
+)
 from syncaai.models import ChecklistItem, Tag, Task
 from syncaai.repositories.tags import TagRepository
 from syncaai.repositories.tasks import TaskRepository
@@ -21,7 +26,7 @@ MAX_PAGE_SIZE = 100
 
 
 @contextmanager
-def _overlap_translated() -> Iterator[None]:
+def _overlap_translated(*, reopening: bool = False) -> Iterator[None]:
     """Turn the database's refusal into a rule the caller broke.
 
     The constraint name comes from the driver's diagnostics rather than from matching the
@@ -34,7 +39,10 @@ def _overlap_translated() -> Iterator[None]:
     except IntegrityError as error:
         diagnostics = getattr(error.orig, "diag", None)
         if getattr(diagnostics, "constraint_name", None) == OVERLAP_CONSTRAINT:
-            raise TaskOverlapsError from error
+            # Same constraint, two different things to say. Creating a task means the time
+            # was already taken; un-completing one means the time it gave back has since
+            # been taken by something else (ADR-0022).
+            raise (CannotReopenTaskError if reopening else TaskOverlapsError) from error
         raise
 
 
@@ -84,11 +92,13 @@ class TaskService:
             task.notes = payload.notes
         if "tag" in provided:
             task.tag_id = self._tag_id(payload.tag)
+        reopening = payload.completed is False and task.completed_at is not None
         if payload.completed is not None:
             # A timestamp rather than a flag: the heatmap needs to know when, not only that.
+            # It also decides the occupancy — end_at follows completion (ADR-0022).
             task.completed_at = datetime.now(timezone.utc) if payload.completed else None
 
-        with _overlap_translated():
+        with _overlap_translated(reopening=reopening):
             self._tasks.flush()
         return task
 
