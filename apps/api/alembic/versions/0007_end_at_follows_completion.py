@@ -15,6 +15,11 @@ is merely imprecise.
 ``GREATEST`` so completing something before it started yields an empty range rather than an
 inverted one, which ``tstzrange`` refuses outright.
 
+A ``CASE`` rather than ``COALESCE(completed_at, 'infinity')``. Infinite *intervals* only
+arrived in PostgreSQL 17, and this runs on 16 — subtracting a finite timestamp from an
+infinite one raises rather than yielding "no limit". The branch is also plainly readable,
+which the clever version was not.
+
 ``duration_minutes`` keeps meaning the plan. Only the occupancy moves.
 """
 
@@ -28,7 +33,15 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _PLANNED = "NEW.duration_minutes * interval '1 minute'"
-_ELAPSED = "COALESCE(NEW.completed_at, 'infinity'::timestamptz) - NEW.start_at"
+_OCCUPIED = f"""
+    CASE
+        WHEN NEW.completed_at IS NULL THEN {_PLANNED}
+        ELSE LEAST(
+            {_PLANNED},
+            GREATEST(NEW.completed_at - NEW.start_at, interval '0')
+        )
+    END
+"""
 _REFIRE = "UPDATE tasks SET duration_minutes = duration_minutes WHERE completed_at IS NOT NULL"
 
 
@@ -38,10 +51,7 @@ def upgrade() -> None:
         CREATE OR REPLACE FUNCTION tasks_set_end_at() RETURNS trigger
         LANGUAGE plpgsql AS $$
         BEGIN
-            NEW.end_at := NEW.start_at + LEAST(
-                {_PLANNED},
-                GREATEST({_ELAPSED}, interval '0')
-            );
+            NEW.end_at := NEW.start_at + {_OCCUPIED};
             RETURN NEW;
         END;
         $$
