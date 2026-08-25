@@ -6,17 +6,29 @@
  * two to drift apart.
  */
 
+/** How heavy a day is, in four steps (ADR-0022). */
+export type Load = "fine" | "heavy" | "strained" | "unsustainable";
+
 /** One day's aggregate. No task appears here, by design (ADR-0004). */
 export interface DayCapacity {
   day: string;
   weekday: number;
+  /** The real length of the local day — 1440, or 1380/1500 on a daylight-saving
+   * transition. Drives the geometry and nothing else. */
   total_minutes: number;
+  /** What the day actually offers: sixteen hours, leaving eight for sleep. Every figure
+   * below is measured against this rather than against the calendar day. */
+  usable_minutes: number;
   occupied_minutes: number;
   free_minutes: number;
+  /** What is left of the whole day. The two loudest messages report this, because past
+   * sixteen hours booked a figure against the budget would read zero and say nothing. */
+  unbooked_minutes: number;
   task_count: number;
-  /** True when the day is booked past its own length. Free minutes floor at zero, so this
-   * is the only thing that says the overflow happened. */
+  /** Booked past the usable day. Free minutes floor at zero, so this is the only thing
+   * that says the overflow happened. */
   over_capacity: boolean;
+  load: Load;
 }
 
 export interface ChecklistItem {
