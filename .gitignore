@@ -41,3 +41,6 @@ apps/web/.thumbnail
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Design briefs stay local — how the screens were produced, not part of the project.
+docs/design-brief*.md
