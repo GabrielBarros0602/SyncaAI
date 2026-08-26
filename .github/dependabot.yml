@@ -7,9 +7,14 @@
 # Python version bumps are deliberately absent. Dependabot edits requirements.txt directly
 # and knows nothing about requirements.in, so each of its pull requests leaves the lockfile
 # in a state the .in file does not produce — a divergence that has to be undone by hand
-# every time. Python dependencies move when `uv pip compile` is rerun, which is the command
-# the project already documents. Alerts still fire either way, and an alert is what a
-# vulnerability needs.
+# every time. Python dependencies move when `uv pip compile --upgrade` is rerun; the plain
+# form re-resolves without moving anything, which is a distinction CONTRIBUTING.md now
+# spells out because getting it wrong looks like nothing happening. Alerts still fire either
+# way, and an alert is what a vulnerability needs.
+#
+# Actions are grouped into one pull request. Ungrouped, a month where three actions move is
+# three pull requests and three CI runs for one decision — and seven of those sat open for a
+# week before anybody looked, which is how a queue stops being read at all.
 version: 2
 
 updates:
@@ -17,5 +22,9 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
     commit-message:
       prefix: ci
