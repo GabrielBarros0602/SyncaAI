@@ -137,6 +137,9 @@ uv pip compile --universal --python-version 3.12 requirements.in -o requirements
 uv pip compile --universal --python-version 3.12 requirements-dev.in -o requirements-dev.txt
 ```
 
+To move versions rather than change the set, add `--upgrade` — the plain form keeps every pin
+it can and reports nothing when it does.
+
 Installation stays on pip — `uv` is used only as the resolver, because development happens on
 Windows while the runtime is Linux. See [CONTRIBUTING.md](CONTRIBUTING.md#dependencies).
 

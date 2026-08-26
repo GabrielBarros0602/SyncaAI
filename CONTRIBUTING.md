@@ -151,6 +151,21 @@ uv pip compile --universal --python-version 3.12 requirements-dev.in -o requirem
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
+**That command does not update versions, and the failure is silent.** `uv pip compile` reads
+the existing `.txt` as a preference and keeps every pin that still satisfies the `.in`, so
+rerunning it after adding a package resolves the new one and leaves the rest exactly where
+they were. Run it expecting an update and you get an empty diff and no error — which reads
+like "already current" and means "never asked".
+
+Updating versions is a different command:
+
+```bash
+uv pip compile --universal --python-version 3.12 --upgrade requirements.in -o requirements.txt
+uv pip compile --universal --python-version 3.12 --upgrade requirements-dev.in -o requirements-dev.txt
+```
+
+Use the plain form when the `.in` changed. Use `--upgrade` when the point is to move.
+
 **Why uv resolves but pip installs.** Development happens on Windows; Docker and CI run Linux.
 `pip-compile` resolves only for the interpreter and platform it runs on, so a lockfile
 generated on Windows pins `colorama` unconditionally and omits Linux-only transitive
