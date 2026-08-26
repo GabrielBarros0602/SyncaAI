@@ -21,10 +21,11 @@ from syncaai.api.routes.capacity import get_capacity_service
 from syncaai.db import get_session
 from syncaai.errors import HorizonTooLongError, InvertedWindowError
 from syncaai.services.capacity import (
+    DEFAULT_USABLE_MINUTES,
     MAX_HORIZON_DAYS,
+    MAX_USABLE_MINUTES,
     STRAINED_ABOVE,
     UNSUSTAINABLE_ABOVE,
-    USABLE_MINUTES_PER_DAY,
     CapacityService,
 )
 
@@ -55,8 +56,12 @@ class _FakeTasks:
         return self.rows
 
 
-def _service(rows: list[_Row] | None = None, zone: str = SAO_PAULO) -> CapacityService:
-    return CapacityService(_FakeTasks(rows), zone)  # type: ignore[arg-type]
+def _service(
+    rows: list[_Row] | None = None,
+    zone: str = SAO_PAULO,
+    usable: int = DEFAULT_USABLE_MINUTES,
+) -> CapacityService:
+    return CapacityService(_FakeTasks(rows), zone, usable)  # type: ignore[arg-type]
 
 
 def _booked(day: date, minutes: float, tasks: int = 1) -> list[_Row]:
@@ -71,8 +76,8 @@ def test_a_day_offers_sixteen_usable_hours_not_twenty_four() -> None:
     # screen asked why a day was only full at 24 hours — "doesn't he sleep?".
     day = _service().by_day(A_MONDAY, A_MONDAY)[0]
 
-    assert day.usable_minutes == USABLE_MINUTES_PER_DAY
-    assert day.free_minutes == USABLE_MINUTES_PER_DAY
+    assert day.usable_minutes == DEFAULT_USABLE_MINUTES
+    assert day.free_minutes == DEFAULT_USABLE_MINUTES
 
 
 def test_the_real_length_of_the_day_is_still_reported() -> None:
@@ -87,14 +92,14 @@ def test_the_real_length_of_the_day_is_still_reported() -> None:
 
 def test_a_daylight_saving_day_still_offers_the_same_budget() -> None:
     # The hour that disappears is one nobody was going to work through.
-    assert _service().by_day(A_SHORT_DAY, A_SHORT_DAY)[0].usable_minutes == USABLE_MINUTES_PER_DAY
+    assert _service().by_day(A_SHORT_DAY, A_SHORT_DAY)[0].usable_minutes == DEFAULT_USABLE_MINUTES
 
 
 def test_free_minutes_come_off_the_budget_not_off_the_calendar_day() -> None:
     day = _service(_booked(A_MONDAY, 120, 2)).by_day(A_MONDAY, A_MONDAY)[0]
 
     assert day.occupied_minutes == 120
-    assert day.free_minutes == USABLE_MINUTES_PER_DAY - 120
+    assert day.free_minutes == DEFAULT_USABLE_MINUTES - 120
     assert day.task_count == 2
 
 
@@ -110,9 +115,9 @@ def test_a_day_with_nothing_on_it_is_still_in_the_answer() -> None:
     ("booked", "expected"),
     [
         (0, "fine"),
-        (USABLE_MINUTES_PER_DAY - 1, "fine"),
-        (USABLE_MINUTES_PER_DAY, "fine"),
-        (USABLE_MINUTES_PER_DAY + 1, "heavy"),
+        (DEFAULT_USABLE_MINUTES - 1, "fine"),
+        (DEFAULT_USABLE_MINUTES, "fine"),
+        (DEFAULT_USABLE_MINUTES + 1, "heavy"),
         (STRAINED_ABOVE, "heavy"),
         (STRAINED_ABOVE + 1, "strained"),
         (UNSUSTAINABLE_ABOVE, "strained"),
@@ -129,14 +134,14 @@ def test_over_capacity_is_measured_against_the_budget() -> None:
     # Against the calendar day this flag would be unreachable: minutes are clipped at
     # midnight and overlaps are impossible, so a day can never exceed its own length. The
     # budget is what keeps it meaning something (ADR-0022).
-    days = _service(_booked(A_MONDAY, USABLE_MINUTES_PER_DAY + 60)).by_day(A_MONDAY, A_MONDAY)
+    days = _service(_booked(A_MONDAY, DEFAULT_USABLE_MINUTES + 60)).by_day(A_MONDAY, A_MONDAY)
 
     assert days[0].over_capacity is True
     assert days[0].free_minutes == 0
 
 
 def test_exactly_the_budget_is_full_but_not_over() -> None:
-    day = _service(_booked(A_MONDAY, USABLE_MINUTES_PER_DAY)).by_day(A_MONDAY, A_MONDAY)[0]
+    day = _service(_booked(A_MONDAY, DEFAULT_USABLE_MINUTES)).by_day(A_MONDAY, A_MONDAY)[0]
 
     assert day.free_minutes == 0
     assert day.over_capacity is False
@@ -173,6 +178,50 @@ def test_nothing_ever_reports_a_negative() -> None:
 
     assert day.free_minutes == 0
     assert day.unbooked_minutes == 2 * 60
+
+
+def test_heavy_is_measured_against_this_person_s_budget() -> None:
+    # Somebody who says their day is eight hours is heavy at eight hours and one minute, not
+    # at sixteen. `heavy` is the one step that is a statement about a plan (ADR-0023).
+    eight_hours = 8 * 60
+    service = _service(_booked(A_MONDAY, eight_hours + 1), usable=eight_hours)
+
+    day = service.by_day(A_MONDAY, A_MONDAY)[0]
+    assert day.usable_minutes == eight_hours
+    assert day.load == "heavy"
+    assert day.over_capacity is True
+
+
+def test_the_two_loud_levels_ignore_the_budget_entirely() -> None:
+    # A shorter budget must not make a nineteen-hour day sound worse than it is, nor a
+    # longer one make it sound better. These two are claims about a person (ADR-0023).
+    for usable in (6 * 60, 12 * 60, MAX_USABLE_MINUTES):
+        day = _service(_booked(A_MONDAY, 19 * 60), usable=usable).by_day(A_MONDAY, A_MONDAY)[0]
+        assert day.load == "strained"
+
+
+def test_a_budget_past_the_ceiling_is_brought_back_to_it() -> None:
+    # The single reason the ladder cannot invert. Left alone, a twenty-hour budget would let
+    # a nineteen-hour day report `strained` while sitting inside its own budget — an extreme
+    # -day warning beside a figure saying there is an hour left (ADR-0023).
+    day = _service(_booked(A_MONDAY, 19 * 60), usable=20 * 60).by_day(A_MONDAY, A_MONDAY)[0]
+
+    assert day.usable_minutes == MAX_USABLE_MINUTES
+    assert day.load == "strained"
+    assert day.over_capacity is True
+
+
+@pytest.mark.parametrize("usable", [60, 8 * 60, DEFAULT_USABLE_MINUTES, MAX_USABLE_MINUTES])
+def test_over_capacity_is_exactly_load_other_than_fine(usable: int) -> None:
+    """The invariant the ceiling buys, at every budget a person can choose.
+
+    The screen drives its accent colour from one of the two. If they could ever disagree it
+    would show a warning with no chip, or a chip with nothing said — so this is asserted
+    rather than assumed (ADR-0023).
+    """
+    for booked in range(0, 24 * 60 + 1, 30):
+        day = _service(_booked(A_MONDAY, booked), usable=usable).by_day(A_MONDAY, A_MONDAY)[0]
+        assert day.over_capacity is (day.load != "fine"), f"{usable=} {booked=} {day.load=}"
 
 
 def test_the_weekday_is_iso_so_monday_is_one() -> None:

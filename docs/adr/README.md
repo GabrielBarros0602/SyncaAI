@@ -31,6 +31,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0020](0020-domain-surface-choices.md) | Tags, checklist ordering and pagination | Accepted |
 | [0021](0021-browser-session-and-origin.md) | Browser session handling and origin strategy | Accepted |
 | [0022](0022-capacity-against-a-usable-day.md) | Capacity is real occupancy, measured against a usable day | Accepted |
+| [0023](0023-a-budget-you-choose-under-a-ceiling-you-do-not.md) | A budget you choose, under a ceiling you do not | Accepted |
 
 ## Template
 

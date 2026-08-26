@@ -10,10 +10,14 @@ Two details carry that weight:
 - **A day is not 1440 minutes.** On a daylight-saving transition it is 1380 or 1500. That
   length is still reported, because it is the only thing in the model that changes geometry
   and the screen draws it.
-- **A day does not offer all of itself.** Capacity is measured against sixteen usable hours
+- **A day does not offer all of itself.** Capacity is measured against a usable budget
   (ADR-0022), because a tool that says you have twenty-four hours free is not helping
   anybody plan. The first person other than the author to see the screen said so in one
   sentence: "why is it only full at 24 hours — doesn't he sleep?"
+- **The budget belongs to the person; the last two warnings do not.** Sixteen hours is a
+  default, not a law (ADR-0023). What a preference may never move is the point at which the
+  day is called extreme — a setting that did would let somebody configure their way out of
+  being told, which is the one thing a tool about overwork must not offer.
 - **Minutes count where they happen.** A task crossing midnight gives its minutes to both
   days, clipped, and one completed early stops occupying the time it gave back. Both come
   out of the query rather than out of arithmetic here.
@@ -33,16 +37,29 @@ from syncaai.time_windows import minutes_in_local_day, utc_window
 # not free and an unbounded range is an easy way to make the server assemble a year.
 MAX_HORIZON_DAYS = 90
 
-# Sixteen hours, leaving eight for sleep (ADR-0022). A constant rather than a column: it
-# becomes a per-user preference alongside the working hours ADR-0004 lists, and GET /me is
-# the resource it will attach to.
-USABLE_MINUTES_PER_DAY = 16 * 60
+# Sixteen hours, leaving eight for sleep. The default a person starts with, not a law: it is
+# a per-user preference (ADR-0023), and this is only what the preference defaults to.
+DEFAULT_USABLE_MINUTES = 16 * 60
 
-# Where the day stops being merely full and starts being worth saying something about. The
-# thresholds are strictly greater, so eighteen hours exactly is still `heavy` — the same
-# convention over_capacity already uses.
+# Where the day stops being merely full and starts being worth saying something about. These
+# two are *not* preferences and never scale with one: eighteen hours booked is a claim about
+# a person, not about their plan, and a setting that could move it would let somebody
+# configure their way out of being told (ADR-0023).
+#
+# Strictly greater, so eighteen hours exactly is still `heavy` — the same convention
+# `over_capacity` already uses.
 STRAINED_ABOVE = 18 * 60
 UNSUSTAINABLE_ABOVE = 20 * 60
+
+# The ceiling on the preference, and the single reason the ladder cannot invert.
+#
+# `heavy` is measured against the budget and `strained` against a fixed eighteen hours. Let
+# the budget rise past eighteen and a day could report `strained` while sitting *inside* its
+# own budget — a warning about an extreme day next to a figure saying there is room left.
+# Capping the preference at the first absolute threshold makes that arithmetically
+# impossible rather than merely unlikely, and it is defensible on its own terms: a "usable
+# day" longer than eighteen hours is not a budget, it is a denial (ADR-0023).
+MAX_USABLE_MINUTES = STRAINED_ABOVE
 
 Load = Literal["fine", "heavy", "strained", "unsustainable"]
 
@@ -77,7 +94,16 @@ class DayCapacity:
     def load(self) -> Load:
         """How heavy the day is, in four steps.
 
-        Strictly greater at every threshold, so sixteen hours exactly is still ``fine`` —
+        One step is relative and two are absolute, on purpose. ``heavy`` says "you are past
+        the day you told us you have"; the other two say "this is too much for a person",
+        which is not a claim a preference gets to move (ADR-0023).
+
+        Because the budget is capped at :data:`MAX_USABLE_MINUTES`, the two kinds can never
+        cross: anything above eighteen hours is above every possible budget. That gives the
+        record's one invariant — ``over_capacity`` is exactly ``load != "fine"`` — which is
+        why the screen can drive its accent from either and never contradict itself.
+
+        Strictly greater at every threshold, so the budget exactly spent is still ``fine`` —
         the same convention ``over_capacity`` uses.
         """
         if self.occupied_minutes > UNSUSTAINABLE_ABOVE:
@@ -105,9 +131,19 @@ class DayCapacity:
 
 
 class CapacityService:
-    def __init__(self, tasks: TaskRepository, zone_name: str) -> None:
+    def __init__(
+        self,
+        tasks: TaskRepository,
+        zone_name: str,
+        usable_minutes: int = DEFAULT_USABLE_MINUTES,
+    ) -> None:
         self._tasks = tasks
         self._zone_name = zone_name
+        # Clamped here as well as at the edge. The column will carry a CHECK and the schema
+        # a validator, and this still holds: it is the last place before the number is used
+        # to decide what a person is told about their own day, and the cost of a second
+        # guard on that is one call to `min`.
+        self._usable_minutes = min(usable_minutes, MAX_USABLE_MINUTES)
 
     def by_day(self, first_day: date, last_day: date) -> list[DayCapacity]:
         """Every day in the window, including the empty ones.
@@ -135,7 +171,7 @@ class CapacityService:
         total = minutes_in_local_day(day, self._zone_name)
         # Clamped by the real day, so a hypothetically short day cannot offer more usable
         # minutes than it has hours.
-        usable = min(USABLE_MINUTES_PER_DAY, total)
+        usable = min(self._usable_minutes, total)
         return DayCapacity(
             day=day,
             # ISO: Monday is 1. Included so the assembler does not recompute it, and because
