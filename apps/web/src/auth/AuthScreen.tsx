@@ -2,12 +2,13 @@
  * Entering, in three states and no router.
  *
  * Three screens' worth of behaviour with two forms, because a router for two forms is
- * machinery with nothing to route. It arrives when there is a URL worth having — the
- * password reset link will be the first, since it carries a token in the address.
+ * machinery with nothing to route. There is one URL worth having — `/verify?token=` — and it
+ * is served by reading the address rather than by routing to it, since nothing about that
+ * arrival needs a second screen.
  *
- * The confirm state is not a dead end: it takes the code, so an account can be created and
- * confirmed without leaving the screen. That matters most in development, where the mail
- * goes to the API's log rather than to a mailbox.
+ * The confirm state is not a dead end: it also takes a pasted code, so an account can be
+ * created and confirmed without leaving the screen. That matters most in development, where
+ * the mail goes to the API's log rather than to a mailbox.
  */
 import { useEffect, useState, type SyntheticEvent } from "react";
 
@@ -21,6 +22,40 @@ type Mode = "signIn" | "signUp" | "confirm";
 
 /** The one error whose answer is an action rather than a correction. */
 const UNVERIFIED = "Confirm your address before signing in.";
+
+/**
+ * The token a verification link carries, read once per page load.
+ *
+ * At module scope rather than in a hook because that is the truthful scope: the address is a
+ * property of the page load, not of a component that can mount twice. React's development
+ * mode mounts every component twice, and a one-time token spent by the first mount would
+ * fail on the second — the person would see "this link has already been used", about
+ * themselves, half a second after arriving.
+ */
+const LINK_TOKEN: string | null = readTheLinkToken();
+
+/**
+ * The confirmation, started once and shared by every mount.
+ *
+ * A boolean "already sent" flag is the obvious guard and it is wrong: React's development
+ * mode mounts, unmounts and remounts, so the flag would stop the second mount from asking
+ * while the first mount's answer went to a component that no longer exists. Nobody would
+ * ever see the result. Holding the promise instead means the mount that survives subscribes
+ * to the request the mount that died started.
+ */
+let linkConfirmation: Promise<void> | null = null;
+
+function readTheLinkToken(): string | null {
+  const found = new URLSearchParams(window.location.search).get("token");
+  if (found === null || found === "") return null;
+
+  // Out of the address bar immediately. A single-use credential in a URL is written to
+  // browser history, offered to autocomplete, and attached to the `Referer` header of the
+  // next request that leaves the page. None of those are places it should reach, and it
+  // costs one line to keep it out of all three.
+  window.history.replaceState(null, "", window.location.pathname);
+  return found;
+}
 
 /** The browser's zone, offered as a default the user can change. */
 function browserZone(): string {
@@ -53,16 +88,21 @@ function asClock(seconds: number): string {
 
 export function AuthScreen(): React.ReactNode {
   const { signIn } = useSession();
-  const [mode, setMode] = useState<Mode>("signIn");
+  const arrivedByLink = LINK_TOKEN !== null;
+  const [mode, setMode] = useState<Mode>(arrivedByLink ? "confirm" : "signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [timezone, setTimezone] = useState(browserZone);
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(LINK_TOKEN ?? "");
   const [revealed, setRevealed] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
-  const [busy, setBusy] = useState(false);
+  // Starts busy when the address carried a token: the request goes out on the first effect,
+  // and a screen that renders idle for one frame before admitting it is working is a flicker
+  // with nothing behind it. Derived rather than set inside the effect, which would cascade a
+  // second render for a fact already known before the first.
+  const [busy, setBusy] = useState(arrivedByLink);
 
   const [retryIn, setRetryIn] = useState(0);
   const blocked = busy || retryIn > 0;
@@ -79,6 +119,45 @@ export function AuthScreen(): React.ReactNode {
       clearTimeout(timer);
     };
   }, [retryIn]);
+
+  /**
+   * Confirm on arrival, without asking again.
+   *
+   * Opening the link *is* the confirmation — the person already acted, in their mail client.
+   * A form asking them to press "confirm" a second time is a step that exists only because
+   * of how this screen happens to be built, and they have no way to know that.
+   *
+   * Not routed through `run`, which reads the form's fields; this reads the address.
+   */
+  useEffect(() => {
+    const carried = LINK_TOKEN;
+    if (carried === null) return;
+
+    let live = true;
+    linkConfirmation ??= auth.verify(carried);
+    linkConfirmation
+      .then(() => {
+        if (!live) return;
+        setToken("");
+        setMode("signIn");
+        setNote("Confirmed. Sign in below.");
+      })
+      .catch((cause: unknown) => {
+        if (!live) return;
+        // The token stays in the field on failure. An expired link and a mistyped code fail
+        // the same way, and leaving it visible is what lets somebody see which they have.
+        const failure = problemOf(cause);
+        setProblem(failure);
+        setRetryIn(failure.retryAfter);
+      })
+      .finally(() => {
+        if (live) setBusy(false);
+      });
+
+    return () => {
+      live = false;
+    };
+  }, []);
 
   function go(next: Mode): void {
     setMode(next);
@@ -154,6 +233,32 @@ export function AuthScreen(): React.ReactNode {
   const signingUp = mode === "signUp";
   const confirming = mode === "confirm";
 
+  // Arriving by the link and arriving by "I have a code" are the same state with different
+  // copy. Telling somebody who just clicked a link to check their inbox is the interface
+  // failing to notice where the person came from.
+  const headline = signingIn
+    ? "Welcome back"
+    : signingUp
+      ? "Start the week"
+      : !arrivedByLink
+        ? "Check your inbox"
+        : busy
+          ? "Confirming"
+          : "That link is spent";
+
+  const lede = signingIn
+    ? "A day's capacity is a number the database knows, not a suggestion. Sign in to see what this week actually holds."
+    : signingUp
+      ? "The time zone decides which day a task lands on, so it is the one field worth reading twice."
+      : !arrivedByLink
+        ? "If that address needs an account, a confirmation link is on its way. Paste the code to finish."
+        : busy
+          ? "You opened the link from your mail. This finishes by itself."
+          : // A link works once. The way to another one is the sign-in screen, which offers
+            // it on the unverified error — not registering again, which answers the same 202
+            // it always does and sends nothing new.
+            "A link works once and expires in a day. Sign in and another will be offered.";
+
   return (
     <div className={styles.screen}>
       <div className={styles.form}>
@@ -166,16 +271,8 @@ export function AuthScreen(): React.ReactNode {
 
         <div key={mode} className={styles.swap}>
           <div className={cx(styles.lead, styles.step, styles.step1)}>
-            <h1 className={styles.headline}>
-              {signingIn ? "Welcome back" : signingUp ? "Start the week" : "Check your inbox"}
-            </h1>
-            <p className={styles.lede}>
-              {signingIn
-                ? "A day's capacity is a number the database knows, not a suggestion. Sign in to see what this week actually holds."
-                : signingUp
-                  ? "The time zone decides which day a task lands on, so it is the one field worth reading twice."
-                  : "If that address needs an account, a confirmation link is on its way. Paste the code to finish."}
-            </p>
+            <h1 className={styles.headline}>{headline}</h1>
+            <p className={styles.lede}>{lede}</p>
           </div>
 
           {problem !== null && (
