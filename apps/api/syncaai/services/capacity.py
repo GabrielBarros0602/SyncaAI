@@ -44,8 +44,6 @@ USABLE_MINUTES_PER_DAY = 16 * 60
 STRAINED_ABOVE = 18 * 60
 UNSUSTAINABLE_ABOVE = 20 * 60
 
-MINUTES_IN_A_CALENDAR_DAY = 24 * 60
-
 Load = Literal["fine", "heavy", "strained", "unsustainable"]
 
 
@@ -96,8 +94,14 @@ class DayCapacity:
 
         The figure the two loudest messages carry. Measured against the budget it would read
         zero at every level that shows it, and say nothing.
+
+        Against ``total_minutes`` and not against a fixed 1440: on the Sunday a zone loses an
+        hour the day really is 1380 minutes long, and claiming the missing hour as unbooked
+        would offer somebody time that does not exist. That is the same class of lie
+        ADR-0022 was written to remove, and ``total_minutes`` is carried through the whole
+        model precisely so nothing has to assume every day is the same size.
         """
-        return max(0, MINUTES_IN_A_CALENDAR_DAY - self.occupied_minutes)
+        return max(0, self.total_minutes - self.occupied_minutes)
 
 
 class CapacityService:
