@@ -151,6 +151,23 @@ def test_unbooked_counts_against_the_whole_day() -> None:
     assert day.unbooked_minutes == 5 * 60
 
 
+def test_unbooked_counts_against_the_day_the_zone_actually_has() -> None:
+    # Twenty-three hours, not twenty-four. Against a fixed 1440 this would answer 5h and
+    # offer an hour that the clock skipped — the same lie about a day's size that ADR-0022
+    # was written to remove, surviving in the one figure measured against the whole day.
+    day = _service(_booked(A_SHORT_DAY, 19 * 60)).by_day(A_SHORT_DAY, A_SHORT_DAY)[0]
+
+    assert day.total_minutes == 23 * 60
+    assert day.unbooked_minutes == 4 * 60
+
+
+def test_unbooked_counts_the_hour_a_long_day_gains() -> None:
+    day = _service(_booked(A_LONG_DAY, 19 * 60)).by_day(A_LONG_DAY, A_LONG_DAY)[0]
+
+    assert day.total_minutes == 25 * 60
+    assert day.unbooked_minutes == 6 * 60
+
+
 def test_nothing_ever_reports_a_negative() -> None:
     day = _service(_booked(A_MONDAY, 22 * 60)).by_day(A_MONDAY, A_MONDAY)[0]
 
