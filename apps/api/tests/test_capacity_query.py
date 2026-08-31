@@ -92,6 +92,11 @@ def _minutes(session: Session, user_id: uuid.UUID, first: date, last: date) -> d
     return {row.day: round(float(row.occupied_minutes)) for row in rows}
 
 
+def _counts(session: Session, user_id: uuid.UUID, first: date, last: date) -> dict[date, int]:
+    rows = TaskRepository(session, user_id).occupied_minutes_by_day(windows=_windows(first, last))
+    return {row.day: int(row.task_count) for row in rows}
+
+
 def test_a_task_is_counted_on_the_local_day_not_the_utc_one(owner: Session) -> None:
     """22:00 in São Paulo is 01:00 the next day in UTC. Counting on the stored instant would
     move a Monday evening onto Tuesday, and the whole calendar with it."""
@@ -116,6 +121,46 @@ def test_a_task_crossing_midnight_is_split_between_the_two_days(owner: Session) 
     tuesday = A_MONDAY + timedelta(days=1)
 
     assert _minutes(owner, user.id, A_MONDAY, tuesday) == {A_MONDAY: 60, tuesday: 60}
+
+
+def test_a_task_crossing_midnight_is_counted_only_on_the_day_it_starts(owner: Session) -> None:
+    """The minutes split; the task does not.
+
+    Tuesday holds an hour of this and owns none of it. Counting occupancy instead would put
+    "1 task" over a Tuesday column whose list is empty, because the list is what starts that
+    day — the screen showing a booked figure with nothing accounting for it is exactly the
+    defect this splits the two columns to fix.
+    """
+    user = _a_user(owner)
+    owner.add(
+        Task(user_id=user.id, title="across", start_at=_local(A_MONDAY, 23), duration_minutes=120)
+    )
+    owner.flush()
+    tuesday = A_MONDAY + timedelta(days=1)
+
+    assert _minutes(owner, user.id, A_MONDAY, tuesday) == {A_MONDAY: 60, tuesday: 60}
+    assert _counts(owner, user.id, A_MONDAY, tuesday) == {A_MONDAY: 1, tuesday: 0}
+
+
+def test_a_task_completed_before_it_began_still_counts_on_its_own_day(owner: Session) -> None:
+    """The edge the widened join exists for.
+
+    Completing a future task collapses `end_at` onto `start_at`. At exactly midnight that
+    fails `end_at > window_start`, so the row would drop out of a day it visibly starts — the
+    count would read one less than the list, which is how this was first noticed on screen.
+    """
+    user = _a_user(owner)
+    task = Task(
+        user_id=user.id, title="at midnight", start_at=_local(A_MONDAY, 0), duration_minutes=30
+    )
+    owner.add(task)
+    owner.flush()
+
+    task.completed_at = _local(A_MONDAY, 0) - timedelta(days=1)
+    owner.flush()
+
+    assert _minutes(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 0}
+    assert _counts(owner, user.id, A_MONDAY, A_MONDAY) == {A_MONDAY: 1}
 
 
 def test_completing_early_gives_the_remaining_minutes_back(owner: Session) -> None:

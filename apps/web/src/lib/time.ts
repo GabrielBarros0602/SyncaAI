@@ -39,8 +39,8 @@ export function formatMinutes(minutes: number): string {
  *
  * Wraps past midnight rather than showing `25:30`, because a task that runs into the next
  * day still ends at a time a clock can show. Which day those minutes count against is
- * settled elsewhere and deliberately: all of them land on the day the task starts
- * (ADR-0012).
+ * settled elsewhere: they are split at midnight and land on the day they happen (ADR-0022),
+ * so a wrapped end time is a genuine tomorrow and the row has to say so.
  */
 export function clock(minutesFromMidnight: number): string {
   const whole = Math.max(0, Math.round(minutesFromMidnight));

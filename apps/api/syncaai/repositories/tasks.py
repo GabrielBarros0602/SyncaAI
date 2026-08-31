@@ -17,6 +17,7 @@ from sqlalchemy import (
     case,
     column,
     func,
+    or_,
     select,
     values,
 )
@@ -106,6 +107,16 @@ class TaskRepository(OwnedRepository[Task]):
         ``utc_window``'s job and happens once, at the edge (ADR-0009) — a query that did its
         own conversion would be a second place for daylight saving to be got wrong.
 
+        **Minutes and tasks answer different questions, and this returns both.**
+        ``occupied_minutes`` is what falls inside the day; ``task_count`` is what *begins*
+        in it. They deliberately disagree about a task crossing midnight: Thursday holds four
+        of its hours and owns none of it.
+
+        Counting occupancy instead would put "1 task" on a Thursday whose list is empty,
+        because the list on the screen is what starts that day. Either the count follows the
+        list or the screen contradicts itself, and the list is the thing a person can act on
+        — the four hours are shown as a band that says where they came from.
+
         **The margin is what keeps the index.** ``ix_tasks_user_start_at`` covers
         ``(user_id, start_at)`` and cannot serve a filter on ``end_at``. So the scan is
         bounded by ``start_at`` alone, reaching back one day before the window — safe
@@ -137,11 +148,17 @@ class TaskRepository(OwnedRepository[Task]):
             else_=func.extract("epoch", overlap) / SECONDS_IN_A_MINUTE,
         )
 
+        # Begins inside this day. Paired with the join's own `start_at < window_end`, this
+        # is the whole of "owns the row on screen".
+        begins_here = Task.start_at >= day_windows.c.window_start
+
         statement: Select[tuple[date, int, int]] = (
             select(
                 day_windows.c.day,
                 func.coalesce(func.sum(minutes), 0).label("occupied_minutes"),
-                func.count(Task.id).label("task_count"),
+                # COUNT skips nulls, so the false branch of the CASE drops the row rather
+                # than counting a zero.
+                func.count(case((begins_here, Task.id))).label("task_count"),
             )
             .select_from(day_windows)
             .outerjoin(
@@ -151,7 +168,12 @@ class TaskRepository(OwnedRepository[Task]):
                     Task.start_at >= first_start - MAX_TASK_LENGTH,
                     Task.start_at < last_end,
                     Task.start_at < day_windows.c.window_end,
-                    Task.end_at > day_windows.c.window_start,
+                    # Occupies the day, *or* begins in it. The second half is not redundant:
+                    # a task completed before it started holds an empty range, so a task
+                    # beginning exactly at midnight and completed early fails
+                    # `end_at > window_start` — and would vanish from the count of a day it
+                    # visibly starts.
+                    or_(Task.end_at > day_windows.c.window_start, begins_here),
                 ),
             )
             .group_by(day_windows.c.day)
