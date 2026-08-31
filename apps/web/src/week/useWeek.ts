@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { DayCapacity, Me, NewTask, Page, Task } from "../api/types";
 import { daysFrom, mondayOf, toLocalDate, zonedDay } from "../lib/time";
+import { type Carried, carriedInto } from "./carried";
 
 /**
  * The week's data.
@@ -31,8 +32,10 @@ export interface Week {
   status: WeekStatus;
   me: Me | null;
   days: DayCapacity[];
-  /** Tasks keyed by the local date they start on. */
+  /** Tasks keyed by the local date they start on — the day that owns the row. */
   byDay: Map<string, Task[]>;
+  /** What the previous day is still holding, keyed by the day receiving it. */
+  carried: Map<string, Carried[]>;
   monday: Date;
   offset: number;
   goTo: (offset: number) => void;
@@ -59,6 +62,13 @@ export function useWeek(): Week {
   const week = daysFrom(monday);
   const firstDay = toLocalDate(week[0] as Date);
   const lastDay = toLocalDate(week[6] as Date);
+
+  // Tasks are fetched from the day *before* the week. Monday can be holding minutes from a
+  // Sunday task that ran past midnight, and the aggregate already counts them — without this
+  // day, Monday would show a booked figure with nothing on screen accounting for it. One day
+  // is enough and not a guess: the CHECK constraint caps a task at 1440 minutes, so nothing
+  // starting earlier can still be running on Monday.
+  const eve = toLocalDate(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 1));
   const currentWindow = `${firstDay}:${lastDay}:${String(attempt)}`;
 
   const status: WeekStatus =
@@ -77,9 +87,7 @@ export function useWeek(): Week {
       const me = await api.get<Me>("/me");
       const [days, page] = await Promise.all([
         api.get<DayCapacity[]>(`/capacity?first_day=${firstDay}&last_day=${lastDay}`),
-        api.get<Page<Task>>(
-          `/tasks?first_day=${firstDay}&last_day=${lastDay}&limit=${String(PAGE)}`,
-        ),
+        api.get<Page<Task>>(`/tasks?first_day=${eve}&last_day=${lastDay}&limit=${String(PAGE)}`),
       ]);
 
       if (cancelled) return;
@@ -95,16 +103,19 @@ export function useWeek(): Week {
     return () => {
       cancelled = true;
     };
-  }, [firstDay, lastDay, currentWindow]);
+  }, [eve, firstDay, lastDay, currentWindow]);
 
   const ready = status === "ready" ? snapshot : null;
   const byDay = new Map<string, Task[]>();
+  // Keyed on where each task *starts*, which is what the server now counts too. The eve's own
+  // tasks land under a date no column renders; only their spill crosses into the week.
   if (ready !== null) {
     for (const task of ready.tasks) {
       const day = zonedDay(task.start_at, ready.me.timezone);
       byDay.set(day, [...(byDay.get(day) ?? []), task]);
     }
   }
+  const carried = ready === null ? new Map<string, Carried[]>() : carriedInto(ready.tasks, ready.me.timezone);
 
   const refetch = useCallback(() => {
     setFailedWindow(null);
@@ -148,6 +159,7 @@ export function useWeek(): Week {
     me: ready?.me ?? null,
     days: ready?.days ?? [],
     byDay,
+    carried,
     monday,
     offset,
     goTo: setOffset,
