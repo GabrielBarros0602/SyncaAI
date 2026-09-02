@@ -41,9 +41,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Same reason as .nvmrc in the web job: one place holds the version, so a machine and
+      # a workflow cannot quietly disagree about it.
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version-file: apps/api/.python-version
           cache: pip
           cache-dependency-path: |
             apps/api/requirements.txt
@@ -92,9 +94,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The version comes from .nvmrc rather than from a literal here. Written twice, the
+      # two copies drift and nothing notices: this repository ran CI on 22 while the
+      # development machine sat on 20, and the whole web suite failed to start there for
+      # weeks without a single red build.
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 

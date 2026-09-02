@@ -179,8 +179,13 @@ platforms:
 colorama==0.4.6 ; sys_platform == 'win32'
 ```
 
-`--python-version 3.12` targets the version declared in `pyproject.toml` and the Dockerfile,
-independently of which interpreter runs the resolver.
+`--python-version 3.12` targets the version in `apps/api/.python-version`, which is also what
+CI installs and what `pyproject.toml` and the Dockerfile declare. **Resolve for it and develop
+on it.** A local interpreter one minor behind produces an environment the lockfile never
+described, and CI stays green while doing it — the same shape of silence that let this
+repository run Node 20 against a CI on 22 for weeks. The flag is honoured independently of
+which interpreter runs the resolver, which is what makes it a target rather than a
+description.
 
 Installation is unchanged: plain `pip install -r`. `uv` is pinned in `requirements-dev.in`, so
 it arrives with the dev dependencies and no global install is needed.
