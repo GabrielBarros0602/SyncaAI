@@ -122,7 +122,13 @@ Rules:
 
 - Windows, **PowerShell**: the command separator is `;`, not `&&`.
 - Docker Desktop for PostgreSQL 16. The API and web run on the host during development.
-- Python 3.12, Node 22.
+- **Python 3.12** (`apps/api/.python-version`) and **Node 24** (`.nvmrc`). Those two files are
+  the only place the versions are written; CI reads them rather than repeating them, and
+  `engine-strict` makes npm refuse to install on the wrong Node instead of warning about it.
+  This is not ceremony: the machine ran Node 20 against a CI on 22 and the entire web suite
+  failed to start locally for weeks, with a green build to look at the whole time.
+- The API venv lives at `apps/api/.venv` and has to be activated —
+  `.\.venv\Scripts\Activate.ps1` — or `ruff`, `mypy` and `pytest` are simply not on the path.
 
 ---
 
