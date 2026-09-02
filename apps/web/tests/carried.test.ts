@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Task } from "../src/api/types";
-import { carriedInto, spillOf } from "../src/week/carried";
+import { carriedInto, spillOf, splitOf } from "../src/week/carried";
 
 const SAO_PAULO = "America/Sao_Paulo"; // UTC-3, no daylight saving since 2019.
 
@@ -68,6 +68,34 @@ describe("spillOf", () => {
     // The same instant is Wednesday evening in São Paulo and Thursday morning in Tokyo, so
     // one of them has a spill and the other does not.
     expect(spillOf(CROSSES, "Asia/Tokyo")).toBeNull();
+  });
+});
+
+describe("splitOf", () => {
+  it("divides the minutes at the midnight they cross", () => {
+    // 19:00 to 04:00: five hours on Wednesday, four on Thursday.
+    expect(splitOf(CROSSES, SAO_PAULO)).toEqual({ own: 5 * 60, into: 4 * 60 });
+  });
+
+  it("adds up to what is occupied, not to what was planned", () => {
+    // Booked for nine hours from 19:00 and completed at 02:00, so `end_at` came back and
+    // `duration_minutes` still describes the plan. Splitting the plan would put an hour on
+    // Thursday that the header does not count and nobody is spending.
+    const finishedEarly = {
+      ...task("finished-early", "2026-09-09T22:00:00Z", "2026-09-10T05:00:00Z"),
+      duration_minutes: 9 * 60,
+      completed_at: "2026-09-10T05:00:00Z",
+    };
+
+    const split = splitOf(finishedEarly, SAO_PAULO);
+
+    expect(split).toEqual({ own: 5 * 60, into: 2 * 60 });
+    expect((split?.own ?? 0) + (split?.into ?? 0)).toBe(7 * 60);
+  });
+
+  it("says nothing about a task that stays inside its own day", () => {
+    expect(splitOf(task("inside", "2026-09-09T15:00:00Z", "2026-09-09T17:00:00Z"), SAO_PAULO))
+      .toBeNull();
   });
 });
 
