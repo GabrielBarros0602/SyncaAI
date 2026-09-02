@@ -1,4 +1,4 @@
-import { formatMinutes, weekdayName, zonedMinutes } from "../lib/time";
+import { formatCompact, formatMinutes, weekdayName, zonedMinutes } from "../lib/time";
 import type { DayCapacity, NewTask, Task } from "../api/types";
 import { warningFor } from "./load";
 import { TaskRow } from "./TaskRow";
@@ -22,6 +22,10 @@ interface Props {
   index: number;
   weekday: string;
   date: string;
+  /** This column is the day it is now, in the user's zone. */
+  today: boolean;
+  /** Already gone, in a week that still holds today. Only true alongside a `today` column. */
+  past: boolean;
   timezone: string;
   formOpen: boolean;
   submitting: boolean;
@@ -40,6 +44,8 @@ export function DayColumn({
   index,
   weekday,
   date,
+  today,
+  past,
   timezone,
   formOpen,
   submitting,
@@ -64,10 +70,16 @@ export function DayColumn({
   // Against the real day, so the bar means "how much of this day is spoken for". The budget
   // decides the numbers; the geometry stays honest about the day itself.
   const barWidth = `${String(Math.min(100, Math.round((capacity.occupied_minutes / capacity.total_minutes) * 100)))}%`;
+  // Where sixteen hours falls on a track that measures twenty-four. This is what stops the
+  // track from being a second drawing of the free figure: the bar says how much of the day
+  // is gone, the tick says where the budget it is measured against sits inside it.
+  const budgetMark = `${String(Math.round((capacity.usable_minutes / capacity.total_minutes) * 1000) / 10)}%`;
   const warning = warningFor(capacity);
 
   return (
-    <div className={cx(styles.day, over && styles.dayOver)}>
+    // `data-today` rather than a class: the rail is one declaration and an attribute reads
+    // as the state it is, where a class would have to be named for the thing it draws.
+    <div className={cx(styles.day, over && styles.dayOver)} data-today={today ? "1" : undefined}>
       <div
         className={styles.head}
         onMouseEnter={(event) => {
@@ -81,7 +93,9 @@ export function DayColumn({
       >
         <span ref={fillRef} className={styles.fill} aria-hidden="true" />
         <div className={styles.layer} style={{ display: "flex", justifyContent: "space-between" }}>
-          <span className={styles.dayIndex}>{dayNumber}</span>
+          <span className={cx(styles.dayIndex, today && styles.dayIndexToday)}>
+            {today ? "today" : dayNumber}
+          </span>
           <span className={styles.dayTotalNote}>
             {capacity.total_minutes === 1440
               ? "1440 min"
@@ -89,13 +103,25 @@ export function DayColumn({
           </span>
         </div>
         <div className={cx(styles.layer, styles.weekday)}>{weekday}</div>
-        <div className={cx(styles.layer, styles.date)}>{date}</div>
-        <div className={cx(styles.layer, styles.free, "rise")}>
-          {formatMinutes(capacity.free_minutes)}
+        <div className={cx(styles.layer, styles.date, past && styles.datePast)}>{date}</div>
+        {/*
+         * The big number is what is *booked*, not what is free.
+         *
+         * Free has a floor at zero (ADR-0022), so a sixteen-hour day, a nineteen-hour day and
+         * a twenty-four-hour day all rendered `0m` in this position, at this size — three very
+         * different days reading identically in the one place the eye lands first. Booked has
+         * no such collapse, and free keeps its meaning on the line below where it carries the
+         * denominator that makes it readable.
+         */}
+        <div className={cx(styles.layer, styles.booked)}>
+          <span data-booked className={cx(styles.bookedValue, "rise")}>
+            {formatCompact(capacity.occupied_minutes)}
+          </span>
+          <span className={styles.bookedWord}>booked</span>
         </div>
-        <div className={cx(styles.layer, styles.freeOf)}>
-          free of{" "}
-          <span className={styles.freeOfValue}>{formatMinutes(capacity.usable_minutes)}</span>
+        <div data-free className={cx(styles.layer, styles.freeOf)}>
+          <span className={styles.freeOfValue}>{formatCompact(capacity.free_minutes)}</span> free of{" "}
+          <span className={styles.freeOfValue}>{formatCompact(capacity.usable_minutes)}</span>
         </div>
         {over && (
           <div className={cx(styles.layer, styles.overChip)}>over by {formatMinutes(overBy)}</div>
@@ -124,13 +150,28 @@ export function DayColumn({
         <div className={cx(styles.layer, styles.trackRow)}>
           <div data-track className={styles.track} style={{ width: trackWidth }}>
             <div data-bar className={styles.bar} style={{ width: barWidth }} />
+            {/*
+             * Once the bar has passed the budget the tick is drawn in the background colour,
+             * so it reads as a notch cut out of the fill rather than a mark sitting on top of
+             * it. That is the whole signal: you can see the line you crossed.
+             */}
+            <div
+              data-budget-mark
+              className={cx(styles.budgetMark, over && styles.budgetMarkPassed)}
+              style={{ left: budgetMark }}
+            />
           </div>
-          {over && <div className={styles.overflow} />}
         </div>
         <div className={cx(styles.layer, styles.dayMeta)}>
+          {/*
+           * Unbooked is measured against the whole calendar day, not against the budget. Past
+           * sixteen hours booked the budget is spent, so a figure against it would read `0m`
+           * here on every day heavy enough for anyone to look — which is the same collapse
+           * that moved the big number off free.
+           */}
           {capacity.task_count === 0
             ? "no tasks"
-            : `${String(capacity.task_count)} ${capacity.task_count === 1 ? "task" : "tasks"} · ${formatMinutes(capacity.occupied_minutes)} booked`}
+            : `${String(capacity.task_count)} ${capacity.task_count === 1 ? "task" : "tasks"} · ${formatMinutes(capacity.unbooked_minutes)} of the day unbooked`}
         </div>
       </div>
 

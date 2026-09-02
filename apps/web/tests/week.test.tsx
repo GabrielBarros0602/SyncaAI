@@ -7,12 +7,13 @@
  * belongs to the database, so its refusal has to arrive from the server rather than from a
  * check this client is not in a position to make.
  */
-import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
 import { setAccessToken } from "../src/api/token";
 import type { DayCapacity, Task } from "../src/api/types";
+import { toLocalDate } from "../src/lib/time";
 import { DayColumn } from "../src/week/DayColumn";
 import { WeekScreen } from "../src/week/WeekScreen";
 import { SessionProvider } from "../src/auth/session";
@@ -65,19 +66,24 @@ const NOOP = {
   onToggle: () => undefined,
 };
 
-function renderDay(
-  capacity: DayCapacity,
-  tasks: Task[] = [],
-  lighter: DayCapacity | null = null,
-): HTMLElement {
+interface When {
+  tasks?: Task[];
+  lighter?: DayCapacity | null;
+  today?: boolean;
+  past?: boolean;
+}
+
+function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
   const { container } = render(
     <DayColumn
       capacity={capacity}
-      lighter={lighter}
-      tasks={tasks}
+      lighter={when.lighter ?? null}
+      tasks={when.tasks ?? []}
       index={0}
       weekday="Mon"
       date="Aug 24"
+      today={when.today ?? false}
+      past={when.past ?? false}
       timezone={SAO_PAULO}
       formOpen={false}
       submitting={false}
@@ -88,8 +94,12 @@ function renderDay(
   return container;
 }
 
+function at(container: HTMLElement, selector: string): HTMLElement {
+  return container.querySelector(selector) as HTMLElement;
+}
+
 function trackWidth(container: HTMLElement): string {
-  return (container.querySelector("[data-track]") as HTMLElement).style.width;
+  return at(container, "[data-track]").style.width;
 }
 
 it("a day that lost an hour is visibly shorter, without a caption saying so", () => {
@@ -125,18 +135,71 @@ it("a day booked past the usable budget reports zero and says by how much", () =
   // would be unreachable now that minutes are clipped at midnight (ADR-0022).
   const container = renderDay(booked(18 * 60, { task_count: 12 }));
 
-  expect(container.textContent).toContain("0m");
+  expect(at(container, "[data-free]").textContent).toBe("0m free of 16h");
   expect(container.textContent).not.toContain("-");
   expect(screen.getByText("over by 2h")).toBeDefined();
 });
 
+it("the big number is what is booked, so three different days do not read alike", () => {
+  // Why it was inverted. Free floors at zero, so at sixteen, nineteen and twenty-four hours
+  // booked the old headline figure was `0m` in all three — identical text, at the largest
+  // size on the screen, for days that are nothing like each other.
+  const sixteen = at(renderDay(booked(16 * 60)), "[data-booked]").textContent;
+  const nineteen = at(renderDay(booked(19 * 60)), "[data-booked]").textContent;
+  const full = at(renderDay(booked(24 * 60)), "[data-booked]").textContent;
+
+  expect([sixteen, nineteen, full]).toEqual(["16h", "19h", "24h"]);
+  expect(new Set([sixteen, nineteen, full]).size).toBe(3);
+});
+
 it("a full day is measured against sixteen hours, not twenty-four", () => {
   // The complaint that started ADR-0022: "why is it only full at 24 hours — doesn't he
-  // sleep?"
+  // sleep?". Read off the figure rather than off the column, because the meta line now
+  // reports what is left of the calendar day and legitimately says 24h there.
   const container = renderDay(booked(0));
 
-  expect(container.textContent).toContain("16h");
-  expect(container.textContent).not.toContain("24h");
+  expect(at(container, "[data-free]").textContent).toBe("16h free of 16h");
+});
+
+it("the meta line counts what is left of the whole day, not of the budget", () => {
+  // Past sixteen hours booked the budget is spent, so a figure against it would read `0m`
+  // on every day heavy enough for anybody to be reading this line.
+  renderDay(booked(19 * 60, { task_count: 12 }));
+
+  expect(screen.getByText("12 tasks · 5h of the day unbooked")).toBeDefined();
+});
+
+it("the track marks where the budget falls inside the day", () => {
+  // Without this the track is a second drawing of the free figure. The bar says how much of
+  // the day is gone; the tick says where the line it is measured against sits.
+  const ordinary = renderDay(booked(8 * 60));
+  const short = renderDay(booked(8 * 60, { total_minutes: 1380 }));
+
+  // Sixteen hours of a 1440-minute day, and of a 1380-minute one.
+  expect(at(ordinary, "[data-budget-mark]").style.left).toBe("66.7%");
+  expect(at(short, "[data-budget-mark]").style.left).toBe("69.6%");
+});
+
+it("a day booked past the budget cuts the mark out of the fill instead of drawing over it", () => {
+  const under = at(renderDay(booked(8 * 60)), "[data-budget-mark]").className;
+  const over = at(renderDay(booked(18 * 60)), "[data-budget-mark]").className;
+
+  expect(over).not.toBe(under);
+});
+
+it("today is named rather than numbered, and carries the rail", () => {
+  const container = renderDay(aDay(), { today: true });
+
+  expect(screen.getByText("today")).toBeDefined();
+  expect(at(container, '[data-today="1"]')).not.toBeNull();
+});
+
+it("any other day keeps its index and no rail", () => {
+  const container = renderDay(aDay());
+
+  expect(screen.queryByText("today")).toBeNull();
+  expect(screen.getByText("01")).toBeDefined();
+  expect(at(container, '[data-today="1"]')).toBeNull();
 });
 
 it("a heavy day names the consequence rather than the day", () => {
@@ -163,7 +226,7 @@ it("an ordinary day says nothing about its load", () => {
 it("a heavy day points at the lightest day in the week", () => {
   // Deterministic and true today: the screen already has all seven days' capacity, so this
   // is data rather than a model.
-  renderDay(booked(19 * 60), [], aDay({ weekday: 2, free_minutes: 9 * 60 }));
+  renderDay(booked(19 * 60), { lighter: aDay({ weekday: 2, free_minutes: 9 * 60 }) });
 
   expect(screen.getByText(/This day is heavier than the rest of your week/)).toBeDefined();
   expect(screen.getByText("Tue has 9h free.")).toBeDefined();
@@ -172,7 +235,7 @@ it("a heavy day points at the lightest day in the week", () => {
 it("a day whose tasks failed to arrive does not claim to be empty", () => {
   // The capacity is the authority on how many tasks a day holds. Gating the empty message
   // on the list would turn a failed fetch into a confident lie.
-  const container = renderDay(aDay({ task_count: 3 }), []);
+  const container = renderDay(aDay({ task_count: 3 }));
 
   expect(container.textContent).not.toContain("Nothing booked");
 });
@@ -236,12 +299,74 @@ function route(routes: Record<string, () => Response>): void {
   });
 }
 
-function renderWeek(): void {
-  render(
+function renderWeek(): HTMLElement {
+  const { container } = render(
     <SessionProvider>
       <WeekScreen />
     </SessionProvider>,
   );
+  return container;
+}
+
+/** Seven days starting at the local date asked for, rather than at a fixed one. */
+function weekFrom(firstDay: string, days: Partial<DayCapacity>[]): DayCapacity[] {
+  const [year = 2026, month = 8, day = 24] = firstDay.split("-").map(Number);
+  return days.map((overrides, index) =>
+    aDay({
+      day: toLocalDate(new Date(year, month - 1, day + index)),
+      weekday: index + 1,
+      occupied_minutes: 0,
+      free_minutes: USABLE,
+      unbooked_minutes: 1440,
+      task_count: 0,
+      ...overrides,
+    }),
+  );
+}
+
+/**
+ * Every route the week needs, answering the window it was actually asked for.
+ *
+ * The fixed-window mock above is fine for a screen that never navigates. Anything that
+ * presses `[` or `]` needs this one: a server that answered last week's dates to a request
+ * for next week's would put the today rail on a column showing another date, and the test
+ * would be reading its own mock rather than the screen.
+ */
+function routeWeek(days: Partial<DayCapacity>[], me: typeof ME = ME): void {
+  fetchMock.mockImplementation((input) => {
+    const [path = "", query = ""] = input.replace("/api/v1", "").split("?");
+
+    if (path === "/auth/refresh") {
+      return Promise.resolve(
+        json(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 }),
+      );
+    }
+    if (path === "/me") return Promise.resolve(json(200, me));
+    if (path === "/tasks") return Promise.resolve(json(200, { items: [], limit: 100, offset: 0 }));
+    if (path === "/capacity") {
+      const first = new URLSearchParams(query).get("first_day") ?? "";
+      return Promise.resolve(json(200, weekFrom(first, days)));
+    }
+    throw new Error(`no route for ${path}`);
+  });
+}
+
+const SEVEN: Partial<DayCapacity>[] = [{}, {}, {}, {}, {}, {}, {}];
+
+/** The date stamp on whichever column carries the today rail, or null if none does. */
+function markedToday(container: HTMLElement): string | null {
+  const column = container.querySelector('[data-today="1"]');
+  return /[A-Z][a-z]{2} \d{2}/.exec(column?.textContent ?? "")?.[0] ?? null;
+}
+
+/** How far from now the header says it is, or null when it says nothing. */
+function awayText(container: HTMLElement): string | null {
+  return container.querySelector("[data-away]")?.textContent ?? null;
+}
+
+function homeButton(): HTMLButtonElement {
+  // By role, because `this week` is also a word in the keyboard legend below it.
+  return screen.getByRole("button", { name: /this week/ });
 }
 
 it("shows the zone the server stores, not the browser's", async () => {
@@ -310,7 +435,108 @@ it("a week with a day over capacity says so in the summary", async () => {
   renderWeek();
 
   await waitFor(() => {
-    expect(screen.getByText("1 day over capacity")).toBeDefined();
+    expect(screen.getByText("1 day over budget")).toBeDefined();
+  });
+});
+
+describe("the week you are looking at", () => {
+  // Only Date is faked. The timers `waitFor` runs on stay real, so a frozen clock does not
+  // turn every assertion below into a five-second wait.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("marks today in the zone the server stores, not in the browser's", async () => {
+    // 20:00 UTC is the 26th in São Paulo and already the 27th in Tokyo. Rendering the same
+    // instant under both zones is what makes this independent of wherever the tests run: if
+    // the browser's clock decided, both would land on the same column.
+    vi.setSystemTime(new Date("2026-08-26T20:00:00Z"));
+
+    routeWeek(SEVEN);
+    const inSaoPaulo = renderWeek();
+    await waitFor(() => {
+      expect(markedToday(inSaoPaulo)).not.toBeNull();
+    });
+
+    routeWeek(SEVEN, { ...ME, timezone: "Asia/Tokyo" });
+    const inTokyo = renderWeek();
+    await waitFor(() => {
+      expect(markedToday(inTokyo)).not.toBeNull();
+    });
+
+    expect(markedToday(inSaoPaulo)).toBe("Aug 26");
+    expect(markedToday(inTokyo)).toBe("Aug 27");
+  });
+
+  it("names the week it is showing", async () => {
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    routeWeek(SEVEN);
+
+    renderWeek();
+
+    await waitFor(() => {
+      expect(screen.getByText("week 35 · 2026")).toBeDefined();
+    });
+  });
+
+  it("offers no way back while there is nothing to come back from", async () => {
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    routeWeek(SEVEN);
+
+    const container = renderWeek();
+
+    await waitFor(() => {
+      expect(markedToday(container)).toBe("Aug 26");
+    });
+    expect(homeButton().disabled).toBe(true);
+    expect(awayText(container)).toBeNull();
+  });
+
+  it("says how far away it has been walked, and walks back in one press", async () => {
+    // `[` and `]` move one week each and the dates alone do not say how many times they were
+    // pressed: three weeks out is a plausible-looking set of dates.
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    routeWeek(SEVEN);
+    const container = renderWeek();
+    await waitFor(() => {
+      expect(markedToday(container)).toBe("Aug 26");
+    });
+
+    fireEvent.keyDown(window, { key: "]" });
+    fireEvent.keyDown(window, { key: "]" });
+
+    await waitFor(() => {
+      expect(awayText(container)).toBe("+2 weeks");
+    });
+    // Two weeks out, no column is today, so nothing wears the rail.
+    expect(markedToday(container)).toBeNull();
+    expect(homeButton().disabled).toBe(false);
+
+    fireEvent.keyDown(window, { key: "T" });
+
+    await waitFor(() => {
+      expect(markedToday(container)).toBe("Aug 26");
+    });
+    expect(awayText(container)).toBeNull();
+  });
+
+  it("counts a single week in the singular", async () => {
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    routeWeek(SEVEN);
+    const container = renderWeek();
+    await waitFor(() => {
+      expect(markedToday(container)).toBe("Aug 26");
+    });
+
+    fireEvent.keyDown(window, { key: "[" });
+
+    await waitFor(() => {
+      expect(awayText(container)).toBe("-1 week");
+    });
   });
 });
 
