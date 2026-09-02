@@ -1,5 +1,7 @@
 import { formatCompact, formatMinutes, weekdayName, zonedMinutes } from "../lib/time";
 import type { DayCapacity, NewTask, Task } from "../api/types";
+import { type Carried, splitOf } from "./carried";
+import { CarriedBand } from "./CarriedBand";
 import { warningFor } from "./load";
 import { TaskRow } from "./TaskRow";
 import { NewTaskForm } from "./NewTaskForm";
@@ -14,11 +16,33 @@ import styles from "./Week.module.css";
  */
 const LONGEST_DAY = 1500;
 
+/**
+ * How a crossing task reads on the row that owns it, or null when it stays in its own day.
+ *
+ * Both weekdays are named rather than left to `+1`, because the mark says only *that* it
+ * crosses. Which day gets how much is the thing somebody planning is actually asking.
+ */
+function splitText(task: Task, timeZone: string, own: string, next: string): string | null {
+  const split = splitOf(task, timeZone);
+  if (split === null) return null;
+
+  return `crosses midnight · ${formatCompact(split.own)} ${own} / ${formatCompact(split.into)} ${next}`;
+}
+
 interface Props {
   capacity: DayCapacity;
   /** The day in the week with the most room, when this one is heavy enough to say so. */
   lighter: DayCapacity | null;
   tasks: Task[];
+  /** What the day before is still holding when this one starts. */
+  carried: Carried[];
+  /**
+   * Focus the row that owns a carried task, or null when that row is not on this screen.
+   *
+   * Null on the first column and only there: what it inherits comes from the day before the
+   * week, which is fetched so the figures are right and never rendered.
+   */
+  onGoToOwner: ((taskId: string) => void) | null;
   index: number;
   weekday: string;
   date: string;
@@ -41,6 +65,8 @@ export function DayColumn({
   capacity,
   lighter,
   tasks,
+  carried,
+  onGoToOwner,
   index,
   weekday,
   date,
@@ -75,6 +101,10 @@ export function DayColumn({
   // is gone, the tick says where the budget it is measured against sits inside it.
   const budgetMark = `${String(Math.round((capacity.usable_minutes / capacity.total_minutes) * 1000) / 10)}%`;
   const warning = warningFor(capacity);
+  // ISO weekdays run 1..7 from Monday, so both neighbours wrap rather than clamp.
+  const previousWeekday = weekdayName(((capacity.weekday + 5) % 7) + 1);
+  const nextWeekday = weekdayName((capacity.weekday % 7) + 1);
+  const carriedMinutes = carried.reduce((sum, entry) => sum + entry.minutes, 0);
 
   return (
     // `data-today` rather than a class: the rail is one declaration and an attribute reads
@@ -173,7 +203,25 @@ export function DayColumn({
             ? "no tasks"
             : `${String(capacity.task_count)} ${capacity.task_count === 1 ? "task" : "tasks"} · ${formatMinutes(capacity.unbooked_minutes)} of the day unbooked`}
         </div>
+        {/* The line above counts what the day owns; this one names what it did not ask for.
+            Without it the booked figure and the task count disagree with no explanation
+            between them — which is the contradiction the band below exists to answer. */}
+        {carried.length > 0 && (
+          <div className={cx(styles.layer, styles.dayMeta)}>
+            incl. {formatMinutes(carriedMinutes)} carried from {previousWeekday}
+          </div>
+        )}
       </div>
+
+      {carried.length > 0 && (
+        <CarriedBand
+          carried={carried}
+          fromWeekday={previousWeekday}
+          timezone={timezone}
+          bookedMinutes={capacity.occupied_minutes}
+          onGoToOwner={onGoToOwner}
+        />
+      )}
 
       {tasks.map((task, position) => (
         <TaskRow
@@ -181,11 +229,14 @@ export function DayColumn({
           task={task}
           index={`${dayNumber}.${String(position + 1).padStart(2, "0")}`}
           minutesFromMidnight={zonedMinutes(task.start_at, timezone)}
+          split={splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday)}
           onToggle={onToggle}
         />
       ))}
 
-      {capacity.task_count === 0 && !formOpen && (
+      {/* A day holding only inherited minutes is not empty, and saying it is would
+          contradict both the figure above and the band. */}
+      {capacity.task_count === 0 && carried.length === 0 && !formOpen && (
         <div className={styles.emptyDay}>
           Nothing booked. The day is open, all{" "}
           <span className={styles.emptyDayValue}>{formatMinutes(capacity.free_minutes)}</span> of it.

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetClientForTests } from "../src/api/client";
 import { setAccessToken } from "../src/api/token";
 import type { DayCapacity, Task } from "../src/api/types";
+import { type Carried, carriedInto } from "../src/week/carried";
 import { toLocalDate } from "../src/lib/time";
 import { DayColumn } from "../src/week/DayColumn";
 import { WeekScreen } from "../src/week/WeekScreen";
@@ -66,8 +67,35 @@ const NOOP = {
   onToggle: () => undefined,
 };
 
+/** A task, given a local start and end in São Paulo. */
+function aTask(id: string, startsAt: string, endsAt: string, over: Partial<Task> = {}): Task {
+  const start = new Date(`${startsAt}-03:00`);
+  const end = new Date(`${endsAt}-03:00`);
+  return {
+    id,
+    title: id,
+    notes: null,
+    start_at: start.toISOString(),
+    end_at: end.toISOString(),
+    duration_minutes: (end.getTime() - start.getTime()) / 60_000,
+    completed_at: null,
+    tag: null,
+    items: [],
+    ...over,
+  };
+}
+
+/** 23:00 Sunday to 04:00 Monday: five hours, of which four land on the receiving day. */
+const OVERNIGHT = aTask("pager", "2026-08-23T23:00:00", "2026-08-24T04:00:00");
+
+function carriedFor(tasks: Task[]): Carried[] {
+  return [...carriedInto(tasks, SAO_PAULO).values()].flat();
+}
+
 interface When {
   tasks?: Task[];
+  carried?: Carried[];
+  onGoToOwner?: ((taskId: string) => void) | null;
   lighter?: DayCapacity | null;
   today?: boolean;
   past?: boolean;
@@ -79,6 +107,8 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       capacity={capacity}
       lighter={when.lighter ?? null}
       tasks={when.tasks ?? []}
+      carried={when.carried ?? []}
+      onGoToOwner={when.onGoToOwner === undefined ? () => undefined : when.onGoToOwner}
       index={0}
       weekday="Mon"
       date="Aug 24"
@@ -232,6 +262,101 @@ it("a heavy day points at the lightest day in the week", () => {
   expect(screen.getByText("Tue has 9h free.")).toBeDefined();
 });
 
+describe("what the day before is still holding", () => {
+  it("names the task, where it came from, and how much of this day it takes", () => {
+    // The bug this closes was visible and passed every test: the day read `4h booked` above
+    // an empty column, because the aggregate counts minutes wherever they fall and the list
+    // only ever shows tasks by the day they start.
+    const container = renderDay(booked(4 * 60, { task_count: 0 }), {
+      carried: carriedFor([OVERNIGHT]),
+    });
+
+    expect(screen.getByText("carried from Sun")).toBeDefined();
+    expect(screen.getByText("from Sun 23:00")).toBeDefined();
+    expect(screen.getByText("ends 04:00")).toBeDefined();
+    expect(screen.getByText("pager")).toBeDefined();
+    expect(container.textContent).toContain("4h of this day");
+  });
+
+  it("says the inherited minutes are already counted above, not on top of it", () => {
+    // Without this the band reads as an addition, and a reader who adds it twice gets a
+    // number wrong in the direction that overbooks.
+    renderDay(booked(4 * 60, { task_count: 0 }), { carried: carriedFor([OVERNIGHT]) });
+
+    expect(
+      screen.getByText("Not this day’s task. Its minutes are already inside the 4h booked above."),
+    ).toBeDefined();
+  });
+
+  it("counts the inheritance in the header, where the figures are", () => {
+    renderDay(booked(4 * 60, { task_count: 0 }), { carried: carriedFor([OVERNIGHT]) });
+
+    expect(screen.getByText("incl. 4h carried from Sun")).toBeDefined();
+  });
+
+  it("a day holding only inherited minutes is not empty", () => {
+    // It has no task of its own, so the count is zero — and saying "Nothing booked" would
+    // contradict both the figure above it and the band right there on the screen.
+    const container = renderDay(booked(4 * 60, { task_count: 0 }), {
+      carried: carriedFor([OVERNIGHT]),
+    });
+
+    expect(container.textContent).not.toContain("Nothing booked");
+  });
+
+  it("offers the way back to the row that owns the task", () => {
+    const focused = vi.fn<(taskId: string) => void>();
+    renderDay(booked(4 * 60, { task_count: 0 }), {
+      carried: carriedFor([OVERNIGHT]),
+      onGoToOwner: focused,
+    });
+
+    fireEvent.click(screen.getByText("go to Sun"));
+
+    expect(focused).toHaveBeenCalledWith("pager");
+  });
+
+  it("offers no way back when the row that owns it is not on this screen", () => {
+    // Monday's source is the day before the week: fetched so the figures are right, never
+    // rendered. A control that goes nowhere is worse than no control.
+    renderDay(booked(4 * 60, { task_count: 0 }), {
+      carried: carriedFor([OVERNIGHT]),
+      onGoToOwner: null,
+    });
+
+    expect(screen.queryByText(/^go to/)).toBeNull();
+    // The band itself stays: the minutes are real whether or not the row is reachable.
+    expect(screen.getByText("carried from Sun")).toBeDefined();
+  });
+
+  it("says nothing at all on a day that inherits nothing", () => {
+    const container = renderDay(aDay());
+
+    expect(container.textContent).not.toContain("carried from");
+    expect(container.textContent).not.toContain("of this day");
+  });
+});
+
+describe("a task that crosses midnight, on the row that owns it", () => {
+  it("marks the end time as tomorrow's and says how the minutes divide", () => {
+    // The end time wraps rather than reading `28:00`, so on its own it claims a morning that
+    // belongs to the next day.
+    const container = renderDay(aDay({ weekday: 7, task_count: 1 }), { tasks: [OVERNIGHT] });
+
+    expect(screen.getByText("+1")).toBeDefined();
+    expect(screen.getByText("crosses midnight · 1h Sun / 4h Mon")).toBeDefined();
+    expect(container.textContent).toContain("23:00 – 04:00");
+  });
+
+  it("leaves a task that stays inside its day unmarked", () => {
+    const inside = aTask("inside", "2026-08-24T09:00:00", "2026-08-24T10:30:00");
+    const container = renderDay(aDay({ task_count: 1 }), { tasks: [inside] });
+
+    expect(screen.queryByText("+1")).toBeNull();
+    expect(container.textContent).not.toContain("crosses midnight");
+  });
+});
+
 it("a day whose tasks failed to arrive does not claim to be empty", () => {
   // The capacity is the authority on how many tasks a day holds. Gating the empty message
   // on the list would turn a failed fetch into a confident lie.
@@ -332,7 +457,7 @@ function weekFrom(firstDay: string, days: Partial<DayCapacity>[]): DayCapacity[]
  * for next week's would put the today rail on a column showing another date, and the test
  * would be reading its own mock rather than the screen.
  */
-function routeWeek(days: Partial<DayCapacity>[], me: typeof ME = ME): void {
+function routeWeek(days: Partial<DayCapacity>[], me: typeof ME = ME, tasks: Task[] = []): void {
   fetchMock.mockImplementation((input) => {
     const [path = "", query = ""] = input.replace("/api/v1", "").split("?");
 
@@ -342,7 +467,9 @@ function routeWeek(days: Partial<DayCapacity>[], me: typeof ME = ME): void {
       );
     }
     if (path === "/me") return Promise.resolve(json(200, me));
-    if (path === "/tasks") return Promise.resolve(json(200, { items: [], limit: 100, offset: 0 }));
+    if (path === "/tasks") {
+      return Promise.resolve(json(200, { items: tasks, limit: 100, offset: 0 }));
+    }
     if (path === "/capacity") {
       const first = new URLSearchParams(query).get("first_day") ?? "";
       return Promise.resolve(json(200, weekFrom(first, days)));
@@ -522,6 +649,49 @@ describe("the week you are looking at", () => {
       expect(markedToday(container)).toBe("Aug 26");
     });
     expect(awayText(container)).toBeNull();
+  });
+
+  it("offers the way back only when the owning row is on the screen", async () => {
+    // Two bands, one reachable and one not, in the same render. Monday inherits from the
+    // Sunday before the week — fetched so its four hours are counted, never drawn — while
+    // Thursday inherits from a Wednesday that is right there. Getting the boundary wrong by
+    // one column is the whole risk, and it only shows with both cases present.
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    const fromTheEve = aTask("eve", "2026-08-23T23:00:00", "2026-08-24T04:00:00");
+    const insideTheWeek = aTask("pager", "2026-08-26T23:00:00", "2026-08-27T04:00:00");
+    routeWeek(SEVEN, ME, [fromTheEve, insideTheWeek]);
+
+    const container = renderWeek();
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/^carried from/)).toHaveLength(2);
+    });
+    const columns = container.querySelectorAll("[class*=grid] > div");
+    const monday = columns[0] as HTMLElement;
+    const thursday = columns[3] as HTMLElement;
+
+    expect(monday.textContent).toContain("carried from Sun");
+    expect(monday.querySelector("[class*=carriedGoTo]")).toBeNull();
+
+    expect(thursday.textContent).toContain("carried from Wed");
+    expect(thursday.querySelector("[class*=carriedGoTo]")).not.toBeNull();
+  });
+
+  it("sends the reader to the row that owns the inherited task", async () => {
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    const pager = aTask("pager", "2026-08-26T23:00:00", "2026-08-27T04:00:00");
+    routeWeek(SEVEN, ME, [pager]);
+
+    const container = renderWeek();
+    await waitFor(() => {
+      expect(screen.getByText("go to Wed")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText("go to Wed"));
+
+    const wednesday = container.querySelectorAll("[class*=grid] > div")[2] as HTMLElement;
+    expect(document.activeElement?.id).toBe("task-pager");
+    expect(wednesday.contains(document.activeElement)).toBe(true);
   });
 
   it("counts a single week in the singular", async () => {
