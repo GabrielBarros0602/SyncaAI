@@ -28,6 +28,11 @@ htmlcov/
 .idea/
 *.swp
 
+# Agent tooling. Machine-local, like the two above: how to run the servers belongs in
+# README.md and CONTRIBUTING.md, where a person reads it, not in a launch config only one
+# tool understands.
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
