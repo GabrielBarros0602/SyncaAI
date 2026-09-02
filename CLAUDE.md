@@ -129,6 +129,15 @@ Rules:
   evolving; a single commit containing a finished feature is a failure of the record.
 - **Branch per change**, pull request per branch. Always cut from a fresh `main`:
   `git checkout main ; git pull --ff-only`.
+- **No `Co-Authored-By` trailer, and no tool named in a commit body or a pull request body.**
+  Not concealment — how this project is built is written down in the open, in the design
+  briefs and in the ADRs. It is accuracy: the architecture decisions, the trade-offs and the
+  reviews are Gabriel's, and a co-author line credits a tool with a share of judgement it did
+  not exercise. The commit records the reasoning, not the typing.
+
+  The pull request body is named because it is the more public of the two and was the gap:
+  a rule that said only "commit" left the description — where the design analysis, the
+  defects found and the trade-offs taken actually get written — outside itself.
 - **ADRs in `docs/adr/`** for every non-trivial architectural decision, numbered in sequence,
   added to `docs/adr/README.md`.
 - **Secrets never in a versioned file.** `.env` is ignored; `.env.example` is committed and
