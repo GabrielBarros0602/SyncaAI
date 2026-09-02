@@ -59,6 +59,42 @@ O maior pedaço aberto, e ele carrega quase inteiras as rodadas 2 e 3 abaixo. O
 `docs/design/README.md` registra o que foi decidido em cada uma e por quê; o que segue é o que
 ainda precisa existir em código.
 
+**Dividido em oito PRs em 2026-09-02**, nesta ordem. Cada uma deixa a aplicação funcionando e
+nenhuma existe só para a seguinte fazer sentido. As duas últimas não dependem de nenhuma
+anterior e podem entrar em qualquer ponto.
+
+| # | O que | Depende de | Back-end |
+|---|---|---|---|
+| 1 | O cabeçalho do dia, invertido: reservado grande, `3h free of 16h` embaixo, tique do orçamento, hoje marcado, `this week`/`T` | — | não |
+| 2 | A faixa herdada, o `+1` e a linha de split | — | não |
+| 3 | A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
+| 4 | Verbos `edit` e `note` | 3 | não |
+| 5 | Verbos `move` e `delete` com undo | 3 | não |
+| 6 | A oferta de mover, do dia pesado | 5 | não |
+| 7 | Confirmar endereço, três estados | — | não |
+| 8 | Configurações — endereço, fuso, sair | — | `PATCH /me` |
+
+**O 409 que nomeia a tarefa não é pré-requisito de nada disto.** A rodada 2 o registra como
+bloqueio para "mover, encurtar ou substituir", e a leitura do design desfez isso: o painel de
+mover calcula a disponibilidade no cliente, com as tarefas que a tela já tem, e o edit mostra
+a frase do servidor no conflito. Nenhuma das três telas precisa desse dado. Ele continua
+valendo por si — só não bloqueia o item 2.
+
+### Decisões tomadas na divisão
+
+- **Undo depois de excluir: apaga já, e o undo recria com `POST`.** A alternativa era
+  otimista — sumir da tela e só mandar o `DELETE` quando a janela de 9s fechasse —, e ela tem
+  uma falha pior: a exclusion constraint continua segurando o horário durante a janela
+  inteira, então quem exclui **para liberar o horário** toma 409 contra uma tarefa que a tela
+  já disse que sumiu. Esse é o caso de uso comum de excluir, não um caso de borda. O custo
+  aceito de recriar é outro: id novo, e o undo pode falhar se o horário foi tomado no meio.
+- **Link de confirmação: um estado só.** O estado ao vivo do `confirm-address.html` separa
+  "já usado" de "expirado", e a API não separa de propósito (ADR-0019). O próprio design se
+  contradiz — o terceiro card do 7b junta os dois. Vale o card: separar exigiria a API
+  distinguir e um ADR emendando o 0019, para ganhar uma frase.
+- **Checklist segue pendente** e mantém o verbo `list` fora dos oito. A decisão de API não
+  mudou: itens dentro do `PATCH` da tarefa, ou recurso próprio em `/tasks/{id}/items`.
+
 ---
 
 ## Rodada 2 — os verbos que faltam
@@ -118,7 +154,14 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
   que a aceita com um 422 que nomeia o teto, e o `GET /me` que a reporta.
 - **Confirmar endereço.** Desenhada em `docs/design/confirm-address.html`, em três estados.
   O comportamento já existe dentro do `AuthScreen`; falta a tela.
-- **Trocar e recuperar senha.** Gatilho registrado: S8, ou antes de publicar.
+- **Trocar e recuperar senha.** Gatilho registrado: S8, ou antes de publicar. **Precisa de ADR
+  antes do endpoint**, e o motivo apareceu ao ler o design: a seção 03 da
+  `docs/design/settings.html` diz explicitamente que trocar a senha **não** desloga o
+  navegador, enquanto o `reset-password` que já existe revoga todas as sessões — e o ADR-0019
+  registra isso como parte do que um reset é. São dois comportamentos opostos para a mesma
+  coluna, e a diferença é defensável: quem faz reset por link pode não ser o dono da conta, e
+  quem digita a senha atual provou que é. Mas isso é decisão, não detalhe de implementação, e
+  o ADR tem que vir antes de escrever a rota.
 - **Entrar com o Google.** Gatilho registrado: antes de demonstrar ou publicar. Precisa de ADR
   próprio para vinculação de conta — o que acontece quando o endereço do Google já tem conta
   com senha.

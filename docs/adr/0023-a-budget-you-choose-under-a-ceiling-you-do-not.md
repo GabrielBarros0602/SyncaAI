@@ -172,6 +172,21 @@ relative and absolute all survive that change. Only the column moves.
 8. [ ] `PATCH /me` accepts it, with a 422 that names the ceiling.
 9. [ ] The settings screen exposes it, and `GET /me` reports it.
 
+> **Items 7–9 lost their home, 2026-09-02.** The second design round drew the settings
+> screen with four sections — address, time zone, password, session — and no budget control
+> anywhere. Item 9 assumed a screen that now does not have the field, and 7 and 8 exist to
+> feed it, so all three are open against a surface that was not drawn.
+>
+> The budget did not stop being per-user in principle: `DEFAULT_USABLE_MINUTES` is still a
+> default and `CapacityService` still takes the value per user, which is items 1–6 and they
+> are done. What is missing is only the way a person changes it. The design does carry a
+> `budgetHours` control, but as a design-time prop for viewing the screen at other budgets —
+> not as a field of the account.
+>
+> These stay open and unstarted rather than being folded into the settings work, because
+> deciding where the field goes is a design decision and the round that would have made it
+> went the other way. Whatever resolves it supersedes this note.
+
 ---
 
 ## Português
