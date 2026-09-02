@@ -34,13 +34,22 @@ de propósito sobre uma tarefa que atravessa a meia-noite. O join alargou para
 recebe, e o `+1` na linha que diz que `04:00` é de amanhã. Está desenhado em
 `docs/design/week.html`.
 
-### 1.3 O caminho logado não tem teste de integração — **aberto**
+### 1.3 O caminho logado não tem teste de integração — ✅ concluído
 
 Registrar → ler o token do `RecordingMailer` → verificar → entrar como `web` → renovar usando
-**só o cookie** → `/me`.
+**só o cookie** → `/me`. Está em `tests/test_signed_in_path.py`, e é o único teste da suíte em
+que nada entre a requisição HTTP e o PostgreSQL é dublê — só os dois rate limiters, porque os
+contadores são linhas que sobrevivem ao teste e o teto de cinco registros por hora derrubaria
+a sexta execução da suíte dentro da mesma hora.
 
-É o item mais barato que sobrou e o único que ainda é puro back-end. Vale fazer antes das
-telas, porque é o que torna seguro mexer no fluxo de entrada depois.
+Três asserções guardam a principal: sem o cookie a renovação dá 401 (senão o passo passaria
+com qualquer outra credencial que o cliente carregasse por acaso), entrar antes de confirmar dá
+403, e o token de confirmação não pode ser gasto duas vezes — esta última é a que pegaria uma
+rota que esqueceu o `commit`, porque contra repositório falso ela passa de graça.
+
+**O que isso mudou de fato:** `verification_tokens` foi de 64% para 100% de cobertura,
+`repositories/users` de 86% para 100%, e o total de 96,43% para 97,45%. Os `integration`
+passaram de 40 para 44 — o número está no `CLAUDE.md` e foi atualizado junto.
 
 ---
 

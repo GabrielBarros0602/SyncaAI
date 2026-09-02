@@ -102,7 +102,7 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 40 today, and a run
+  them is not a green run. `pytest -m integration` counts them; there are 44 today, and a run
   that reports fewer found no database.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
@@ -166,17 +166,14 @@ TypeScript in strict mode, CSS Modules, no component library. The AI layer is de
 
 **Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate:
 
-1. The signed-in path has no integration test: register → read the token from `RecordingMailer`
-   → verify → sign in as `web` → refresh using **only** the cookie → `/me`. The cheapest thing
-   left and the last one that is pure back-end.
-2. The three screens in `docs/design/` are not implemented. This is the large one, and it
+1. The three screens in `docs/design/` are not implemented. This is the large one, and it
    carries most of rounds 2 and 3 of the backlog: the five verbs in an opened row, the
    inherited band, today marked, delete with undo, the move panel. Read
    `docs/design/README.md` before opening the HTML — it records what was decided and why, and
    the files themselves are large.
-3. Items 7–9 of ADR-0023: the `users.usable_minutes` column with
+2. Items 7–9 of ADR-0023: the `users.usable_minutes` column with
    `CHECK (usable_minutes BETWEEN 60 AND 1080)`, `PATCH /me`, and the settings screen.
-4. S6 — the AI pipeline against a test double, no provider.
+3. S6 — the AI pipeline against a test double, no provider.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when
