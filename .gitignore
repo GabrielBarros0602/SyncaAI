@@ -44,3 +44,6 @@ dist/
 
 # Design briefs stay local — how the screens were produced, not part of the project.
 docs/design-brief*.md
+
+# Scratch file for `gh pr create --body-file`.
+.pr-body.md
