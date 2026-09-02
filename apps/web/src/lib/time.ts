@@ -35,6 +35,25 @@ export function formatMinutes(minutes: number): string {
 }
 
 /**
+ * The same duration, tightened for figures that sit next to each other.
+ *
+ * `90` reads as `1h30`, `120` as `2h`, `45` as `45m`. The space in `formatMinutes` is what
+ * makes it read like speech, and that is right in a sentence. A day header stacks three of
+ * these in as many lines, and there the space starts reading as a gap *between* numbers
+ * rather than inside one — `18h 20m` and `0m` and `16h` stop looking like the same kind of
+ * thing.
+ */
+export function formatCompact(minutes: number): string {
+  const whole = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(whole / MINUTES_IN_AN_HOUR);
+  const rest = whole % MINUTES_IN_AN_HOUR;
+
+  if (hours > 0 && rest > 0) return `${String(hours)}h${pad(rest)}`;
+  if (hours > 0) return `${String(hours)}h`;
+  return `${String(rest)}m`;
+}
+
+/**
  * Minutes since local midnight, as a 24-hour clock.
  *
  * Wraps past midnight rather than showing `25:30`, because a task that runs into the next
@@ -96,8 +115,7 @@ export function toLocalDate(date: Date): string {
  */
 export function mondayOf(date: Date, weekOffset = 0): Date {
   const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const isoWeekday = monday.getDay() === 0 ? 7 : monday.getDay();
-  monday.setDate(monday.getDate() - (isoWeekday - 1) + weekOffset * 7);
+  monday.setDate(monday.getDate() - (isoWeekdayOf(monday) - 1) + weekOffset * 7);
   return monday;
 }
 
@@ -108,6 +126,36 @@ export function daysFrom(monday: Date): Date[] {
     day.setDate(day.getDate() + offset);
     return day;
   });
+}
+
+const MILLISECONDS_IN_A_DAY = 24 * 60 * 60 * 1000;
+
+/** ISO weekday for a local date, where Monday is 1 and Sunday is 7. */
+function isoWeekdayOf(date: Date): number {
+  return date.getDay() === 0 ? 7 : date.getDay();
+}
+
+/**
+ * The ISO week a date belongs to, and the year that week belongs to.
+ *
+ * The two are returned together because they can disagree with the calendar, which is the
+ * whole reason this is not `getMonth`-style arithmetic: ISO puts a week in the year holding
+ * its **Thursday**, so the 1st of January can be week 53 of the year before and the 31st of
+ * December can be week 1 of the year after. Reading the year off the date instead of off the
+ * week would print `week 53 · 2027` for a week that is entirely in 2026.
+ */
+export function isoWeek(date: Date): { week: number; year: number } {
+  const thursday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  thursday.setDate(thursday.getDate() + 4 - isoWeekdayOf(thursday));
+
+  // Week 1 is the one holding 4 January, by definition, so its Thursday is the origin.
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
+  firstThursday.setDate(firstThursday.getDate() + 4 - isoWeekdayOf(firstThursday));
+
+  // Rounded rather than divided exactly: both ends are local midnights, and a daylight
+  // saving transition between them makes the span 23 or 25 hours short of a whole number.
+  const days = Math.round((thursday.getTime() - firstThursday.getTime()) / MILLISECONDS_IN_A_DAY);
+  return { week: 1 + Math.round(days / 7), year: thursday.getFullYear() };
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
