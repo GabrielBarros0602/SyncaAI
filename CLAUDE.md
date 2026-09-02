@@ -74,15 +74,25 @@ So:
 
 CI is not the first check. It is the second.
 
+One command per line, never chained with `;`. Chained, a failure in the middle is invisible
+in the scrollback and the report cannot say which one broke.
+
 ```powershell
 docker compose up -d db            # integration tests need a reachable PostgreSQL
 
 cd apps\api
+.\.venv\Scripts\Activate.ps1
 ruff format .
-ruff check . ; mypy ; pytest       # pytest includes the tests marked `integration`
+ruff check .
+mypy
+alembic upgrade head
+alembic check
+pytest --cov=syncaai --cov-fail-under=85
 
 cd ..\web
-npm run lint ; npm run typecheck ; npm test
+npm run lint
+npm run typecheck
+npm test
 ```
 
 Rules:
@@ -92,7 +102,18 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run.
+  them is not a green run. `pytest -m integration` counts them; there are 40 today, and a run
+  that reports fewer found no database.
+- **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
+  forget the migration, and every test still passes: the ones that never touch the new column
+  cannot tell. The drift surfaces sprints later, with conflicting migrations to untangle.
+- **The coverage floor is CI's, so it belongs here too.** Running plain `pytest` locally and
+  `--cov-fail-under=85` in CI means a change can be green on the machine and red on the
+  branch, which is the whole failure this section exists to prevent.
+- **One check here is deliberately weaker than CI.** CI also runs
+  `alembic downgrade base` followed by `alembic upgrade head`, proving the migration reverses.
+  That drops every table, and the development database holds whatever was set up for manual
+  validation. Let CI own that one; do not run it against a database somebody is using.
 - **When something cannot be verified, say so plainly** and name what would verify it.
 - A test that only passes because it asserts what the code happens to do is worse than no
   test. Assert the behaviour the record claims.
