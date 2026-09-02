@@ -47,6 +47,32 @@ export function spillOf(task: Task, timeZone: string): Carried | null {
   return { task, minutes, from };
 }
 
+/** How a crossing task's minutes divide between the two days they fall on. */
+export interface Split {
+  /** Minutes on the day the task starts, and is listed and counted on. */
+  own: number;
+  /** Minutes on the day after, which gets a band and no row. */
+  into: number;
+}
+
+/**
+ * The two halves of a task that crosses midnight, or null when it does not.
+ *
+ * Numbers rather than a sentence, so the wording stays where the weekday names are and this
+ * stays testable without one.
+ *
+ * The span is measured between the real ends and not from `duration_minutes`: completing
+ * early shortens `end_at` (ADR-0022), and the two halves have to add up to what the day
+ * actually holds rather than to what was planned for it.
+ */
+export function splitOf(task: Task, timeZone: string): Split | null {
+  const carried = spillOf(task, timeZone);
+  if (carried === null) return null;
+
+  const occupied = (Date.parse(task.end_at) - Date.parse(task.start_at)) / 60_000;
+  return { own: occupied - carried.minutes, into: carried.minutes };
+}
+
 /** Every task's spill, keyed by the day receiving it, in the order they arrive. */
 export function carriedInto(tasks: readonly Task[], timeZone: string): Map<string, Carried[]> {
   const byDay = new Map<string, Carried[]>();
