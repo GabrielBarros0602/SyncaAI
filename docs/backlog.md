@@ -65,7 +65,7 @@ anterior e podem entrar em qualquer ponto.
 
 | # | O que | Depende de | Back-end |
 |---|---|---|---|
-| 1 | O cabeçalho do dia, invertido: reservado grande, `3h free of 16h` embaixo, tique do orçamento, hoje marcado, `this week`/`T` | — | não |
+| 1 | ✅ O cabeçalho do dia, invertido: reservado grande, `3h free of 16h` embaixo, tique do orçamento, hoje marcado, `this week`/`T` | — | não |
 | 2 | A faixa herdada, o `+1` e a linha de split | — | não |
 | 3 | A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
 | 4 | Verbos `edit` e `note` | 3 | não |
