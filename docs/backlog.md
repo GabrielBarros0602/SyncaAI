@@ -1,67 +1,54 @@
 # Backlog
 
-O que está aberto, e em que ordem. Atualizado em 2026-08-25, ao fim da validação manual do
-ADR-0022.
+O que está aberto, e em que ordem. Atualizado em 2026-08-26, quando o design voltou e a
+execução passou para o Claude Code.
 
 ## O critério de ordenação
 
-A tela da semana vai ser redesenhada — a segunda rodada com o Claude Design está em curso
-(`design-brief-2.md`). Isso decide a ordem sozinho:
+A tela da semana **foi** redesenhada, e as telas estão em `docs/design/`. O critério que
+ordenou a rodada 1 continua valendo para tudo que ainda não é visual:
 
 > **Primeiro o que um redesenho não pode invalidar.**
 
 Lógica de agrupamento, correção de servidor, teste e migration sobrevivem a qualquer mudança
-visual. Um botão, um estado de hover e um ícone não sobrevivem. Construir pixel agora é
-construir duas vezes.
+visual. Um botão, um estado de hover e um ícone não sobrevivem.
 
 ---
 
-## Rodada 1 — o que está errado hoje
+## Rodada 1 — o que estava errado
 
-Nada aqui é funcionalidade nova. São afirmações falsas na tela ou caminhos que não fecham.
+### 1.1 O link de verificação não abria nada — ✅ concluído
 
-### 1.1 O link de verificação não abre nada
+O email mandava `/verify?token=...` e a aplicação não tinha rota `/verify`, então o token na
+URL nunca era lido. A tela passou a ler `?token=` de `window.location.search` no boot e
+confirmar sozinha, e a barra de endereço é limpa antes da primeira requisição.
 
-O email manda `http://localhost:5173/verify?token=...`. A aplicação não tem rota `/verify`,
-então o Vite serve o `index.html`, o app chama `/auth/refresh`, toma 401 e mostra a entrada.
-O token na URL nunca é lido.
+### 1.2 A lista e a contagem discordavam sobre em que dia a tarefa está — ✅ a metade lógica
 
-A tela aceita o token colado, mas o email não diz isso — ele diz "clique aqui". As duas metades
-nunca se falaram.
+`occupied_minutes` é o que cai no dia; `task_count` é o que **começa** nele. Os dois discordam
+de propósito sobre uma tarefa que atravessa a meia-noite. O join alargou para
+`end_at > window_start OR start_at >= window_start`, o cliente busca desde o dia anterior, e
+`carried.ts` monta o que cada dia herda.
 
-**Correção:** ler `?token=` de `window.location.search` no boot e ir direto para o estado de
-confirmação. Sem roteador: `AuthScreen` já tem o estado, falta só a leitura da URL.
+**Falta a metade visual**, e ela faz parte do item 2 abaixo: a faixa herdada na coluna que
+recebe, e o `+1` na linha que diz que `04:00` é de amanhã. Está desenhado em
+`docs/design/week.html`.
 
-### 1.2 A lista e a contagem discordam sobre em que dia a tarefa está
-
-Dois endpoints, duas noções de "neste dia":
-
-| | Regra | Origem |
-|---|---|---|
-| `/capacity` | a tarefa **encosta** no dia — sobreposição de intervalo | `capacity_statement` |
-| `/tasks` | a tarefa **começa** no dia — filtro em `start_at` | `list_with_items` |
-
-Três sintomas, um tronco:
-
-- Uma tarefa que atravessa a meia-noite conta os minutos nos dois dias e só aparece no
-  primeiro. O segundo dia mostra `1 task · 4h booked` com a coluna vazia.
-- Uma tarefa concluída antes de começar colapsa o `end_at` exatamente na meia-noite;
-  `end_at > window_start` vira `00:00 > 00:00`, falso. Some da contagem e fica na lista.
-- A primeira segunda da janela perde as linhas que vêm do domingo anterior, porque a busca
-  de tarefas começa na segunda.
-
-**Correção (parte lógica, agora):** a busca de `/tasks` passa a começar um dia antes da
-janela, e o agrupamento por dia deixa de ser `zonedDay(start_at)` e passa a ser a interseção
-com o dia — a mesma regra que a capacidade já usa.
-
-**Correção (parte visual, depois do redesenho):** como o segundo dia mostra a metade que
-recebeu, e como a linha diz que `04:00` é de amanhã. É a pergunta central do
-`design-brief-2.md`.
-
-### 1.3 O caminho logado não tem teste de integração
+### 1.3 O caminho logado não tem teste de integração — **aberto**
 
 Registrar → ler o token do `RecordingMailer` → verificar → entrar como `web` → renovar usando
-**só o cookie** → `/me`. É o teste que torna seguro mexer em 1.1 e 1.2 depois.
+**só o cookie** → `/me`.
+
+É o item mais barato que sobrou e o único que ainda é puro back-end. Vale fazer antes das
+telas, porque é o que torna seguro mexer no fluxo de entrada depois.
+
+---
+
+## Item 2 — as três telas, contra `docs/design/`
+
+O maior pedaço aberto, e ele carrega quase inteiras as rodadas 2 e 3 abaixo. O
+`docs/design/README.md` registra o que foi decidido em cada uma e por quê; o que segue é o que
+ainda precisa existir em código.
 
 ---
 
@@ -80,9 +67,11 @@ A API sabe fazer oito coisas. A tela oferece três.
 | **Checklist** | `items[]`, já vem na resposta | **não** | leitura não; editar sim |
 | **Etiquetas** | `GET /tags` | **não** | não |
 
-Quatro dessas são puramente front-end e estão bloqueadas só pelo redesenho.
+Quatro dessas são puramente front-end e agora estão desenhadas: os cinco verbos vivem na
+**linha aberta**, com nota e checklist no mesmo painel. Concluir sai do conjunto e vira caixa
+permanente antes do título, porque é o verbo frequente e não deve custar uma abertura.
 
-Duas precisam de servidor e podem começar agora:
+Duas precisam de servidor e não dependem de tela nenhuma:
 
 - **Conflito com saídas.** O 409 de sobreposição não diz **qual** tarefa ocupa o horário. Sem
   esse dado a tela não consegue oferecer mover, encurtar ou substituir. Substituir tem que ser
@@ -95,20 +84,31 @@ Duas precisam de servidor e podem começar agora:
 
 ## Rodada 3 — orientação
 
-Barato, visível, e inteiramente dentro do redesenho.
+Barato, visível, e tudo já resolvido em `docs/design/week.html`.
 
 - **Hoje não está marcado.** Não existe a palavra `today` em `apps/web/src/week/`. Nada na
-  tela diz qual dia é agora.
-- **Não dá para voltar para a semana atual.** `[` e `]` andam, nada volta.
+  tela diz qual dia é agora. Desenhado como um filete de 2px no topo da coluna, a palavra
+  `today` onde fica o índice, e as datas passadas caindo para o cinza fraco.
+- **Não dá para voltar para a semana atual.** `[` e `]` andam, nada volta. Desenhado como
+  `this week` no cabeçalho, tecla `T`.
 - **Uma tarefa concluída não diz quando.** A tela mostra `done`. O `completed_at` existe, e a
-  diferença entre ele e o planejado é o dado que o ADR-0022 criou para o S6 usar.
+  diferença entre ele e o planejado é o dado que o ADR-0022 criou para o S6 usar. Desenhado
+  como `done 15:00 · 1h30 of 3h · −1h30`, em tinta neutra: passar da estimativa é informação,
+  não falha.
+- **O número grande do dia é o livre, e ele tem piso em zero**, então um dia de 16h, um de 19h
+  e um de 24h leem `0m` no mesmo corpo. Invertido no desenho: o grande passa a ser o
+  reservado, e o livre vai para a linha de baixo com o denominador — `3h free of 16h`.
 
 ---
 
 ## Rodada 4 — telas que não existem
 
-- **Configurações.** O fuso aparece no cabeçalho e não pode ser mudado. Não existe
-  `PATCH /me` — esta precisa de back-end antes do desenho.
+- **Configurações.** Desenhada em `docs/design/settings.html`. O fuso aparece no cabeçalho e
+  não pode ser mudado, e não existe `PATCH /me`. Carrega junto os itens 7–9 do **ADR-0023**: a
+  coluna `users.usable_minutes` com `CHECK (usable_minutes BETWEEN 60 AND 1080)`, o `PATCH /me`
+  que a aceita com um 422 que nomeia o teto, e o `GET /me` que a reporta.
+- **Confirmar endereço.** Desenhada em `docs/design/confirm-address.html`, em três estados.
+  O comportamento já existe dentro do `AuthScreen`; falta a tela.
 - **Trocar e recuperar senha.** Gatilho registrado: S8, ou antes de publicar.
 - **Entrar com o Google.** Gatilho registrado: antes de demonstrar ou publicar. Precisa de ADR
   próprio para vinculação de conta — o que acontece quando o endereço do Google já tem conta

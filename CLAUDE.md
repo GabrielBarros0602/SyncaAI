@@ -17,6 +17,7 @@ documentation and UI copy are English (see Conventions).
 |---|---|
 | `docs/adr/README.md` | index of 23 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
+| `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
 | `CONTRIBUTING.md` | commit format, dependency workflow, test commands |
 | `docs/threat-model.md` | the security decisions and what they address |
@@ -139,10 +140,13 @@ TypeScript in strict mode, CSS Modules, no component library. The AI layer is de
 **Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate:
 
 1. The signed-in path has no integration test: register → read the token from `RecordingMailer`
-   → verify → sign in as `web` → refresh using **only** the cookie → `/me`.
-2. The three screens returned from the design round are not implemented. This is the large one,
-   and it carries most of rounds 2 and 3 of the backlog: the five verbs in an opened row, the
-   inherited band, today marked, delete with undo, the move panel.
+   → verify → sign in as `web` → refresh using **only** the cookie → `/me`. The cheapest thing
+   left and the last one that is pure back-end.
+2. The three screens in `docs/design/` are not implemented. This is the large one, and it
+   carries most of rounds 2 and 3 of the backlog: the five verbs in an opened row, the
+   inherited band, today marked, delete with undo, the move panel. Read
+   `docs/design/README.md` before opening the HTML — it records what was decided and why, and
+   the files themselves are large.
 3. Items 7–9 of ADR-0023: the `users.usable_minutes` column with
    `CHECK (usable_minutes BETWEEN 60 AND 1080)`, `PATCH /me`, and the settings screen.
 4. S6 — the AI pipeline against a test double, no provider.
