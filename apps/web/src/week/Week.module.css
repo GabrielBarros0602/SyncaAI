@@ -402,6 +402,110 @@
   color: var(--faint);
 }
 
+/*
+ * What the day before is still holding.
+ *
+ * Every value here is one step quieter than the task rows below it, and that is the whole
+ * design: it has to be legible and it must not be mistaken for a row somebody can act on.
+ * The tint separates it from the column without spending the accent, which means trouble.
+ */
+.carried {
+  border-top: 1px solid var(--rule2);
+  background: var(--hover);
+  padding: var(--rowpad) var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.carriedHead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.carriedArrow {
+  font: 500 11px/1 var(--mono);
+  color: var(--dim);
+}
+
+.carriedFrom {
+  font: 400 10px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.carriedTotal {
+  margin-left: auto;
+  font: 500 10px/1 var(--mono);
+  color: var(--dim);
+}
+
+.carriedItem {
+  border-top: 1px solid var(--rule);
+  padding-top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.carriedWhen {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  font: 400 10px/1 var(--mono);
+  color: var(--dim);
+}
+
+/* Dimmed even at title weight. The row that owns this task shows it in full ink one column
+   to the left, and only one of the two should read as the thing itself. */
+.carriedTitle {
+  font: 500 12px/1.35 var(--sans);
+  color: var(--dim);
+  text-wrap: pretty;
+}
+
+.carriedFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.carriedMinutes {
+  font: 400 10px/1.4 var(--mono);
+  color: var(--faint);
+}
+
+.carriedGoTo {
+  flex: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: 400 10px/1.4 var(--mono);
+  color: var(--dim);
+  border-bottom: 1px solid var(--rule2);
+  transition: color var(--dur), border-color var(--dur);
+}
+
+.carriedGoTo:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* The band otherwise reads as an addition to the figure above it. These minutes are already
+   inside that figure, and a reader who adds them twice gets a number wrong in the direction
+   that overbooks. */
+.carriedNote {
+  margin: 0;
+  font: 400 10px/1.45 var(--sans);
+  color: var(--faint);
+  text-wrap: pretty;
+}
+
 .task {
   position: relative;
   border-top: 1px solid var(--rule);
@@ -437,6 +541,22 @@
 .taskDuration {
   margin-left: auto;
   font: 500 11px/1 var(--mono);
+  color: var(--dim);
+}
+
+/* Full ink, unlike everything around it in the range. It is the one character on the row
+   that changes which day the end time belongs to. */
+.taskNextDay {
+  font: 500 8px/1 var(--mono);
+  vertical-align: super;
+  color: var(--ink);
+}
+
+.taskSplit {
+  position: relative;
+  display: block;
+  margin-top: 7px;
+  font: 400 10px/1.45 var(--mono);
   color: var(--dim);
 }
 

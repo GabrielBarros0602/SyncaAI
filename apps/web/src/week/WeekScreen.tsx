@@ -72,6 +72,13 @@ export function WeekScreen(): React.ReactNode {
   const { week: weekNumber, year } = isoWeek(week.monday);
   const distance = Math.abs(week.offset);
 
+  // Focus rather than scroll: the row is a control, and moving the keyboard there is what
+  // makes the way back usable by somebody who is not holding a mouse. `scrollIntoView` would
+  // move the eye and leave the focus in the band it came from.
+  function focusTask(taskId: string): void {
+    document.getElementById(`task-${taskId}`)?.focus();
+  }
+
   return (
     <div className={styles.frame}>
       <div className={styles.chrome}>
@@ -187,6 +194,11 @@ export function WeekScreen(): React.ReactNode {
             capacity={capacity}
             lighter={capacity.load === "fine" ? null : lightestDay(week.days, capacity.day)}
             tasks={week.byDay.get(capacity.day) ?? []}
+            carried={week.carried.get(capacity.day) ?? []}
+            // Null on the first column only. What Monday inherits comes from the Sunday
+            // before the week — fetched so the figures are right, never rendered — so there
+            // is no row on this screen to send anybody to.
+            onGoToOwner={index === 0 ? null : focusTask}
             index={index}
             weekday={weekdayName(capacity.weekday)}
             date={stamp(dates[index] as Date)}
