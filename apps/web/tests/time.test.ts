@@ -10,7 +10,9 @@ import { describe, expect, it } from "vitest";
 import {
   clock,
   daysFrom,
+  formatCompact,
   formatMinutes,
+  isoWeek,
   mondayOf,
   parseClock,
   parseDuration,
@@ -18,6 +20,46 @@ import {
   toLocalDate,
   weekdayName,
 } from "../src/lib/time";
+
+describe("formatCompact", () => {
+  it("closes the gap that separates two numbers from one", () => {
+    expect(formatCompact(90)).toBe("1h30");
+    expect(formatCompact(1100)).toBe("18h20");
+  });
+
+  it("agrees with formatMinutes wherever there is no gap to close", () => {
+    // The two differ in exactly one case. If they ever differ anywhere else, one of the two
+    // day headers reading `2h` and `2h` is lying about being the same number.
+    for (const minutes of [0, 45, 60, 120, 960, 1440]) {
+      expect(formatCompact(minutes)).toBe(formatMinutes(minutes));
+    }
+  });
+});
+
+describe("isoWeek", () => {
+  it("numbers an ordinary week from the Thursday it contains", () => {
+    expect(isoWeek(new Date(2026, 7, 24))).toEqual({ week: 35, year: 2026 });
+  });
+
+  it("gives January days to the year whose week actually holds them", () => {
+    // 1 January 2027 is a Friday, so its week's Thursday is 31 December 2026 — the week
+    // belongs to 2026 and reading the year off the date would print `week 53 · 2027`.
+    expect(isoWeek(new Date(2027, 0, 1))).toEqual({ week: 53, year: 2026 });
+  });
+
+  it("gives December days to the next year when the week has crossed", () => {
+    // 31 December 2019 is a Tuesday; that week's Thursday is 2 January 2020.
+    expect(isoWeek(new Date(2019, 11, 31))).toEqual({ week: 1, year: 2020 });
+  });
+
+  it("puts every day of one week on the same number", () => {
+    // The header is drawn from the Monday, but nothing stops a caller passing another day,
+    // and a week that renumbers itself halfway through would be a very quiet bug.
+    const numbers = daysFrom(mondayOf(new Date(2026, 7, 26))).map((day) => isoWeek(day).week);
+
+    expect(new Set(numbers)).toEqual(new Set([35]));
+  });
+});
 
 describe("formatMinutes", () => {
   it("says what a person would say", () => {
