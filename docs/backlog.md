@@ -23,16 +23,21 @@ O email mandava `/verify?token=...` e a aplicação não tinha rota `/verify`, e
 URL nunca era lido. A tela passou a ler `?token=` de `window.location.search` no boot e
 confirmar sozinha, e a barra de endereço é limpa antes da primeira requisição.
 
-### 1.2 A lista e a contagem discordavam sobre em que dia a tarefa está — ✅ a metade lógica
+### 1.2 A lista e a contagem discordavam sobre em que dia a tarefa está — ✅ concluído
 
 `occupied_minutes` é o que cai no dia; `task_count` é o que **começa** nele. Os dois discordam
 de propósito sobre uma tarefa que atravessa a meia-noite. O join alargou para
 `end_at > window_start OR start_at >= window_start`, o cliente busca desde o dia anterior, e
 `carried.ts` monta o que cada dia herda.
 
-**Falta a metade visual**, e ela faz parte do item 2 abaixo: a faixa herdada na coluna que
-recebe, e o `+1` na linha que diz que `04:00` é de amanhã. Está desenhado em
-`docs/design/week.html`.
+**A metade visual entrou na PR 2 do item 2:** a faixa herdada na coluna que recebe — nomeando
+a tarefa, de onde veio, quando acaba e quanto do dia ela toma, sem verbo nenhum — e o `+1` com
+a divisão na linha que a possui. A faixa carrega um rodapé dizendo que esses minutos **já
+estão** na figura do topo, porque sem ele ela lê como soma e quem soma duas vezes erra para o
+lado que superlota.
+
+Uma contradição foi junto: um dia que só herda minutos não tem tarefa própria, então ele
+anunciava dia vazio logo abaixo de um cabeçalho reportando quatro horas reservadas.
 
 ### 1.3 O caminho logado não tem teste de integração — ✅ concluído
 
@@ -66,7 +71,7 @@ anterior e podem entrar em qualquer ponto.
 | # | O que | Depende de | Back-end |
 |---|---|---|---|
 | 1 | ✅ O cabeçalho do dia, invertido: reservado grande, `3h free of 16h` embaixo, tique do orçamento, hoje marcado, `this week`/`T` | — | não |
-| 2 | A faixa herdada, o `+1` e a linha de split | — | não |
+| 2 | ✅ A faixa herdada, o `+1` e a linha de split — fecha a metade visual do 1.2 | — | não |
 | 3 | A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
 | 4 | Verbos `edit` e `note` | 3 | não |
 | 5 | Verbos `move` e `delete` com undo | 3 | não |
