@@ -9,17 +9,70 @@ import { describe, expect, it } from "vitest";
 
 import {
   clock,
+  zonedDay,
   daysFrom,
   formatCompact,
   formatMinutes,
   isoWeek,
+  minutesBetween,
   mondayOf,
   parseClock,
   parseDuration,
   stamp,
+  startOfLocalDay,
   toLocalDate,
   weekdayName,
 } from "../src/lib/time";
+
+describe("startOfLocalDay", () => {
+  const SAO_PAULO = "America/Sao_Paulo";
+
+  it("is local midnight on an ordinary day", () => {
+    expect(startOfLocalDay("2026-09-02", SAO_PAULO).toISOString()).toBe("2026-09-02T03:00:00.000Z");
+  });
+
+  it("is 01:00 on the day midnight never happened", () => {
+    // Brazil used to begin daylight saving *at* midnight: on 2018-11-04 the clock went from
+    // 23:59:59 straight to 01:00:00. Returning a midnight that did not exist would put the
+    // day's boundary an hour before the day, which is the whole bug this fixes.
+    expect(startOfLocalDay("2018-11-04", SAO_PAULO).toISOString()).toBe("2018-11-04T03:00:00.000Z");
+  });
+
+  it("is midnight on both sides of the night that repeats an hour", () => {
+    // The other direction, and it needs no special handling: on 2019-02-17 the clock rolled
+    // back *to* midnight, which lengthens the 16th to 1500 minutes rather than giving the
+    // 17th two beginnings. Both folds of that midnight are the same instant — measured
+    // against the server's own helper, not assumed.
+    expect(startOfLocalDay("2019-02-16", SAO_PAULO).toISOString()).toBe("2019-02-16T02:00:00.000Z");
+    expect(startOfLocalDay("2019-02-17", SAO_PAULO).toISOString()).toBe("2019-02-17T03:00:00.000Z");
+  });
+
+  it("agrees with the day a converted instant reports it belongs to", () => {
+    // The inverse of zonedDay, so the two have to close the loop. If they ever disagree the
+    // screen and the capacity query are answering about different days.
+    for (const day of ["2018-11-04", "2019-02-16", "2019-02-17", "2026-09-02", "2026-01-01"]) {
+      expect(zonedDay(startOfLocalDay(day, SAO_PAULO).toISOString(), SAO_PAULO)).toBe(day);
+    }
+  });
+
+  it("is the first instant of the day, not merely an instant inside it", () => {
+    // One minute earlier has to belong to the day before, or the boundary is in the wrong
+    // place and every minute between the two is counted twice.
+    for (const day of ["2018-11-04", "2019-02-16", "2019-02-17", "2026-09-02"]) {
+      const start = startOfLocalDay(day, SAO_PAULO);
+      const justBefore = new Date(start.getTime() - 60_000).toISOString();
+
+      expect(zonedDay(justBefore, SAO_PAULO)).not.toBe(day);
+    }
+  });
+});
+
+describe("minutesBetween", () => {
+  it("counts real elapsed time, not the difference the clocks show", () => {
+    // 23:00 to 04:00 across the skipped midnight reads as five hours on a clock and is four.
+    expect(minutesBetween("2018-11-04T02:00:00Z", "2018-11-04T06:00:00Z")).toBe(240);
+  });
+});
 
 describe("formatCompact", () => {
   it("closes the gap that separates two numbers from one", () => {
