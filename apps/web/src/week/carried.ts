@@ -14,7 +14,7 @@
  * receiving day gets a band instead — the task named, where it came from, and no verbs.
  */
 import type { Task } from "../api/types";
-import { zonedDay, zonedMinutes } from "../lib/time";
+import { minutesBetween, startOfLocalDay, zonedDay } from "../lib/time";
 
 export interface Carried {
   task: Task;
@@ -39,9 +39,19 @@ export function spillOf(task: Task, timeZone: string): Carried | null {
   const into = zonedDay(task.end_at, timeZone);
   if (into === from) return null;
 
-  // Ending exactly at midnight is not a spill. The range is half-open, and the server's sum
-  // clips it the same way — a band reading `0m carried` would be the two disagreeing.
-  const minutes = zonedMinutes(task.end_at, timeZone);
+  // Real time since the receiving day began, not the reading on its clock. The two differ on
+  // a daylight saving night, and the difference is a whole hour on the screen: a task running
+  // to 04:00 on the day Brazil used to start daylight saving *at* midnight shows four hours
+  // on the clock and occupied three, because 00:00 to 01:00 never happened. The band would
+  // have claimed 4h under a header the capacity query had already counted as 3h.
+  //
+  // The server sums against exactly this boundary — `syncaai.time_windows.utc_window` — so
+  // measuring it any other way is the client contradicting the figure it sits under.
+  const minutes = minutesBetween(startOfLocalDay(into, timeZone), task.end_at);
+
+  // Ending exactly as the day begins is not a spill. The range is half-open and the server
+  // clips it the same way, so a band reading `0m carried` would be the two disagreeing about
+  // a task neither counts.
   if (minutes === 0) return null;
 
   return { task, minutes, from };
@@ -64,12 +74,16 @@ export interface Split {
  * The span is measured between the real ends and not from `duration_minutes`: completing
  * early shortens `end_at` (ADR-0022), and the two halves have to add up to what the day
  * actually holds rather than to what was planned for it.
+ *
+ * Both halves are real elapsed time, so on a daylight saving night they still add up to the
+ * span and neither is the clock's reading of it. The hour that never happened is missing from
+ * `own`, which is where it is missing from the day.
  */
 export function splitOf(task: Task, timeZone: string): Split | null {
   const carried = spillOf(task, timeZone);
   if (carried === null) return null;
 
-  const occupied = (Date.parse(task.end_at) - Date.parse(task.start_at)) / 60_000;
+  const occupied = minutesBetween(task.start_at, task.end_at);
   return { own: occupied - carried.minutes, into: carried.minutes };
 }
 

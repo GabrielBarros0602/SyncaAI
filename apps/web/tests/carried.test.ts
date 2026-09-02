@@ -71,6 +71,77 @@ describe("spillOf", () => {
   });
 });
 
+describe("the night the clock skipped an hour", () => {
+  /**
+   * 23:00 Saturday to 04:00 Sunday, across 2018-11-04, when Brazil began daylight saving at
+   * midnight and 00:00 never happened.
+   *
+   * Four hours really pass. The clock says five. The receiving day begins at 01:00 local, so
+   * three of those hours fall on Sunday and one on Saturday — and that is what the capacity
+   * query sums, because it clips against the same boundary.
+   *
+   * Reading the spill off the clock gave four hours to Sunday, so the band claimed `4h of
+   * this day` directly under a header the server had already counted as `3h`.
+   */
+  const ACROSS_THE_GAP = task("across-the-gap", "2018-11-04T02:00:00Z", "2018-11-04T06:00:00Z");
+
+  it("carries the hours that really fell on the receiving day", () => {
+    expect(spillOf(ACROSS_THE_GAP, SAO_PAULO)?.minutes).toBe(3 * 60);
+  });
+
+  it("does not lose the hour that never happened out of the other half", () => {
+    // The missing hour belongs to neither day, because nobody spent it. What the two halves
+    // must add up to is the time that really passed.
+    const split = splitOf(ACROSS_THE_GAP, SAO_PAULO);
+
+    expect(split).toEqual({ own: 60, into: 3 * 60 });
+    expect((split?.own ?? 0) + (split?.into ?? 0)).toBe(4 * 60);
+  });
+
+  it("still refuses a task that ends exactly as the receiving day begins", () => {
+    // 01:00 local is that day's first instant, so a task ending there has spilled nothing.
+    // Read off the clock this looked like a sixty-minute spill.
+    const upToTheBoundary = task("to-the-boundary", "2018-11-04T00:00:00Z", "2018-11-04T03:00:00Z");
+
+    expect(spillOf(upToTheBoundary, SAO_PAULO)).toBeNull();
+  });
+});
+
+describe("the night the clock repeats an hour", () => {
+  /**
+   * 22:00 Saturday to 01:00 Sunday, across 2019-02-17, when daylight saving ended and the
+   * clock rolled back to midnight — which lengthens the 16th to 1500 minutes rather than
+   * giving the 17th two beginnings.
+   *
+   * The mirror of the skipped-hour night, and the pair is the point: there the clock ran
+   * ahead of real time and here it runs behind it. Four hours really pass, the clock says
+   * three, and `own` absorbs the extra hour exactly as it absorbed the missing one — because
+   * both are measured as elapsed time and neither is read off a dial.
+   */
+  const ACROSS_THE_REPEAT = task("across-the-repeat", "2019-02-17T00:00:00Z", "2019-02-17T04:00:00Z");
+
+  it("carries only the hour that fell after the receiving day began", () => {
+    expect(spillOf(ACROSS_THE_REPEAT, SAO_PAULO)?.minutes).toBe(60);
+  });
+
+  it("puts the repeated hour on the day that lived it twice", () => {
+    const split = splitOf(ACROSS_THE_REPEAT, SAO_PAULO);
+
+    expect(split).toEqual({ own: 3 * 60, into: 60 });
+    expect((split?.own ?? 0) + (split?.into ?? 0)).toBe(4 * 60);
+  });
+
+  it("is the reverse of the other night, in the same two numbers", () => {
+    // Same shape of task, same clock readings, opposite direction — and the halves swap
+    // rather than both drifting the same way, which is what says the arithmetic is elapsed
+    // time and not an offset applied somewhere.
+    const skipped = splitOf(task("gap", "2018-11-04T02:00:00Z", "2018-11-04T06:00:00Z"), SAO_PAULO);
+    const repeated = splitOf(ACROSS_THE_REPEAT, SAO_PAULO);
+
+    expect([skipped?.own, skipped?.into]).toEqual([repeated?.into, repeated?.own]);
+  });
+});
+
 describe("splitOf", () => {
   it("divides the minutes at the midnight they cross", () => {
     // 19:00 to 04:00: five hours on Wednesday, four on Thursday.

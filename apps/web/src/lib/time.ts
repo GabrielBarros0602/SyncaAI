@@ -12,6 +12,7 @@
 
 const MINUTES_IN_AN_HOUR = 60;
 const MINUTES_IN_A_DAY = 24 * MINUTES_IN_AN_HOUR;
+const MILLISECONDS_IN_A_MINUTE = 60 * 1000;
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
@@ -128,7 +129,7 @@ export function daysFrom(monday: Date): Date[] {
   });
 }
 
-const MILLISECONDS_IN_A_DAY = 24 * 60 * 60 * 1000;
+const MILLISECONDS_IN_A_DAY = MINUTES_IN_A_DAY * MILLISECONDS_IN_A_MINUTE;
 
 /** ISO weekday for a local date, where Monday is 1 and Sunday is 7. */
 function isoWeekdayOf(date: Date): number {
@@ -194,6 +195,59 @@ function partsInZone(iso: string, timeZone: string): Record<string, number> {
     if (part.type !== "literal") read[part.type] = Number(part.value);
   }
   return read;
+}
+
+/** How far local time is ahead of UTC at a given instant, in minutes. */
+function offsetAt(instant: number, timeZone: string): number {
+  const parts = partsInZone(new Date(instant).toISOString(), timeZone);
+  const asIfUtc = Date.UTC(
+    parts.year ?? 1970,
+    (parts.month ?? 1) - 1,
+    parts.day ?? 1,
+    (parts.hour ?? 0) % 24,
+    parts.minute ?? 0,
+  );
+  return (asIfUtc - instant) / MILLISECONDS_IN_A_MINUTE;
+}
+
+/**
+ * The first instant of a local day, given as `YYYY-MM-DD`.
+ *
+ * The inverse of `zonedDay`, and the piece that was missing. Everything else here reads a
+ * zone off an instant; this is the only thing that has to go the other way, and going the
+ * other way is where the awkward cases live.
+ *
+ * **Midnight does not always exist.** Brazil used to begin daylight saving *at* midnight, so
+ * on 2018-11-04 the clock went from 23:59:59 to 01:00:00 and 00:00 never happened. The first
+ * instant of that local day is 01:00 local, and this returns it.
+ *
+ * The offset is applied twice because the first guess lands on the wrong side of a
+ * transition: reading the offset *before* the change and subtracting it gives an instant
+ * whose offset is the one *after*. When the second pass falls back into the previous day —
+ * which is exactly the skipped-midnight case — the first pass was already the transition
+ * itself, and the transition is the first instant the day has.
+ *
+ * This has to agree with `syncaai.time_windows.utc_window`, which is what the capacity query
+ * sums against. A client that disagreed with it would put a figure on the screen the server
+ * contradicts.
+ */
+export function startOfLocalDay(localDate: string, timeZone: string): Date {
+  const [year = 1970, month = 1, day = 1] = localDate.split("-").map(Number);
+  const asIfUtc = Date.UTC(year, month - 1, day);
+
+  const firstPass = asIfUtc - offsetAt(asIfUtc, timeZone) * MILLISECONDS_IN_A_MINUTE;
+  const secondPass = asIfUtc - offsetAt(firstPass, timeZone) * MILLISECONDS_IN_A_MINUTE;
+
+  return new Date(zonedDay(new Date(secondPass).toISOString(), timeZone) === localDate
+    ? secondPass
+    : firstPass);
+}
+
+/** Real minutes between two instants, which is not the same as clock minutes. */
+export function minutesBetween(from: string | Date, to: string | Date): number {
+  const start = from instanceof Date ? from.getTime() : Date.parse(from);
+  const end = to instanceof Date ? to.getTime() : Date.parse(to);
+  return (end - start) / MILLISECONDS_IN_A_MINUTE;
 }
 
 /** Minutes since local midnight, for an instant seen from `timeZone`. */
