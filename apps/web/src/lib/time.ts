@@ -11,7 +11,7 @@
  */
 
 const MINUTES_IN_AN_HOUR = 60;
-const MINUTES_IN_A_DAY = 24 * MINUTES_IN_AN_HOUR;
+export const MINUTES_IN_A_DAY = 24 * MINUTES_IN_AN_HOUR;
 const MILLISECONDS_IN_A_MINUTE = 60 * 1000;
 
 function pad(value: number): string {
@@ -165,6 +165,12 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 /** `Aug 24`, the short stamp the day header uses. */
 export function stamp(date: Date): string {
   return `${MONTHS[date.getMonth()] ?? ""} ${pad(date.getDate())}`;
+}
+
+/** `Aug 24` for an instant, read in a named zone rather than in the browser's. */
+export function zonedStamp(iso: string, timeZone: string): string {
+  const parts = partsInZone(iso, timeZone);
+  return `${MONTHS[(parts.month ?? 1) - 1] ?? ""} ${pad(parts.day ?? 1)}`;
 }
 
 /** The three-letter weekday for an ISO weekday, where Monday is 1. */

@@ -22,6 +22,7 @@ import {
   startOfLocalDay,
   toLocalDate,
   weekdayName,
+  zonedStamp,
 } from "../src/lib/time";
 
 describe("startOfLocalDay", () => {
@@ -64,6 +65,15 @@ describe("startOfLocalDay", () => {
 
       expect(zonedDay(justBefore, SAO_PAULO)).not.toBe(day);
     }
+  });
+});
+
+describe("zonedStamp", () => {
+  it("reads the date in the zone it is given, not the browser's", () => {
+    // 01:00 UTC on the 25th is still the 24th in São Paulo. A stamp taken from the browser
+    // would name the wrong day on every task completed late in the evening.
+    expect(zonedStamp("2026-08-25T01:00:00Z", "America/Sao_Paulo")).toBe("Aug 24");
+    expect(zonedStamp("2026-08-25T01:00:00Z", "Asia/Tokyo")).toBe("Aug 25");
   });
 });
 
