@@ -72,7 +72,7 @@ anterior e podem entrar em qualquer ponto.
 |---|---|---|---|
 | 1 | ✅ O cabeçalho do dia, invertido: reservado grande, `3h free of 16h` embaixo, tique do orçamento, hoje marcado, `this week`/`T` | — | não |
 | 2 | ✅ A faixa herdada, o `+1` e a linha de split — fecha a metade visual do 1.2 | — | não |
-| 3 | A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
+| 3 | ✅ A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
 | 4 | Verbos `edit` e `note` | 3 | não |
 | 5 | Verbos `move` e `delete` com undo | 3 | não |
 | 6 | A oferta de mover, do dia pesado | 5 | não |
@@ -84,6 +84,19 @@ bloqueio para "mover, encurtar ou substituir", e a leitura do design desfez isso
 mover calcula a disponibilidade no cliente, com as tarefas que a tela já tem, e o edit mostra
 a frase do servidor no conflito. Nenhuma das três telas precisa desse dado. Ele continua
 valendo por si — só não bloqueia o item 2.
+
+### Aberto pela PR 3, e é decisão sua
+
+**Marcar uma tarefa antiga.** A caixa permanente tornou isso um clique: esquece a tarefa de
+segunda, marca na quarta. Medido literalmente, a linha diz `done 22:22 · 56h22 of 2h30 ·
++53h52` — verdade sobre o relógio, mentira sobre o trabalho, justamente na linha de onde o S6
+vai ler plano-contra-real. O design não alcança esse caso porque calcula em minutos desde a
+meia-noite e dá uma volta só.
+
+A PR 3 **derruba a comparação** passado um dia e deixa só data e hora, porque o que uma marca
+tardia registra é quando alguém lembrou. O limite de um dia é o que o schema já usa. As
+alternativas, se você preferir outra: limitar o número em vez de escondê-lo, seguir o design
+ao pé da letra e aceitar um número plausível e errado, ou recusar a marcação fora da janela.
 
 ### Decisões tomadas na divisão
 
