@@ -11,6 +11,20 @@ from syncaai.models import MINUTES_IN_A_DAY
 MAX_CHECKLIST_ITEMS = 50
 MAX_TAG_LENGTH = 50
 
+# Every other free-text field here is bounded by the column behind it — a title is 200
+# because `String(200)` is. `notes` is `Text`, so the schema is the only place a bound can
+# exist, and until the screen offered a textarea nobody could write into it anyway.
+#
+# The reason it needs one is not storage. It is that ADR-0004 puts exactly one note in front
+# of a paid provider: UC2 excludes notes entirely, and UC1 sends the invoked task's
+# description. ADR-0006 estimates spend *before* the call, and an unbounded field makes the
+# worst case of that estimate unbounded too.
+#
+# Four thousand characters is roughly a thousand tokens and about two pages of prose — past
+# anything somebody writes on a calendar entry, and small enough that one note cannot be the
+# thing that moves a prompt's cost. The number is a judgement; that there must be one is not.
+MAX_NOTES_LENGTH = 4000
+
 
 def _require_an_offset(value: datetime) -> datetime:
     """Refuse a naive timestamp.
@@ -66,7 +80,7 @@ class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     start_at: datetime
     duration_minutes: int = Field(gt=0, le=MINUTES_IN_A_DAY)
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=MAX_NOTES_LENGTH)
     tag: str | None = Field(default=None, max_length=MAX_TAG_LENGTH)
     items: list[ChecklistItemCreate] = Field(default_factory=list, max_length=MAX_CHECKLIST_ITEMS)
 
@@ -92,7 +106,7 @@ class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     start_at: datetime | None = None
     duration_minutes: int | None = Field(default=None, gt=0, le=MINUTES_IN_A_DAY)
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=MAX_NOTES_LENGTH)
     tag: str | None = Field(default=None, max_length=MAX_TAG_LENGTH)
     completed: bool | None = None
 
