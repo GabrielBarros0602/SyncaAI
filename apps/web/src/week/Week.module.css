@@ -516,9 +516,49 @@
   width: 100%;
   text-align: left;
   background: transparent;
-  border-left: 0;
-  border-right: 0;
-  border-bottom: 0;
+}
+
+/* An open row keeps the hover tint after the pointer has gone, so it stays findable while
+   the reader is inside the panel it opened. */
+.task[data-open="1"] {
+  background: var(--hover);
+}
+
+.taskLine {
+  position: relative;
+  margin-top: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+/*
+ * The one verb promoted out of the opened set.
+ *
+ * Twelve pixels and a hairline: it is pressed more than everything else on this screen put
+ * together, and it still must not be the loudest thing in a column of seven.
+ */
+.check {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  padding: 0;
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--rule2);
+  cursor: pointer;
+  transition: border-color var(--dur);
+}
+
+.check:hover {
+  border-color: var(--ink);
+}
+
+.checkMark {
+  position: absolute;
+  inset: 2px;
+  background: var(--ink);
 }
 
 .taskTop {
@@ -561,8 +601,6 @@
 }
 
 .taskTitle {
-  position: relative;
-  margin-top: 7px;
   font: 500 13px/1.35 var(--sans);
   letter-spacing: -0.005em;
   text-wrap: pretty;
@@ -574,9 +612,12 @@
   text-decoration-thickness: 1px;
 }
 
+/* The minimum height holds the row still. Without it a row gains and loses eleven pixels
+   as a tag or a note appears, and a column of them jitters on every change. */
 .taskFoot {
   position: relative;
   margin-top: 8px;
+  min-height: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -597,10 +638,104 @@
   color: var(--faint);
 }
 
-.taskDoneAt {
+/*
+ * When it was finished, how long it took, and the difference from the plan.
+ *
+ * In the neutral ink at every value, including a large overrun. The accent means trouble on
+ * this screen and only trouble; taking longer than you guessed is information, and colouring
+ * it would turn a datum the planner wants into a reprimand.
+ */
+.taskDoneLine {
+  position: relative;
+  display: block;
+  margin-top: 8px;
+  font: 400 10px/1.45 var(--mono);
+  color: var(--dim);
+}
+
+/*
+ * What an opened row shows. In this pull request that is the note and the checklist and
+ * nothing else; the five verbs arrive with the panels they act through.
+ */
+.panel {
+  position: relative;
+  margin-top: 11px;
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  cursor: default;
+}
+
+.panelTop {
+  display: flex;
+  align-items: center;
+}
+
+.panelClose {
   margin-left: auto;
-  font: 400 10px/1 var(--mono);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: 400 10px/1.3 var(--mono);
   color: var(--faint);
+}
+
+.panelClose:hover {
+  color: var(--ink);
+}
+
+.panelNote {
+  margin: 0;
+  font: 400 11px/1.6 var(--sans);
+  color: var(--dim);
+  text-wrap: pretty;
+  white-space: pre-wrap;
+}
+
+.panelBlank {
+  margin: 0;
+  font: 400 11px/1.5 var(--sans);
+  color: var(--faint);
+  text-wrap: pretty;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.checklistHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.checklistTitle {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.checkLabel {
+  font: 400 11px/1.4 var(--sans);
+  text-wrap: pretty;
+}
+
+.checkLabelDone {
+  color: var(--faint);
+  text-decoration: line-through;
 }
 
 .emptyDay {
@@ -693,8 +828,10 @@
 }
 
 .itemBox {
+  position: relative;
   width: 11px;
   height: 11px;
+  margin-top: 3px;
   flex: none;
   border: 1px solid var(--rule2);
 }

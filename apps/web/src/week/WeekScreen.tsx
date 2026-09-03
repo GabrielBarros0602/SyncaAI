@@ -14,6 +14,9 @@ export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
   const week = useWeek();
   const [openDay, setOpenDay] = useState<string | null>(null);
+  // One row open across the whole week, not one per column. Two panels standing open at once
+  // would each be offering to act on a different task with nothing saying which is in front.
+  const [openTask, setOpenTask] = useState<string | null>(null);
   const hovered = useRef<string | null>(null);
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export function WeekScreen(): React.ReactNode {
 
       if (event.key === "Escape") {
         setOpenDay(null);
+        setOpenTask(null);
       } else if ((event.key === "n" || event.key === "N") && hovered.current !== null) {
         event.preventDefault();
         setOpenDay(hovered.current);
@@ -199,6 +203,8 @@ export function WeekScreen(): React.ReactNode {
             // before the week — fetched so the figures are right, never rendered — so there
             // is no row on this screen to send anybody to.
             onGoToOwner={index === 0 ? null : focusTask}
+            openTask={openTask}
+            onOpenTask={setOpenTask}
             index={index}
             weekday={weekdayName(capacity.weekday)}
             date={stamp(dates[index] as Date)}

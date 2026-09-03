@@ -92,10 +92,18 @@ function carriedFor(tasks: Task[]): Carried[] {
   return [...carriedInto(tasks, SAO_PAULO).values()].flat();
 }
 
+/** The same local wall time the task factory takes, as the instant the API would send. */
+function instant(local: string): string {
+  return new Date(`${local}-03:00`).toISOString();
+}
+
 interface When {
   tasks?: Task[];
   carried?: Carried[];
   onGoToOwner?: ((taskId: string) => void) | null;
+  openTask?: string | null;
+  onOpenTask?: (taskId: string | null) => void;
+  onToggle?: (task: Task) => void;
   lighter?: DayCapacity | null;
   today?: boolean;
   past?: boolean;
@@ -109,6 +117,8 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       tasks={when.tasks ?? []}
       carried={when.carried ?? []}
       onGoToOwner={when.onGoToOwner === undefined ? () => undefined : when.onGoToOwner}
+      openTask={when.openTask ?? null}
+      onOpenTask={when.onOpenTask ?? (() => undefined)}
       index={0}
       weekday="Mon"
       date="Aug 24"
@@ -119,6 +129,7 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       submitting={false}
       serverError={null}
       {...NOOP}
+      onToggle={when.onToggle ?? (() => undefined)}
     />,
   );
   return container;
@@ -334,6 +345,191 @@ describe("what the day before is still holding", () => {
 
     expect(container.textContent).not.toContain("carried from");
     expect(container.textContent).not.toContain("of this day");
+  });
+});
+
+describe("the row, and the box that came out of it", () => {
+  const PLAIN = aTask("plain", "2026-08-24T09:00:00", "2026-08-24T10:30:00");
+
+  function row(): HTMLElement {
+    return screen.getByRole("group");
+  }
+
+  it("completes from the box without opening the row", () => {
+    // The whole reason the box was promoted out of the opened set: this is the verb somebody
+    // presses dozens of times a week, and it must not cost an opening.
+    const toggled = vi.fn<(task: Task) => void>();
+    const opened = vi.fn<(taskId: string | null) => void>();
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Complete/ }));
+
+    expect(toggled).toHaveBeenCalledWith(PLAIN);
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it("opens from the row without completing it", () => {
+    // The inverse, and the one that used to be impossible: before this the whole row was the
+    // toggle, so there was nowhere to press that did not complete something.
+    const toggled = vi.fn<(task: Task) => void>();
+    const opened = vi.fn<(taskId: string | null) => void>();
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
+
+    fireEvent.click(row());
+
+    expect(opened).toHaveBeenCalledWith("plain");
+    expect(toggled).not.toHaveBeenCalled();
+  });
+
+  it("keeps space on completing and Enter on opening", () => {
+    const toggled = vi.fn<(task: Task) => void>();
+    const opened = vi.fn<(taskId: string | null) => void>();
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
+
+    fireEvent.keyDown(row(), { key: " " });
+    expect(toggled).toHaveBeenCalledWith(PLAIN);
+    expect(opened).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(row(), { key: "Enter" });
+    expect(opened).toHaveBeenCalledWith("plain");
+    expect(toggled).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the row it is asked to open again", () => {
+    const opened = vi.fn<(taskId: string | null) => void>();
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [PLAIN],
+      openTask: "plain",
+      onOpenTask: opened,
+    });
+
+    fireEvent.click(row());
+
+    expect(opened).toHaveBeenCalledWith(null);
+  });
+
+  it("says the row is expanded, so it is not only a visual state", () => {
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], openTask: "plain" });
+
+    expect(row().getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("shows nothing of the note or the checklist while it is shut", () => {
+    const withBoth = aTask("both", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
+      notes: "Rehearse against a copy of prod.",
+      items: [{ id: "i1", label: "Migration dry run", position: 0, completed_at: null }],
+    });
+    const container = renderDay(aDay({ task_count: 1 }), { tasks: [withBoth] });
+
+    // The resting row only hints: a `note` word and a count, which is what the design gives
+    // it room for.
+    expect(screen.getByText("note")).toBeDefined();
+    expect(screen.getByText("0/1 checked")).toBeDefined();
+    expect(container.textContent).not.toContain("Rehearse against a copy of prod.");
+  });
+
+  it("shows the note and the checklist once it is open", () => {
+    const withBoth = aTask("both", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
+      notes: "Rehearse against a copy of prod.",
+      items: [
+        { id: "i1", label: "Migration dry run", position: 0, completed_at: instant("2026-08-24T09:30:00") },
+        { id: "i2", label: "Smoke tests", position: 1, completed_at: null },
+      ],
+    });
+    renderDay(aDay({ task_count: 1 }), { tasks: [withBoth], openTask: "both" });
+
+    expect(screen.getByText("Rehearse against a copy of prod.")).toBeDefined();
+    expect(screen.getByText("Checklist")).toBeDefined();
+    expect(screen.getByText("Migration dry run")).toBeDefined();
+    expect(screen.getByText("Smoke tests")).toBeDefined();
+  });
+
+  it("does not offer to change a checklist it has no way to save", () => {
+    // Editing items has no API — TaskUpdate has no items field and no route touches
+    // ChecklistItem — so the lines are text. A control that silently does nothing is worse
+    // than one that was never offered.
+    const withItems = aTask("items", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
+      items: [{ id: "i1", label: "Migration dry run", position: 0, completed_at: null }],
+    });
+    renderDay(aDay({ task_count: 1 }), { tasks: [withItems], openTask: "items" });
+
+    expect(screen.queryByRole("button", { name: /Migration dry run/ })).toBeNull();
+  });
+
+  it("says so plainly when there is neither", () => {
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], openTask: "plain" });
+
+    expect(
+      screen.getByText("No note, no checklist. Both are optional and neither is parsed."),
+    ).toBeDefined();
+  });
+});
+
+describe("what a completed task says about the estimate", () => {
+  function doneLineOf(task: Task): string {
+    renderDay(aDay({ task_count: 1 }), { tasks: [task] });
+    return screen.getByText(/^done /).textContent;
+  }
+
+  it("reports when it finished, how long it took, and the difference", () => {
+    const early = aTask("early", "2026-08-24T12:00:00", "2026-08-24T13:30:00", {
+      duration_minutes: 180,
+      completed_at: instant("2026-08-24T13:30:00"),
+    });
+
+    expect(doneLineOf(early)).toBe("done 13:30 · 1h30 of 3h · −1h30");
+  });
+
+  it("reports an overrun rather than hiding it", () => {
+    // end_at is clamped to the planned end by the trigger (ADR-0022), so reading the overrun
+    // off it would report every late finish as exact. This is measured to completed_at.
+    const late = aTask("late", "2026-08-24T12:00:00", "2026-08-24T13:00:00", {
+      duration_minutes: 60,
+      completed_at: instant("2026-08-24T13:45:00"),
+    });
+
+    expect(doneLineOf(late)).toBe("done 13:45 · 1h45 of 1h · +45m");
+  });
+
+  it("has a word for landing exactly on the estimate", () => {
+    const exact = aTask("exact", "2026-08-24T12:00:00", "2026-08-24T13:00:00", {
+      duration_minutes: 60,
+      completed_at: instant("2026-08-24T13:00:00"),
+    });
+
+    expect(doneLineOf(exact)).toBe("done 13:00 · 1h of 1h · to the minute");
+  });
+
+  it("drops the comparison when the tick came days after the task ran", () => {
+    // The box makes this a click away: forget Monday's task, tick it on Wednesday. Measured
+    // literally that is `56h22 of 2h30 · +53h52` — true about the clock and false about the
+    // work, on the row the planner reads plan-versus-actual from. The date replaces it,
+    // because when it was ticked is the only thing that is still known.
+    const remembered = aTask("remembered", "2026-08-24T14:00:00", "2026-08-24T16:30:00", {
+      duration_minutes: 150,
+      completed_at: instant("2026-08-26T22:22:00"),
+    });
+
+    expect(doneLineOf(remembered)).toBe("done Aug 26 22:22");
+  });
+
+  it("keeps the comparison for a task that ran right up against the bound", () => {
+    // A day is the bound because no task may exceed 1440 minutes, so anything inside it can
+    // still be describing the task's own run. Twenty-three hours is a real shift.
+    const longShift = aTask("shift", "2026-08-24T06:00:00", "2026-08-25T02:00:00", {
+      duration_minutes: 20 * 60,
+      completed_at: instant("2026-08-25T05:00:00"),
+    });
+
+    expect(doneLineOf(longShift)).toBe("done 05:00 · 23h of 20h · +3h");
+  });
+
+  it("says nothing at all while the task is still open", () => {
+    const container = renderDay(aDay({ task_count: 1 }), {
+      tasks: [aTask("open", "2026-08-24T12:00:00", "2026-08-24T13:00:00")],
+    });
+
+    expect(container.textContent).not.toContain("done");
   });
 });
 
@@ -692,6 +888,54 @@ describe("the week you are looking at", () => {
     const wednesday = container.querySelectorAll("[class*=grid] > div")[2] as HTMLElement;
     expect(document.activeElement?.id).toBe("task-pager");
     expect(wednesday.contains(document.activeElement)).toBe(true);
+  });
+
+  it("keeps one row open across the whole week, not one per column", async () => {
+    // Two panels standing open would each be offering to act on a different task with
+    // nothing saying which is in front — which is why the state is on the screen rather than
+    // inside each row.
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    const monday = aTask("mon", "2026-08-24T09:00:00", "2026-08-24T10:00:00");
+    const tuesday = aTask("tue", "2026-08-25T09:00:00", "2026-08-25T10:00:00");
+    routeWeek(SEVEN, ME, [monday, tuesday]);
+
+    renderWeek();
+    await waitFor(() => {
+      expect(screen.getAllByRole("group")).toHaveLength(2);
+    });
+    const [first, second] = screen.getAllByRole("group");
+
+    fireEvent.click(first as HTMLElement);
+    await waitFor(() => {
+      expect((first as HTMLElement).getAttribute("aria-expanded")).toBe("true");
+    });
+
+    fireEvent.click(second as HTMLElement);
+
+    await waitFor(() => {
+      expect((second as HTMLElement).getAttribute("aria-expanded")).toBe("true");
+    });
+    expect((first as HTMLElement).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("shuts the open row on escape", async () => {
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    routeWeek(SEVEN, ME, [aTask("mon", "2026-08-24T09:00:00", "2026-08-24T10:00:00")]);
+
+    renderWeek();
+    await waitFor(() => {
+      expect(screen.getByRole("group")).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole("group"));
+    await waitFor(() => {
+      expect(screen.getByRole("group").getAttribute("aria-expanded")).toBe("true");
+    });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.getByRole("group").getAttribute("aria-expanded")).toBe("false");
+    });
   });
 
   it("counts a single week in the singular", async () => {
