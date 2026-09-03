@@ -85,6 +85,29 @@ mover calcula a disponibilidade no cliente, com as tarefas que a tela já tem, e
 a frase do servidor no conflito. Nenhuma das três telas precisa desse dado. Ele continua
 valendo por si — só não bloqueia o item 2.
 
+### Aberto pela PR 3, com gatilho: **depois da PR 6**
+
+**Quantas paradas de tabulação uma semana tem.** A PR 3 tirou o `role="group"` com
+`tabIndex` e `aria-expanded` da linha, porque o `eslint-plugin-jsx-a11y` mostrou que `group`
+não suporta `aria-expanded` — o estado aberto estava sendo anunciado para ninguém. No lugar
+entraram dois botões de verdade, a caixa e o título. Correto, e custa **duas paradas por
+linha** onde o desenho previa uma.
+
+Com 31 tarefas numa semana cheia isso é ordem de 60 paradas para atravessar a tela, e as PRs
+4 a 6 acrescentam cinco verbos e um painel dentro de cada linha aberta.
+
+**Por que esperar a PR 6 e não decidir agora:** hoje não dá para medir. Com dois controles por
+linha e nada aberto, a conta é aritmética; com os cinco verbos, o painel de mover e o de
+edição existindo, dá para pegar o teclado e atravessar uma semana de verdade. Decisão tomada
+antes disso é palpite sobre o próprio palpite.
+
+**A resposta provável não é mexer na linha — é o padrão `grid` da ARIA.** Coluna do dia como
+`grid`, linha como `row`, controles como `gridcell`; **uma** parada de tabulação para a semana
+inteira e as setas navegando dentro dela. Isso muda a navegação da tela toda, não a estrutura
+de uma linha, e o `docs/design/` não especificou navegação por teclado além das teclas de
+atalho — então **é pergunta nova, não implementação faltando**. Provavelmente merece ADR
+próprio, porque decide como a semana inteira é percorrida.
+
 ### Aberto pela PR 3, e é decisão sua
 
 **Marcar uma tarefa antiga.** A caixa permanente tornou isso um clique: esquece a tarefa de
@@ -171,7 +194,16 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
   coluna `users.usable_minutes` com `CHECK (usable_minutes BETWEEN 60 AND 1080)`, o `PATCH /me`
   que a aceita com um 422 que nomeia o teto, e o `GET /me` que a reporta.
 - **Confirmar endereço.** Desenhada em `docs/design/confirm-address.html`, em três estados.
-  O comportamento já existe dentro do `AuthScreen`; falta a tela.
+  O comportamento já existe dentro do `AuthScreen`; falta a tela. **É a PR 7 do item 2.**
+
+  **Leva junto o último `jsx-a11y/no-autofocus` da base.** A PR 3 ligou o plugin e achou três,
+  todos no `autoFocus`. Dois seguem ação explícita — formulário aberto com `N`, campo que
+  apareceu porque pediram — e ficam com a razão escrita no lugar, que é o caso que a regra
+  existe para proteger. O terceiro é o endereço na tela de entrar, que recebe foco no
+  carregamento sem ninguém ter pedido: o mais fraco dos três, mantido só porque mudar onde uma
+  página de entrada começa é assunto de uma mudança sobre ela. **A PR 7 é essa mudança**, então
+  ou o `disable` cai junto ou a justificativa passa a valer por escolha e não por adiamento.
+  Fechada essa, a base não tem `disable` de acessibilidade pendente.
 - **Trocar e recuperar senha.** Gatilho registrado: S8, ou antes de publicar. **Precisa de ADR
   antes do endpoint**, e o motivo apareceu ao ler o design: a seção 03 da
   `docs/design/settings.html` diz explicitamente que trocar a senha **não** desloga o
