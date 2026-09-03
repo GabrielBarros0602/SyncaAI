@@ -73,7 +73,7 @@ anterior e podem entrar em qualquer ponto.
 | 1 | ✅ O cabeçalho do dia, invertido: reservado grande, `3h free of 16h` embaixo, tique do orçamento, hoje marcado, `this week`/`T` | — | não |
 | 2 | ✅ A faixa herdada, o `+1` e a linha de split — fecha a metade visual do 1.2 | — | não |
 | 3 | ✅ A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
-| 4 | Verbos `edit` e `note` | 3 | não |
+| 4 | ✅ Verbos `edit` e `note` | 3 | não |
 | 5 | Verbos `move` e `delete` com undo | 3 | não |
 | 6 | A oferta de mover, do dia pesado | 5 | não |
 | 7 | Confirmar endereço, três estados | — | não |
@@ -107,6 +107,29 @@ inteira e as setas navegando dentro dela. Isso muda a navegação da tela toda, 
 de uma linha, e o `docs/design/` não especificou navegação por teclado além das teclas de
 atalho — então **é pergunta nova, não implementação faltando**. Provavelmente merece ADR
 próprio, porque decide como a semana inteira é percorrida.
+
+### Aberto pela PR 4, e é decisão sua
+
+**O que a regra do passado deveria recusar.** Hoje `_refuse_the_past` recusa qualquer
+`start_at` no passado, tanto ao criar quanto ao atualizar. A PR 4 contornou o efeito colateral
+mandando só o que mudou, o que é o certo por outras razões — mas não tocou na regra, e ela
+ainda tem uma consequência: **um horário digitado errado numa tarefa que já começou não tem
+conserto**. Corrigir `09:00` para `08:00` numa tarefa das nove desta manhã é recusado, porque
+oito da manhã de hoje já passou.
+
+As opções, e nenhuma foi escolhida:
+
+- **Recusar *agendar para* o passado, não *ter* início no passado.** Na atualização, comparar
+  o `start_at` novo com o antigo e recusar só quando ele se afasta mais do agora do que já
+  estava. Permite corrigir, continua impedindo criar tarefa retroativa.
+- **Recusar só na criação.** Mais simples: `update` para de chamar a regra. Abre registro
+  retroativo por edição, que o ADR-0012 recusou de propósito na criação.
+- **Manter como está** e aceitar que horário errado em tarefa começada se conserta excluindo e
+  recriando — o que a PR 5 vai tornar possível, e que perde a nota, a checklist e o id.
+
+O ADR-0012 registra a regra 1 como "recusada na camada de serviço" e diz que a variante
+"permitir quando já concluída" supersede aquele registro se o registro retroativo fizer falta.
+Esta é a mesma discussão chegando por outra porta.
 
 ### Aberto pela PR 3, e é decisão sua
 
@@ -156,6 +179,22 @@ A API sabe fazer oito coisas. A tela oferece três.
 Quatro dessas são puramente front-end e agora estão desenhadas: os cinco verbos vivem na
 **linha aberta**, com nota e checklist no mesmo painel. Concluir sai do conjunto e vira caixa
 permanente antes do título, porque é o verbo frequente e não deve custar uma abertura.
+
+**Etiqueta é texto livre, e o `GET /tags` nunca foi chamado por ninguém.** Verificado no
+`docs/design/week.html` na PR 4: os dois campos de etiqueta — o do painel de edição e o do
+formulário de nova tarefa — são `<input>` simples com `placeholder="Tag, optional"`, sem
+`datalist`, sem lista, sem nada que referencie as etiquetas existentes. Então a tela ficou como
+está e a rota segue sem cliente.
+
+A consequência é silenciosa e vale registrar antes de alguém tropeçar nela: **erro de digitação
+cria etiqueta nova sem avisar.** O servidor normaliza espaço e caixa (`_normalise_tag`), então
+`Faculdade` e `faculdade` são a mesma linha — mas `facudade` é outra, e a tela não tem como
+mostrar que ela é nova. Com o tempo a lista de etiquetas de um usuário acumula quase-duplicatas
+que só ele consegue distinguir.
+
+Resolver isso é decisão de design, não de implementação: sugerir enquanto digita, oferecer as
+existentes num menu, ou avisar quando a etiqueta digitada não existe ainda. As três mudam o
+campo, e o `docs/design/` desenhou o campo sem nenhuma delas.
 
 Duas precisam de servidor e não dependem de tela nenhuma:
 
