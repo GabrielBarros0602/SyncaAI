@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from "react";
 
-import { parseClock, parseDuration } from "../lib/time";
+import { instantAt, parseClock, parseDuration } from "../lib/time";
 import type { NewTask } from "../api/types";
 import styles from "./Week.module.css";
 
@@ -20,43 +20,6 @@ interface Props {
 }
 
 const EMPTY = { title: "", start: "", duration: "", tag: "" };
-
-/**
- * Build an ISO timestamp for a local day and time in a named zone.
- *
- * The offset is asked of `Intl` for that exact instant rather than assumed, because an
- * offset is not a property of a zone — it is a property of a zone at a moment, and it moves
- * twice a year in every zone that still observes daylight saving.
- */
-function toIsoInZone(day: string, minutesFromMidnight: number, timeZone: string): string {
-  const [year, month, date] = day.split("-").map(Number);
-  const hours = Math.floor(minutesFromMidnight / 60);
-  const minutes = minutesFromMidnight % 60;
-  const guess = Date.UTC(year ?? 0, (month ?? 1) - 1, date ?? 1, hours, minutes);
-
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(new Date(guess));
-
-  const read = (type: string): number => Number(parts.find((part) => part.type === type)?.value);
-  const asZoned = Date.UTC(
-    read("year"),
-    read("month") - 1,
-    read("day"),
-    read("hour") % 24,
-    read("minute"),
-    read("second"),
-  );
-
-  return new Date(guess + (guess - asZoned)).toISOString();
-}
 
 export function NewTaskForm({
   weekday,
@@ -105,7 +68,7 @@ export function NewTaskForm({
     const tag = fields.tag.trim();
     onSubmit({
       title,
-      start_at: toIsoInZone(day, start, timezone),
+      start_at: instantAt(day, start, timezone).toISOString(),
       duration_minutes: duration,
       ...(tag === "" ? {} : { tag }),
       ...(items.length === 0
