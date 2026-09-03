@@ -70,6 +70,23 @@ export interface Me {
   verified_at: string | null;
 }
 
+/**
+ * A partial change to a task, and partial is the whole point.
+ *
+ * The API distinguishes an absent field from a null one through Pydantic's
+ * `model_fields_set`, and the service leans on that: `null` clears a note or a tag, absent
+ * leaves it alone. Sending a field that did not change is not free either — `PATCH /tasks`
+ * validates `start_at` against the past whenever it arrives, so a client that resends an
+ * unchanged start time is refused for correcting a title on a task that already began.
+ */
+export interface TaskChanges {
+  title?: string;
+  start_at?: string;
+  duration_minutes?: number;
+  notes?: string | null;
+  tag?: string | null;
+}
+
 export interface NewTask {
   title: string;
   start_at: string;

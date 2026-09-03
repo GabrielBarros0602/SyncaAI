@@ -10,10 +10,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { resetClientForTests } from "../src/api/client";
+import { ApiError, resetClientForTests } from "../src/api/client";
 import { setAccessToken } from "../src/api/token";
-import type { DayCapacity, Task } from "../src/api/types";
+import type { DayCapacity, Task, TaskChanges } from "../src/api/types";
 import { type Carried, carriedInto } from "../src/week/carried";
+import type { Panel } from "../src/week/TaskRow";
 import { toLocalDate } from "../src/lib/time";
 import { DayColumn } from "../src/week/DayColumn";
 import { WeekScreen } from "../src/week/WeekScreen";
@@ -101,8 +102,10 @@ interface When {
   tasks?: Task[];
   carried?: Carried[];
   onGoToOwner?: ((taskId: string) => void) | null;
-  openTask?: string | null;
-  onOpenTask?: (taskId: string | null) => void;
+  /** A bare id opens the resting panel, which is what most of these want. */
+  openTask?: string | { id: string; panel: Panel } | null;
+  onOpenTask?: (open: { id: string; panel: Panel } | null) => void;
+  onSaveTask?: (taskId: string, changes: TaskChanges) => Promise<void>;
   onToggle?: (task: Task) => void;
   lighter?: DayCapacity | null;
   today?: boolean;
@@ -117,8 +120,9 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       tasks={when.tasks ?? []}
       carried={when.carried ?? []}
       onGoToOwner={when.onGoToOwner === undefined ? () => undefined : when.onGoToOwner}
-      openTask={when.openTask ?? null}
+      openTask={typeof when.openTask === "string" ? { id: when.openTask, panel: "open" } : (when.openTask ?? null)}
       onOpenTask={when.onOpenTask ?? (() => undefined)}
+      onSaveTask={when.onSaveTask ?? (() => Promise.resolve())}
       index={0}
       weekday="Mon"
       date="Aug 24"
@@ -363,7 +367,7 @@ describe("the row, and the box that came out of it", () => {
     // The whole reason the box was promoted out of the opened set: this is the verb somebody
     // presses dozens of times a week, and it must not cost an opening.
     const toggled = vi.fn<(task: Task) => void>();
-    const opened = vi.fn<(taskId: string | null) => void>();
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
     fireEvent.click(box());
@@ -376,12 +380,12 @@ describe("the row, and the box that came out of it", () => {
     // The inverse, and the one that used to be impossible: before this the whole row was the
     // toggle, so there was nowhere to press that did not complete something.
     const toggled = vi.fn<(task: Task) => void>();
-    const opened = vi.fn<(taskId: string | null) => void>();
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
     fireEvent.click(disclosure());
 
-    expect(opened).toHaveBeenCalledWith("plain");
+    expect(opened).toHaveBeenCalledWith({ id: "plain", panel: "open" });
     expect(toggled).not.toHaveBeenCalled();
   });
 
@@ -396,7 +400,7 @@ describe("the row, and the box that came out of it", () => {
   });
 
   it("closes the row it is asked to open again", () => {
-    const opened = vi.fn<(taskId: string | null) => void>();
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), {
       tasks: [PLAIN],
       openTask: "plain",
@@ -462,6 +466,155 @@ describe("the row, and the box that came out of it", () => {
     expect(
       screen.getByText("No note, no checklist. Both are optional and neither is parsed."),
     ).toBeDefined();
+  });
+});
+
+describe("the two verbs an opened row offers", () => {
+  const TASK = aTask("lecture", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
+    tag: { id: "g1", name: "college" },
+  });
+
+  function openWith(panel: Panel, over: Partial<When> = {}): (changes: TaskChanges) => void {
+    const saved = vi.fn<(taskId: string, changes: TaskChanges) => Promise<void>>(() =>
+      Promise.resolve(),
+    );
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [TASK],
+      openTask: { id: "lecture", panel },
+      onSaveTask: saved,
+      ...over,
+    });
+    return (changes) => {
+      expect(saved).toHaveBeenCalledWith("lecture", changes);
+    };
+  }
+
+  it("reaches a verb from the title without opening first", () => {
+    // The letters are the point of the letters. Having to press Enter and then E would make
+    // the shortcut slower than the mouse.
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
+    renderDay(aDay({ task_count: 1 }), { tasks: [TASK], onOpenTask: opened });
+
+    fireEvent.keyDown(screen.getByRole("button", { expanded: false }), { key: "e" });
+
+    expect(opened).toHaveBeenCalledWith({ id: "lecture", panel: "edit" });
+  });
+
+  it("marks which verb is showing, and only that one", () => {
+    renderDay(aDay({ task_count: 1 }), { tasks: [TASK], openTask: { id: "lecture", panel: "note" } });
+
+    expect(screen.getByRole("button", { name: "note" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "edit" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("edits a title without touching the start time", () => {
+    // The defect this pull request was told about: the panel holds four fields, the task has
+    // already begun, and resending the start it did not change is refused by the server.
+    const expectSaved = openWith("edit");
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Compilers lecture" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    expectSaved({ title: "Compilers lecture" });
+  });
+
+  it("sends the start time only when the clock was actually retyped", () => {
+    const expectSaved = openWith("edit");
+
+    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "11:00" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    // 11:00 in São Paulo, which is UTC-3.
+    expectSaved({ start_at: "2026-08-24T14:00:00.000Z" });
+  });
+
+  it("refuses a clock time it cannot read, before asking the server", () => {
+    openWith("edit");
+
+    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "half nine" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    expect(screen.getByRole("alert").textContent).toBe("Start needs 24-hour time, like 14:30.");
+  });
+
+  it("keeps what was typed when the server refuses the change", () => {
+    // A 409 is a rule the person can still satisfy by moving the task an hour. Closing the
+    // panel would throw the edit away over something they can fix.
+    const rejected = vi.fn<(taskId: string, changes: TaskChanges) => Promise<void>>(() =>
+      Promise.reject(new ApiError(409, "That time is already taken by another task.")),
+    );
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [TASK],
+      openTask: { id: "lecture", panel: "edit" },
+      onSaveTask: rejected,
+    });
+
+    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "11:00" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    return waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe(
+        "That time is already taken by another task.",
+      );
+      expect(screen.getByLabelText<HTMLInputElement>("Start").value).toBe("11:00");
+    });
+  });
+
+  it("writes a note", () => {
+    const expectSaved = openWith("note");
+
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "  Bring the slides.  " } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    expectSaved({ notes: "Bring the slides." });
+  });
+
+  it("clears a note with null rather than with an empty string", () => {
+    // Absent leaves it, null removes it. An empty string would leave the `note` mark on the
+    // resting row pointing at nothing.
+    const saved = vi.fn<(taskId: string, changes: TaskChanges) => Promise<void>>(() =>
+      Promise.resolve(),
+    );
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [aTask("noted", "2026-08-24T09:00:00", "2026-08-24T10:30:00", { notes: "old" })],
+      openTask: { id: "noted", panel: "note" },
+      onSaveTask: saved,
+    });
+
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    expect(saved).toHaveBeenCalledWith("noted", { notes: null });
+  });
+
+  it("leaves Enter to the text in a note, and saves on the modifier", () => {
+    // The one field on this screen somebody writes a paragraph in. Stealing Enter to save
+    // would make the second line impossible.
+    const saved = vi.fn<(taskId: string, changes: TaskChanges) => Promise<void>>(() =>
+      Promise.resolve(),
+    );
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [TASK],
+      openTask: { id: "lecture", panel: "note" },
+      onSaveTask: saved,
+    });
+    const box = screen.getByLabelText("Note");
+    fireEvent.change(box, { target: { value: "first line" } });
+
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(saved).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(box, { key: "Enter", metaKey: true });
+    expect(saved).toHaveBeenCalledWith("lecture", { notes: "first line" });
+  });
+
+  it("counts down only once the bound is close", () => {
+    renderDay(aDay({ task_count: 1 }), { tasks: [TASK], openTask: { id: "lecture", panel: "note" } });
+    expect(screen.queryByText(/characters left/)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "n".repeat(3900) } });
+
+    expect(screen.getByText("100 characters left")).toBeDefined();
   });
 });
 

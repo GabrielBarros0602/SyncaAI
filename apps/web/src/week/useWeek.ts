@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, api } from "../api/client";
-import type { DayCapacity, Me, NewTask, Page, Task } from "../api/types";
+import type { DayCapacity, Me, NewTask, Page, Task, TaskChanges } from "../api/types";
 import { daysFrom, mondayOf, toLocalDate, zonedDay } from "../lib/time";
 import { type Carried, carriedInto } from "./carried";
 
@@ -41,6 +41,8 @@ export interface Week {
   goTo: (offset: number) => void;
   reload: () => void;
   create: (task: NewTask) => Promise<void>;
+  /** Send a partial change. Rejects with the server's `ApiError` so the panel can show it. */
+  update: (taskId: string, changes: TaskChanges) => Promise<void>;
   toggle: (task: Task) => Promise<void>;
   /** The server's word on the last create. A conflict is a 409 and the message is the API's. */
   createError: string | null;
@@ -142,6 +144,17 @@ export function useWeek(): Week {
     [refetch],
   );
 
+  const update = useCallback(
+    async (taskId: string, changes: TaskChanges) => {
+      // The error is not held here, unlike `create`'s. A create belongs to a day and there is
+      // one form open at a time; an update belongs to a row, and the panel showing the
+      // message is the one that has to keep what was typed while the message is on screen.
+      await api.patch<Task>(`/tasks/${taskId}`, changes);
+      refetch();
+    },
+    [refetch],
+  );
+
   const toggle = useCallback(
     async (task: Task) => {
       await api.patch<Task>(`/tasks/${task.id}`, { completed: task.completed_at === null });
@@ -165,6 +178,7 @@ export function useWeek(): Week {
     goTo: setOffset,
     reload: refetch,
     create,
+    update,
     toggle,
     createError,
     clearCreateError,

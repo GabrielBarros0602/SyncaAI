@@ -8,11 +8,11 @@ import {
   zonedMinutes,
   zonedStamp,
 } from "../lib/time";
-import type { DayCapacity, NewTask, Task } from "../api/types";
+import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
 import { type Carried, splitOf } from "./carried";
 import { CarriedBand } from "./CarriedBand";
 import { warningFor } from "./load";
-import { TaskRow } from "./TaskRow";
+import { type Panel, TaskRow } from "./TaskRow";
 import { NewTaskForm } from "./NewTaskForm";
 import { useDirectionalFill } from "./useDirectionalFill";
 import { cx } from "../lib/cx";
@@ -89,8 +89,9 @@ interface Props {
    */
   onGoToOwner: ((taskId: string) => void) | null;
   /** The one row open anywhere on the screen, or null. One at a time, like the design. */
-  openTask: string | null;
-  onOpenTask: (taskId: string | null) => void;
+  openTask: { id: string; panel: Panel } | null;
+  onOpenTask: (open: { id: string; panel: Panel } | null) => void;
+  onSaveTask: (taskId: string, changes: TaskChanges) => Promise<void>;
   index: number;
   weekday: string;
   date: string;
@@ -117,6 +118,7 @@ export function DayColumn({
   onGoToOwner,
   openTask,
   onOpenTask,
+  onSaveTask,
   index,
   weekday,
   date,
@@ -281,10 +283,12 @@ export function DayColumn({
           minutesFromMidnight={zonedMinutes(task.start_at, timezone)}
           split={splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday)}
           doneLine={doneText(task, timezone)}
-          open={openTask === task.id}
-          onOpen={() => {
-            onOpenTask(openTask === task.id ? null : task.id);
+          timezone={timezone}
+          open={openTask?.id === task.id ? openTask.panel : null}
+          onOpen={(panel) => {
+            onOpenTask(panel === null ? null : { id: task.id, panel });
           }}
+          onSave={(changes) => onSaveTask(task.id, changes)}
           onToggle={onToggle}
         />
       ))}

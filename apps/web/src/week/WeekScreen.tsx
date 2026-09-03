@@ -7,6 +7,7 @@ import { DayColumn } from "./DayColumn";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
 import { lightestDay } from "./load";
+import type { Panel } from "./TaskRow";
 import { useWeek } from "./useWeek";
 import styles from "./Week.module.css";
 
@@ -16,7 +17,7 @@ export function WeekScreen(): React.ReactNode {
   const [openDay, setOpenDay] = useState<string | null>(null);
   // One row open across the whole week, not one per column. Two panels standing open at once
   // would each be offering to act on a different task with nothing saying which is in front.
-  const [openTask, setOpenTask] = useState<string | null>(null);
+  const [openTask, setOpenTask] = useState<{ id: string; panel: Panel } | null>(null);
   const hovered = useRef<string | null>(null);
 
   useEffect(() => {
@@ -210,6 +211,12 @@ export function WeekScreen(): React.ReactNode {
             onGoToOwner={index === 0 ? null : focusTask}
             openTask={openTask}
             onOpenTask={setOpenTask}
+            onSaveTask={async (taskId, changes) => {
+              await week.update(taskId, changes);
+              // Back to the resting panel rather than shut. The row stays where the reader
+              // was, and the change they just made is on it.
+              setOpenTask({ id: taskId, panel: "open" });
+            }}
             index={index}
             weekday={weekdayName(capacity.weekday)}
             date={stamp(dates[index] as Date)}
