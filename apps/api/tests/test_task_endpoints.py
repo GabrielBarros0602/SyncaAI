@@ -23,6 +23,7 @@ from syncaai.api.routes.tasks import get_task_service
 from syncaai.config import Settings
 from syncaai.db import get_session
 from syncaai.models import Tag, Task
+from syncaai.schemas.tasks import MAX_NOTES_LENGTH
 from syncaai.services.tasks import OVERLAP_CONSTRAINT, TaskService
 
 TASKS = "/api/v1/tasks"
@@ -215,6 +216,29 @@ def test_a_duration_longer_than_a_day_is_refused(app: FastAPI, client: TestClien
     )
 
     assert response.status_code == 422
+
+
+def test_a_note_at_the_bound_is_accepted_and_one_past_it_is_not(
+    app: FastAPI, client: TestClient
+) -> None:
+    """The only free-text field with no column behind it to bound it.
+
+    It matters because of where a note goes rather than where it is stored: ADR-0004 excludes
+    notes from the plan-generation context entirely and sends the invoked task's description
+    for task assistance, so exactly one of these reaches a paid provider. ADR-0006 estimates
+    spend before the call, and an unbounded field makes that estimate's worst case unbounded.
+
+    Asserted at both sides of the bound, because a limit tested only from above passes just as
+    well when it is off by one in the direction that refuses valid input.
+    """
+    _wire(app, _FakeTasks())
+    task = {"title": "with a note", "start_at": _future(days=1), "duration_minutes": 30}
+
+    at_the_bound = client.post(TASKS, json={**task, "notes": "n" * MAX_NOTES_LENGTH})
+    past_it = client.post(TASKS, json={**task, "notes": "n" * (MAX_NOTES_LENGTH + 1)})
+
+    assert at_the_bound.status_code == 201, at_the_bound.text
+    assert past_it.status_code == 422
 
 
 def test_an_overlap_answers_409_rather_than_500(app: FastAPI, client: TestClient) -> None:
