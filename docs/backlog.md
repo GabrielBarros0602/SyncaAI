@@ -191,6 +191,20 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
 **S6 — a camada de IA**, contra um dublê de teste. É a tese do produto e ainda é invisível na
 tela. O `end_at` que encurta ao concluir cedo já está guardando o dado que ela vai usar.
 
+> **A mesma armadilha da PR 3 espera aqui.** O ADR-0022 diz que a camada de IA ganha
+> plano-contra-real de graça. Ganha — mas **não** por `completed_at - start_at`. Essa derivada
+> é tempo de relógio até alguém lembrar de marcar: uma tarefa de 2h30 marcada dois dias depois
+> vira 53 horas, e o modelo aprende que a pessoa estoura a estimativa em vinte vezes.
+>
+> O `end_at` **armazenado** está certo e é a fonte a usar: o trigger o define como
+> `LEAST(planejado, concluído − início)`, então ele nunca passa do plano e nunca conta o
+> esquecimento. O que é derivado dele também está certo; o que é derivado de `completed_at`
+> não está.
+>
+> A tela resolveu isso escondendo a comparação passado um dia (PR 3). O S6 não pode esconder —
+> ele precisa decidir *qual* dado alimenta o contexto. Registrado antes de existir código para
+> consertar depois.
+
 O ADR-0022 deixou dois itens para revisitar: `USABLE_MINUTES_PER_DAY` como preferência por
 usuário, e horas de trabalho como **janela** em vez de orçamento — o que substitui a decisão 3
 quando chegar.
