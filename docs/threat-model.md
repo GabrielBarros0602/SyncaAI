@@ -8,10 +8,23 @@ Most of the reasoning already exists inside individual ADRs. What did not exist 
 single view, and a decision looks different next to the others than it does alone.
 
 **Reviewed at:** end of S3, 53 commits.
-**Next review:** end of S5, when a browser front end adds a surface this document does not
-yet cover. **Outstanding** — S5 is finished and the front end exists. Rows 10 and 13 were
-amended outside any review, found on 2026-09-02 and written on 2026-09-03; the account of how
-is below rather than smoothed over.
+
+**Next review — two triggers, replacing a date that went stale:**
+
+1. **When item 2 of [`backlog.md`](backlog.md) is finished and the three screens exist.** The
+   front end is the surface the old trigger was pointing at, and it is still being built:
+   delete, move, settings and address confirmation are not there yet. Reviewing halfway means
+   reviewing twice, and the second one is the only one that would have counted.
+2. **Before a real provider is wired in S7.** Sending a user's calendar to a paid third party
+   is a new class of exposure rather than more of this one. Four rows describe that day and
+   not one of them has running code behind it: 12 and 15 are *mitigated by design*, 13 is
+   *designed, not built*, and 14 — prompt injection — is *not yet considered* at all. They
+   stop being paper together, which is the moment to have read them together.
+
+The trigger this replaces was *end of S5*. S5 finished, the review did not happen, and rows 10
+and 13 were amended outside any review — found on 2026-09-02, written on 2026-09-03, with the
+account of how below rather than smoothed over. A sprint number is a date in disguise; both
+triggers above name a thing that will exist, and one of them is a gate rather than a milestone.
 
 ## Method
 
@@ -179,6 +192,10 @@ ao limitar o campo `notes` para a tela que passou a oferecer um textarea. **Miti
 e não registrada é indistinguível de mitigação inexistente** para quem lê isto para decidir se
 o sistema está protegido.
 
-**Próxima revisão:** fim do S5, quando o front-end adicionar superfície que este documento
-ainda não cobre. **Está vencida** — o S5 terminou, o front-end existe, e a correção acima foi
-achada escrevendo outra coisa em vez de por ela.
+**Próxima revisão: dois gatilhos, no lugar de uma data que venceu.** O antigo era "fim do S5";
+o S5 terminou, a revisão não aconteceu, e a correção acima foi achada escrevendo outra coisa.
+Os novos são **(1)** o fim do item 2, quando as três telas existirem — o front-end é a
+superfície que o gatilho antigo mirava e ainda está sendo construído, e revisar no meio é
+revisar duas vezes; e **(2)** antes de ligar um provedor real no S7, porque mandar o calendário
+de alguém para um terceiro pago é classe nova de exposição e não continuação desta. Número de
+sprint é data disfarçada; os dois nomeiam coisa que vai existir.
