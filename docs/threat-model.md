@@ -9,7 +9,9 @@ single view, and a decision looks different next to the others than it does alon
 
 **Reviewed at:** end of S3, 53 commits.
 **Next review:** end of S5, when a browser front end adds a surface this document does not
-yet cover.
+yet cover. **Outstanding** — S5 is finished and the front end exists. Rows 10 and 13 were
+amended outside any review, found on 2026-09-02 and written on 2026-09-03; the account of how
+is below rather than smoothed over.
 
 ## Method
 
@@ -62,15 +64,40 @@ otherwise would make the rest of this document less trustworthy.
 | 7 | One user reads another's data | mitigated, unexercised | filter lives in a base with no unscoped read ([ADR-0016](adr/0016-ownership-isolation.md)); **no endpoint uses it until S4** |
 | 8 | Token forgery | mitigated | HS256, secret refused below 32 bytes at boot, type claim checked, expiry required |
 | 9 | Cross-site request forgery | **open** | `SameSite=Strict` helps; no CORS policy exists yet and the naive one is dangerous — S5 |
-| 10 | Memory exhaustion through argon2 | mitigated | login and registration are rate limited |
+| 10 | Memory exhaustion through argon2 | mitigated | two bounds, not one: rate limited per caller, **and the input is capped** — `MAX_PASSWORD_LENGTH` is 128 on register, login and reset. Frequency alone would not be enough, because a memory-hard function with unbounded input lets the caller choose how much work one attempt costs |
 | 11 | Locking a victim out by failing their logins | accepted | there is no lockout, on purpose — see below |
 | 12 | AI provider key reaching a client | mitigated by design | server-side only, [ADR-0001](adr/0001-backend-stack.md); not yet built |
-| 13 | AI spend abused | designed, not built | per-user cap and a global kill switch, [ADR-0006](adr/0006-cost-limits-cache-degradation.md) |
+| 13 | AI spend abused | designed, not built | per-user cap and a global kill switch, [ADR-0006](adr/0006-cost-limits-cache-degradation.md). The one piece that exists in code is the 4000-character bound on `notes`: ADR-0004 sends the invoked task's note to the provider, and ADR-0006 estimates spend *before* the call, so without a bound that estimate has no defined worst case |
 | 14 | Prompt injection steering the AI layer | **not yet considered** | S6 and S7 |
 | 15 | Calendar content leaving to the AI provider | mitigated by design | allowlist, aggregates only, [ADR-0004](adr/0004-context-assembly-policy.md) |
 | 16 | Request-volume denial of service | not mitigated | only the auth endpoints are limited; the rest belongs to a proxy — S11 |
 | 17 | Secrets committed to the repository | mitigated | `.env` ignored, `.env.example` carries no real value, verified in review |
 | 18 | Known-vulnerable dependency | **open** | nothing scans; lockfiles pin versions, which freezes vulnerabilities as reliably as it freezes behaviour |
+
+### How rows 10 and 13 came to be amended — found 2026-09-02, written 2026-09-03
+
+Recorded because a threat model that only ever shows its corrected state is not falsifiable,
+which is what the opening paragraph claims this one is.
+
+`MAX_PASSWORD_LENGTH` has been applied on three endpoints since S2, and the comment where it
+is defined says exactly why — *a memory-hard function with unbounded input is an amplification
+vector; the caller chooses how much work the server does.* It appeared in this document zero
+times. Row 10 credited the rate limit and nothing else, so the frequency of an attempt was
+recorded as bounded while the cost of one was bounded only in the code.
+
+It surfaced sideways. `notes` was the last free-text field with no limit, the screen was about
+to offer a textarea for it, and asking what bounds that field led to asking which other input
+bounds this document knows about. The answer was none.
+
+Two things follow, and neither is comfortable. **A mitigation applied but unrecorded is
+indistinguishable from one that was never applied** — anybody reading this to decide whether
+argon2 was safe here would have got the wrong answer from the row rather than from the code.
+And the trigger was luck: the gap was found by writing an unrelated feature, not by the review
+this document schedules for itself.
+
+That review is also outstanding. The header still reads *next review: end of S5*, and S5 is
+done — the front end that was supposed to prompt it exists, and item 2 of `docs/backlog.md` is
+adding to it. This amendment is not that review and does not stand in for it.
 
 ## Accepted deliberately
 
@@ -143,5 +170,15 @@ no S3.
 travar a vítima; o token sobrevive à conta apagada por até 30 minutos, que é o preço de não
 consultar o banco a cada requisição; e janela fixa permite rajada do dobro na virada.
 
+**Limites de entrada — achados em 2026-09-02, corrigidos em 2026-09-03.** As linhas 10 e 13
+creditavam só a frequência.
+O `MAX_PASSWORD_LENGTH` está aplicado em cadastro, login e redefinição desde o S2 e não
+aparecia neste documento nenhuma vez — a frequência de uma tentativa estava registrada como
+limitada, e o custo de uma estava limitado no código e em lugar nenhum aqui. Apareceu de lado,
+ao limitar o campo `notes` para a tela que passou a oferecer um textarea. **Mitigação aplicada
+e não registrada é indistinguível de mitigação inexistente** para quem lê isto para decidir se
+o sistema está protegido.
+
 **Próxima revisão:** fim do S5, quando o front-end adicionar superfície que este documento
-ainda não cobre.
+ainda não cobre. **Está vencida** — o S5 terminou, o front-end existe, e a correção acima foi
+achada escrevendo outra coisa em vez de por ela.
