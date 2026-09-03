@@ -238,15 +238,36 @@ function offsetAt(instant: number, timeZone: string): number {
  * contradicts.
  */
 export function startOfLocalDay(localDate: string, timeZone: string): Date {
+  return instantAt(localDate, 0, timeZone);
+}
+
+/**
+ * The instant a local date and a wall-clock time name, in a given zone.
+ *
+ * The only conversion in this module that runs backwards, which is why it is the only one
+ * that needs repairing. Everything else reads a zone off an instant that already exists;
+ * this is handed a reading somebody typed and has to find the moment it names — and on the
+ * night a clock jumps forward there may be no such moment at all.
+ *
+ * The offset is applied twice because a first pass lands on the far side of a transition:
+ * reading the offset before the change and subtracting it produces an instant whose offset
+ * is the one after. When the second pass does not read back as the time that was asked for,
+ * the wall time never happened, and the first pass is the transition itself — the first
+ * moment that exists after the gap, which is the only answer available.
+ */
+export function instantAt(localDate: string, minutesFromMidnight: number, timeZone: string): Date {
   const [year = 1970, month = 1, day = 1] = localDate.split("-").map(Number);
-  const asIfUtc = Date.UTC(year, month - 1, day);
+  const asIfUtc = Date.UTC(year, month - 1, day, 0, minutesFromMidnight);
 
   const firstPass = asIfUtc - offsetAt(asIfUtc, timeZone) * MILLISECONDS_IN_A_MINUTE;
   const secondPass = asIfUtc - offsetAt(firstPass, timeZone) * MILLISECONDS_IN_A_MINUTE;
 
-  return new Date(zonedDay(new Date(secondPass).toISOString(), timeZone) === localDate
-    ? secondPass
-    : firstPass);
+  const reading = new Date(secondPass).toISOString();
+  const survived =
+    zonedDay(reading, timeZone) === localDate &&
+    zonedMinutes(reading, timeZone) === minutesFromMidnight;
+
+  return new Date(survived ? secondPass : firstPass);
 }
 
 /** Real minutes between two instants, which is not the same as clock minutes. */
