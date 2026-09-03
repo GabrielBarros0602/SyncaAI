@@ -1,4 +1,13 @@
-import { formatCompact, formatMinutes, weekdayName, zonedMinutes } from "../lib/time";
+import {
+  MINUTES_IN_A_DAY,
+  clock,
+  formatCompact,
+  formatMinutes,
+  minutesBetween,
+  weekdayName,
+  zonedMinutes,
+  zonedStamp,
+} from "../lib/time";
 import type { DayCapacity, NewTask, Task } from "../api/types";
 import { type Carried, splitOf } from "./carried";
 import { CarriedBand } from "./CarriedBand";
@@ -29,6 +38,42 @@ function splitText(task: Task, timeZone: string, own: string, next: string): str
   return `crosses midnight · ${formatCompact(split.own)} ${own} / ${formatCompact(split.into)} ${next}`;
 }
 
+/**
+ * When a task was finished, how long it took, and how that compares to the plan.
+ *
+ * Measured to `completed_at` rather than to `end_at`, and the difference is the whole point.
+ * The trigger clamps `end_at` to the planned end (ADR-0022), so reading the overrun off it
+ * would report every late finish as exact — and running past an estimate is the datum the
+ * planner in S6 is being given, not a failure to hide.
+ *
+ * In the neutral ink either way. The accent means trouble, and taking longer than you
+ * guessed is not trouble.
+ */
+function doneText(task: Task, timeZone: string): string | null {
+  if (task.completed_at === null) return null;
+
+  const at = clock(zonedMinutes(task.completed_at, timeZone));
+  const actual = minutesBetween(task.start_at, task.completed_at);
+
+  // A task ticked days after it ran measures when somebody remembered, not how long it took.
+  // The design never meets this case — it works in minutes since midnight and wraps once, so
+  // it cannot produce more than a day — but the box makes it a click away: forget Monday's
+  // task, tick it on Wednesday, and the comparison reads `56h22 of 2h30 · +53h52`. True about
+  // the clock and false about the work, on the row the planner reads plan-versus-actual from.
+  //
+  // A day is the bound because the schema already uses it: no task may exceed 1440 minutes,
+  // so a completion further out than that cannot be describing the task's own run.
+  if (actual < 0 || actual > MINUTES_IN_A_DAY) {
+    return `done ${zonedStamp(task.completed_at, timeZone)} ${at}`;
+  }
+
+  const delta = actual - task.duration_minutes;
+  const against =
+    delta === 0 ? "to the minute" : `${delta < 0 ? "−" : "+"}${formatCompact(Math.abs(delta))}`;
+
+  return `done ${at} · ${formatCompact(actual)} of ${formatCompact(task.duration_minutes)} · ${against}`;
+}
+
 interface Props {
   capacity: DayCapacity;
   /** The day in the week with the most room, when this one is heavy enough to say so. */
@@ -43,6 +88,9 @@ interface Props {
    * week, which is fetched so the figures are right and never rendered.
    */
   onGoToOwner: ((taskId: string) => void) | null;
+  /** The one row open anywhere on the screen, or null. One at a time, like the design. */
+  openTask: string | null;
+  onOpenTask: (taskId: string | null) => void;
   index: number;
   weekday: string;
   date: string;
@@ -67,6 +115,8 @@ export function DayColumn({
   tasks,
   carried,
   onGoToOwner,
+  openTask,
+  onOpenTask,
   index,
   weekday,
   date,
@@ -230,6 +280,11 @@ export function DayColumn({
           index={`${dayNumber}.${String(position + 1).padStart(2, "0")}`}
           minutesFromMidnight={zonedMinutes(task.start_at, timezone)}
           split={splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday)}
+          doneLine={doneText(task, timezone)}
+          open={openTask === task.id}
+          onOpen={() => {
+            onOpenTask(openTask === task.id ? null : task.id);
+          }}
           onToggle={onToggle}
         />
       ))}
