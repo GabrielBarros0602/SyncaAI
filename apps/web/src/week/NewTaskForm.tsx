@@ -140,6 +140,9 @@ export function NewTaskForm({
         onKeyDown={onKeyDown}
         placeholder="Title"
         aria-label="Title"
+        // The form opened because somebody pressed N or clicked `new task`, and landing them
+        // in the first field is the point of the shortcut. Without it the key saves nothing.
+        // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus
       />
       <div className={styles.pair}>

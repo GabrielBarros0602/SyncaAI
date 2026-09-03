@@ -27,14 +27,20 @@ interface Props {
 /**
  * One task, on the day it belongs to.
  *
- * The row is a container rather than a control, and the checkbox inside it is the control.
- * That inversion is the whole change: completing is the frequent verb and must not cost an
- * opening, while everything else a task can do needs room the resting row does not have.
+ * The row is a container and the two things it offers are real buttons: a checkbox that
+ * completes, and the title, which is the disclosure that opens the panel. Completing is the
+ * frequent verb and must not cost an opening; everything else needs room the resting row
+ * does not have.
  *
- * It costs the free keyboard behaviour a `<button>` was giving away, which is why the key
- * handler is explicit. `role="group"` rather than `role="button"` because the row really does
- * contain controls — a button holding a button is invalid, and lying about the role to get
- * the semantics would put the checkbox somewhere a screen reader cannot reach it.
+ * An earlier version of this made the row itself focusable — `role="group"`, `tabIndex={0}`,
+ * `aria-expanded`, and hand-written key handling — to keep the design's single tab stop per
+ * row. `eslint-plugin-jsx-a11y` refused it, and was right: `aria-expanded` is not supported
+ * on `group`, so the open state was announced to nobody, and a container carrying a tab stop
+ * and key handlers is a control pretending not to be one.
+ *
+ * Two native buttons cost a second tab stop per row and buy back everything that was being
+ * written by hand — focus, activation, the pressed and expanded states — from elements that
+ * actually mean them.
  */
 export function TaskRow({
   task,
@@ -57,23 +63,8 @@ export function TaskRow({
       // to. The task id rather than the position: the row moves when its neighbours change.
       id={`task-${task.id}`}
       role="group"
-      tabIndex={0}
-      aria-expanded={open}
       data-open={open ? "1" : undefined}
       className={cx(styles.task, done && styles.taskDone)}
-      onClick={onOpen}
-      onKeyDown={(event) => {
-        if (event.key === " ") {
-          // Space completes rather than opening, because that is the verb somebody presses
-          // dozens of times and opening to reach it would be the cost this row exists to
-          // remove.
-          event.preventDefault();
-          onToggle(task);
-        } else if (event.key === "Enter") {
-          event.preventDefault();
-          onOpen();
-        }
-      }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -95,16 +86,22 @@ export function TaskRow({
           className={styles.check}
           aria-pressed={done}
           aria-label={`Complete ${task.title}`}
-          onClick={(event) => {
-            // Or the row underneath opens on the same click, and completing a task would
-            // leave a panel standing open on it.
-            event.stopPropagation();
+          onClick={() => {
             onToggle(task);
           }}
         >
           {done && <span className={styles.checkMark} />}
         </button>
-        <span className={styles.taskTitle}>{task.title}</span>
+        {/* The disclosure. A real button, so focus, Enter and Space are the browser's rather
+            than this file's, and `aria-expanded` sits on a role that supports it. */}
+        <button
+          type="button"
+          className={styles.taskTitle}
+          aria-expanded={open}
+          onClick={onOpen}
+        >
+          {task.title}
+        </button>
       </span>
 
       {split !== null && <span className={styles.taskSplit}>{split}</span>}
@@ -122,14 +119,9 @@ export function TaskRow({
       {doneLine !== null && <span className={styles.taskDoneLine}>{doneLine}</span>}
 
       {open && (
-        <div
-          className={styles.panel}
-          // The panel is inside the row, and the row opens and closes on click. Without this
-          // every click on a note or a checklist item would close what it landed in.
-          onClick={(event) => {
-            event.stopPropagation();
-          }}
-        >
+        // No click handler of its own any more. Opening lives on the title button, so a
+        // click landing in here reaches nothing that would close it.
+        <div className={styles.panel}>
           <div className={styles.panelTop}>
             <button type="button" className={styles.panelClose} onClick={onOpen}>
               esc
