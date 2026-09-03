@@ -317,6 +317,12 @@ export function AuthScreen(): React.ReactNode {
                       placeholder="you@example.com"
                       autoComplete="email"
                       required
+                      // The weakest of the three in this repository, and kept only because
+                      // changing where a sign-in page starts belongs in a change about the
+                      // sign-in page. The rule is about focus moving on load without the user
+                      // asking; here the form is the entire screen, so there is nowhere else
+                      // it could have been.
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
                       autoFocus
                     />
                   </div>
@@ -398,6 +404,10 @@ export function AuthScreen(): React.ReactNode {
                       setToken(event.target.value);
                     }}
                     required
+                    // This field appears because the reader asked for it, and moving focus to
+                    // what an action just produced is the behaviour the rule exists to
+                    // protect rather than the one it warns about.
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
                   />
                   <div className={styles.afterField}>

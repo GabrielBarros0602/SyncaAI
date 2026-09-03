@@ -506,11 +506,13 @@
   text-wrap: pretty;
 }
 
+/* No cursor here any more. The row is not clickable; the box and the title are, and each
+   carries its own pointer — a whole row that looks pressable and mostly is not is worse
+   than one that shows exactly where it answers. */
 .task {
   position: relative;
   border-top: 1px solid var(--rule);
   padding: var(--rowpad) var(--pad);
-  cursor: pointer;
   overflow: hidden;
   display: block;
   width: 100%;
@@ -600,7 +602,16 @@
   color: var(--dim);
 }
 
+/* A button that has to look like a title: the disclosure is the words themselves, so every
+   affordance a button brings with it has to be taken back off. */
 .taskTitle {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
   font: 500 13px/1.35 var(--sans);
   letter-spacing: -0.005em;
   text-wrap: pretty;

@@ -1,14 +1,20 @@
 import js from "@eslint/js";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 /**
- * The rule that matters here is the storage ban.
+ * Two rules here are load-bearing, and they are load-bearing for the same reason: both
+ * enforce a decision that a reviewer reading a diff would have to remember to check.
  *
- * ADR-0021 decided the access token lives in memory and nowhere else. That decision is one
- * convenient line away from being undone by anybody in a hurry, including a future me — so
- * it is enforced by the linter rather than by review, which is the only enforcement that
- * still works at 2am.
+ * The storage ban comes from ADR-0021 — the access token lives in memory and nowhere else,
+ * which is one convenient line away from being undone by anybody in a hurry.
+ *
+ * The accessibility rules came later, and the gap they close was found the hard way. The week
+ * screen's task row was rewritten from a `<button>` into a `role="group"` container, and
+ * `npm run lint` reported nothing — not because the markup was sound but because nothing in
+ * the chain had an opinion about `role` or `aria-*` at all. A green run that had no rule
+ * capable of failing is not evidence, and this screen is largely keyboard-driven.
  */
 const NO_STORAGE = "ADR-0021: no credential is written to browser storage. Keep it in memory.";
 
@@ -21,9 +27,10 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
-    plugins: { "react-hooks": reactHooks },
+    plugins: { "react-hooks": reactHooks, "jsx-a11y": jsxA11y },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      ...jsxA11y.flatConfigs.recommended.rules,
       "no-restricted-globals": [
         "error",
         { name: "localStorage", message: NO_STORAGE },

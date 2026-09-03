@@ -351,8 +351,12 @@ describe("what the day before is still holding", () => {
 describe("the row, and the box that came out of it", () => {
   const PLAIN = aTask("plain", "2026-08-24T09:00:00", "2026-08-24T10:30:00");
 
-  function row(): HTMLElement {
-    return screen.getByRole("group");
+  function box(): HTMLElement {
+    return screen.getByRole("button", { name: /^Complete/ });
+  }
+
+  function disclosure(): HTMLElement {
+    return screen.getByRole("button", { expanded: false });
   }
 
   it("completes from the box without opening the row", () => {
@@ -362,37 +366,33 @@ describe("the row, and the box that came out of it", () => {
     const opened = vi.fn<(taskId: string | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
-    fireEvent.click(screen.getByRole("button", { name: /^Complete/ }));
+    fireEvent.click(box());
 
     expect(toggled).toHaveBeenCalledWith(PLAIN);
     expect(opened).not.toHaveBeenCalled();
   });
 
-  it("opens from the row without completing it", () => {
+  it("opens from the title without completing the task", () => {
     // The inverse, and the one that used to be impossible: before this the whole row was the
     // toggle, so there was nowhere to press that did not complete something.
     const toggled = vi.fn<(task: Task) => void>();
     const opened = vi.fn<(taskId: string | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
-    fireEvent.click(row());
+    fireEvent.click(disclosure());
 
     expect(opened).toHaveBeenCalledWith("plain");
     expect(toggled).not.toHaveBeenCalled();
   });
 
-  it("keeps space on completing and Enter on opening", () => {
-    const toggled = vi.fn<(task: Task) => void>();
-    const opened = vi.fn<(taskId: string | null) => void>();
-    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
+  it("gives each verb its own control rather than sharing one tab stop", () => {
+    // The single focusable row this replaced needed hand-written key handling, and the state
+    // it announced sat on a role that does not support it. Two buttons get focus, activation
+    // and both states from the elements themselves.
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN] });
 
-    fireEvent.keyDown(row(), { key: " " });
-    expect(toggled).toHaveBeenCalledWith(PLAIN);
-    expect(opened).not.toHaveBeenCalled();
-
-    fireEvent.keyDown(row(), { key: "Enter" });
-    expect(opened).toHaveBeenCalledWith("plain");
-    expect(toggled).toHaveBeenCalledTimes(1);
+    expect(box().getAttribute("aria-pressed")).toBe("false");
+    expect(disclosure().getAttribute("aria-expanded")).toBe("false");
   });
 
   it("closes the row it is asked to open again", () => {
@@ -403,7 +403,7 @@ describe("the row, and the box that came out of it", () => {
       onOpenTask: opened,
     });
 
-    fireEvent.click(row());
+    fireEvent.click(screen.getByRole("button", { expanded: true }));
 
     expect(opened).toHaveBeenCalledWith(null);
   });
@@ -411,7 +411,7 @@ describe("the row, and the box that came out of it", () => {
   it("says the row is expanded, so it is not only a visual state", () => {
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], openTask: "plain" });
 
-    expect(row().getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { expanded: true })).toBeDefined();
   });
 
   it("shows nothing of the note or the checklist while it is shut", () => {
@@ -885,8 +885,14 @@ describe("the week you are looking at", () => {
 
     fireEvent.click(screen.getByText("go to Wed"));
 
+    // Focus lands on the row's disclosure, not on the row. The row is a plain container with
+    // no tab stop, so `focus()` on it does nothing at all — which is how this would fail
+    // silently if the way back were ever pointed at the wrong element again.
     const wednesday = container.querySelectorAll("[class*=grid] > div")[2] as HTMLElement;
-    expect(document.activeElement?.id).toBe("task-pager");
+    const owningRow = container.querySelector("#task-pager");
+
+    expect(document.activeElement?.getAttribute("aria-expanded")).toBe("false");
+    expect(owningRow?.contains(document.activeElement)).toBe(true);
     expect(wednesday.contains(document.activeElement)).toBe(true);
   });
 
@@ -901,9 +907,9 @@ describe("the week you are looking at", () => {
 
     renderWeek();
     await waitFor(() => {
-      expect(screen.getAllByRole("group")).toHaveLength(2);
+      expect(screen.getAllByRole("button", { expanded: false })).toHaveLength(2);
     });
-    const [first, second] = screen.getAllByRole("group");
+    const [first, second] = screen.getAllByRole("button", { expanded: false });
 
     fireEvent.click(first as HTMLElement);
     await waitFor(() => {
@@ -924,17 +930,17 @@ describe("the week you are looking at", () => {
 
     renderWeek();
     await waitFor(() => {
-      expect(screen.getByRole("group")).toBeDefined();
+      expect(screen.getByRole("button", { expanded: false })).toBeDefined();
     });
-    fireEvent.click(screen.getByRole("group"));
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
     await waitFor(() => {
-      expect(screen.getByRole("group").getAttribute("aria-expanded")).toBe("true");
+      expect(screen.getByRole("button", { expanded: true })).toBeDefined();
     });
 
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
-      expect(screen.getByRole("group").getAttribute("aria-expanded")).toBe("false");
+      expect(screen.getByRole("button", { expanded: false })).toBeDefined();
     });
   });
 

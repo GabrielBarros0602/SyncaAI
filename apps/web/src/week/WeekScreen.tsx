@@ -76,11 +76,16 @@ export function WeekScreen(): React.ReactNode {
   const { week: weekNumber, year } = isoWeek(week.monday);
   const distance = Math.abs(week.offset);
 
-  // Focus rather than scroll: the row is a control, and moving the keyboard there is what
-  // makes the way back usable by somebody who is not holding a mouse. `scrollIntoView` would
-  // move the eye and leave the focus in the band it came from.
+  // Focus rather than scroll: moving the keyboard there is what makes the way back usable by
+  // somebody who is not holding a mouse. `scrollIntoView` would move the eye and leave the
+  // focus in the band it came from.
+  //
+  // The target is the row's disclosure, not the row. The row is a plain container with no tab
+  // stop of its own — `focus()` on it silently does nothing, which is how this quietly stopped
+  // working when the row gave up being focusable.
   function focusTask(taskId: string): void {
-    document.getElementById(`task-${taskId}`)?.focus();
+    const row = document.getElementById(`task-${taskId}`);
+    row?.querySelector<HTMLElement>("[aria-expanded]")?.focus();
   }
 
   return (
