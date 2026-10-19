@@ -245,9 +245,7 @@
 
 .dayIndex {
   font: 500 11px/1 var(--mono);
-  letter-spacing: 0.06em;
   color: var(--faint);
-  text-transform: uppercase;
 }
 
 /* The index is a position in a list; `today` is the answer to a question. It takes the full
@@ -265,7 +263,7 @@
 .weekday {
   margin-top: 13px;
   font: 600 12px/1 var(--sans);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -440,8 +438,6 @@
 
 .carriedFrom {
   font: 400 10px/1 var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--dim);
 }
 
@@ -761,7 +757,7 @@
 
 .panelLabel {
   font: 600 10px/1 var(--sans);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
@@ -829,7 +825,7 @@
 
 .checklistTitle {
   font: 600 10px/1 var(--sans);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
@@ -904,7 +900,7 @@
 
 .formTitle {
   font: 600 10px/1 var(--sans);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
