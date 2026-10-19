@@ -37,7 +37,7 @@
 }
 
 .meta {
-  font: 400 11px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   letter-spacing: 0.06em;
   color: var(--faint);
 }
@@ -48,12 +48,12 @@
 }
 
 .identityEmail {
-  font: 400 11px/1.5 var(--mono);
+  font: 400 12px/1.5 var(--mono);
   color: var(--dim);
 }
 
 .identityZone {
-  font: 400 10px/1.5 var(--mono);
+  font: 400 12px/1.5 var(--mono);
   color: var(--faint);
 }
 
@@ -83,7 +83,7 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background var(--dur);
-  font: 400 11px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--dim);
 }
 
@@ -114,14 +114,14 @@
 }
 
 .away {
-  font: 400 11px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--dim);
 }
 
 /* The keyboard hint next to every action. Not decoration: on a screen opened every day, a
    shortcut is a feature, and showing it is what makes it discoverable. */
 .key {
-  font: 500 10px/1 var(--mono);
+  font: 500 11px/1 var(--mono);
   border: 1px solid var(--rule2);
   border-radius: 4px;
   padding: 2px 4px;
@@ -159,7 +159,7 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  font: 400 11px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--faint);
 }
 
@@ -177,21 +177,26 @@
 }
 
 .legendWord {
-  font: 400 10px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--faint);
 }
 
 .chip {
-  font: 500 11px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   color: var(--chip-ink);
   background: var(--chip-bg);
   border: 1px solid var(--accent);
   padding: 4px 6px;
 }
 
+/* Never narrower than 150px. A crossing task's range, `22:00 – 01:00+1`, is 108px of 12px
+   type and does not break, and below that width it was the `+1` that got clipped — the one
+   character saying the end time belongs to tomorrow. Under 1180px the week scrolls a little
+   sideways instead. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(150px, 1fr));
+  overflow-x: auto;
 }
 
 .day {
@@ -244,7 +249,7 @@
 }
 
 .dayIndex {
-  font: 500 11px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   color: var(--faint);
 }
 
@@ -255,7 +260,7 @@
 }
 
 .dayTotalNote {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   letter-spacing: 0.03em;
   color: var(--faint);
 }
@@ -281,11 +286,14 @@
 }
 
 /* The number the product exists to report. Scale carries it, not colour. */
+/* Wraps rather than overflows: a five-character figure at --num is a hundred pixels on its
+   own, and in a narrow column the word goes under it instead of out of the column. */
 .booked {
   margin-top: 16px;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 7px;
+  gap: 4px 7px;
 }
 
 .bookedValue {
@@ -294,13 +302,13 @@
 }
 
 .bookedWord {
-  font: 400 11px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--dim);
 }
 
 .freeOf {
   margin-top: 7px;
-  font: 400 11px/1.4 var(--sans);
+  font: 400 12px/1.4 var(--sans);
   color: var(--dim);
 }
 
@@ -311,7 +319,7 @@
 .overChip {
   margin-top: 10px;
   display: inline-block;
-  font: 500 11px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   color: var(--chip-ink);
   background: var(--chip-bg);
   border: 1px solid var(--accent);
@@ -338,7 +346,7 @@
 
 .warningText {
   margin: 0;
-  font: 500 11px/1.45 var(--sans);
+  font: 500 12px/1.45 var(--sans);
   color: var(--dim);
   text-wrap: pretty;
 }
@@ -349,7 +357,7 @@
 
 .warningMove {
   margin: 6px 0 0;
-  font: 400 11px/1.45 var(--sans);
+  font: 400 12px/1.45 var(--sans);
   color: var(--faint);
   text-wrap: pretty;
 }
@@ -405,7 +413,7 @@
 
 .dayMeta {
   margin-top: 9px;
-  font: 400 11px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--faint);
 }
 
@@ -432,18 +440,18 @@
 }
 
 .carriedArrow {
-  font: 500 11px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   color: var(--dim);
 }
 
 .carriedFrom {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--dim);
 }
 
 .carriedTotal {
   margin-left: auto;
-  font: 500 10px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   color: var(--dim);
 }
 
@@ -460,7 +468,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 6px;
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--dim);
 }
 
@@ -480,7 +488,7 @@
 }
 
 .carriedMinutes {
-  font: 400 10px/1.4 var(--mono);
+  font: 400 12px/1.4 var(--mono);
   color: var(--faint);
 }
 
@@ -490,7 +498,7 @@
   border: 0;
   padding: 0;
   cursor: pointer;
-  font: 400 10px/1.4 var(--mono);
+  font: 400 12px/1.4 var(--mono);
   color: var(--dim);
   border-bottom: 1px solid var(--rule2);
   transition: color var(--dur), border-color var(--dur);
@@ -506,7 +514,7 @@
    that overbooks. */
 .carriedNote {
   margin: 0;
-  font: 400 10px/1.45 var(--sans);
+  font: 400 12px/1.45 var(--sans);
   color: var(--faint);
   text-wrap: pretty;
 }
@@ -549,20 +557,32 @@
 /*
  * The one verb promoted out of the opened set.
  *
- * Twelve pixels and a hairline: it is pressed more than everything else on this screen put
- * together, and it still must not be the loudest thing in a column of seven.
+ * Sixteen pixels and a hairline: it is pressed more than everything else on this screen put
+ * together, and it still must not be the loudest thing in a column of seven. The hairline is
+ * --field-border rather than a rule, because it is the only thing that says a control is
+ * there, and a control's edge is held to 3:1.
  */
 .check {
   flex: none;
-  width: 12px;
-  height: 12px;
-  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
   padding: 0;
   position: relative;
   background: transparent;
-  border: 1px solid var(--rule2);
+  border: 1px solid var(--field-border);
+  border-radius: 4px;
   cursor: pointer;
   transition: border-color var(--dur);
+}
+
+/* What answers a press is larger than what is drawn. Insets count from inside the 1px
+   border, so -5px is four pixels past the drawn edge on each side: 24 by 24. The title,
+   the row's other button, starts nine pixels to the right, so the two never overlap. */
+.check::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
 }
 
 .check:hover {
@@ -571,37 +591,48 @@
 
 .checkMark {
   position: absolute;
-  inset: 2px;
+  inset: 3px;
+  border-radius: 2px;
   background: var(--ink);
 }
 
+/* Index, range and duration do not fit one line of a column at 12px, and none of them may
+   break inside itself, so the line breaks between them: the duration drops under the range,
+   still flush right. */
 .taskTop {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px 8px;
 }
 
 .taskIndex {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--faint);
 }
 
+/* A time is one token. Broken across two lines `19:00 –` reads as a start with no end, and
+   tabular figures keep the colons of a column of rows in one vertical line. */
 .taskRange {
-  font: 400 11px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .taskDuration {
   margin-left: auto;
-  font: 500 11px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   color: var(--dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Full ink, unlike everything around it in the range. It is the one character on the row
    that changes which day the end time belongs to. */
 .taskNextDay {
-  font: 500 8px/1 var(--mono);
+  font: 500 12px/1 var(--mono);
   vertical-align: super;
   color: var(--ink);
 }
@@ -610,7 +641,7 @@
   position: relative;
   display: block;
   margin-top: 7px;
-  font: 400 10px/1.45 var(--mono);
+  font: 400 12px/1.45 var(--mono);
   color: var(--dim);
 }
 
@@ -656,7 +687,7 @@
  * opened row of an overbooked day --faint reads 4.0:1. --dim reads 5.4.
  */
 .tag {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--dim);
   background: var(--fill);
   border: 0;
@@ -665,7 +696,7 @@
 }
 
 .taskNote {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--faint);
 }
 
@@ -680,7 +711,7 @@
   position: relative;
   display: block;
   margin-top: 8px;
-  font: 400 10px/1.45 var(--mono);
+  font: 400 12px/1.45 var(--mono);
   color: var(--dim);
 }
 
@@ -724,7 +755,7 @@
   border: 0;
   padding: 0;
   cursor: pointer;
-  font: 400 11px/1.3 var(--sans);
+  font: 400 12px/1.3 var(--sans);
   color: var(--dim);
   border-bottom: 1px solid var(--rule2);
   transition: color var(--dur), border-color var(--dur);
@@ -742,7 +773,7 @@
 }
 
 .verbKey {
-  font: 500 9px/1 var(--mono);
+  font: 500 11px/1 var(--mono);
   border: 1px solid var(--rule);
   border-radius: 4px;
   padding: 2px 3px;
@@ -756,7 +787,7 @@
 }
 
 .panelLabel {
-  font: 600 10px/1 var(--sans);
+  font: 600 12px/1 var(--sans);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
@@ -777,7 +808,7 @@
 /* Absent until the bound is close. A note is a place to think out loud, and a counter
    standing over it from the first keystroke changes what it feels like to write in. */
 .panelCount {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--faint);
 }
 
@@ -787,7 +818,7 @@
   border: 0;
   padding: 0;
   cursor: pointer;
-  font: 400 10px/1.3 var(--mono);
+  font: 400 12px/1.3 var(--mono);
   color: var(--faint);
 }
 
@@ -797,7 +828,7 @@
 
 .panelNote {
   margin: 0;
-  font: 400 11px/1.6 var(--sans);
+  font: 400 12px/1.6 var(--sans);
   color: var(--dim);
   text-wrap: pretty;
   white-space: pre-wrap;
@@ -805,7 +836,7 @@
 
 .panelBlank {
   margin: 0;
-  font: 400 11px/1.5 var(--sans);
+  font: 400 12px/1.5 var(--sans);
   color: var(--faint);
   text-wrap: pretty;
 }
@@ -824,7 +855,7 @@
 }
 
 .checklistTitle {
-  font: 600 10px/1 var(--sans);
+  font: 600 12px/1 var(--sans);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
@@ -837,7 +868,7 @@
 }
 
 .checkLabel {
-  font: 400 11px/1.4 var(--sans);
+  font: 400 12px/1.4 var(--sans);
   text-wrap: pretty;
 }
 
@@ -873,7 +904,7 @@
   cursor: pointer;
   text-align: left;
   transition: background var(--dur), color var(--dur);
-  font: 500 11px/1 var(--sans);
+  font: 500 12px/1 var(--sans);
   letter-spacing: 0.03em;
   width: 100%;
 }
@@ -899,14 +930,14 @@
 }
 
 .formTitle {
-  font: 600 10px/1 var(--sans);
+  font: 600 12px/1 var(--sans);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
 
 .formWhen {
-  font: 400 10px/1 var(--mono);
+  font: 400 12px/1 var(--mono);
   color: var(--faint);
 }
 
@@ -951,11 +982,12 @@
 
 .itemBox {
   position: relative;
-  width: 11px;
-  height: 11px;
-  margin-top: 3px;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
   flex: none;
   border: 1px solid var(--rule2);
+  border-radius: 3px;
 }
 
 .itemInput {
@@ -965,7 +997,7 @@
   border: 0;
   border-bottom: 1px solid var(--field-border);
   padding: 5px 0;
-  font: 400 11px/1.2 var(--sans);
+  font: 400 12px/1.2 var(--sans);
   caret-color: var(--ink);
 }
 
@@ -974,7 +1006,7 @@
   background: transparent;
   border: 0;
   padding: 0;
-  font: 400 11px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--dim);
   cursor: pointer;
   border-bottom: 1px solid var(--rule2);
@@ -985,7 +1017,7 @@
   border-radius: var(--radius-md);
   background: var(--accent-tint);
   padding: 8px;
-  font: 400 11px/1.45 var(--sans);
+  font: 400 12px/1.45 var(--sans);
   color: var(--chip-ink);
   text-wrap: pretty;
 }
@@ -1010,7 +1042,7 @@
   border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
-  font: 600 11px/1 var(--sans);
+  font: 600 12px/1 var(--sans);
   letter-spacing: 0.03em;
 }
 
@@ -1020,7 +1052,7 @@
 }
 
 .submitKey {
-  font: 500 10px/1 var(--mono);
+  font: 500 11px/1 var(--mono);
   border-radius: 4px;
   opacity: 0.65;
 }
@@ -1036,7 +1068,7 @@
   border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
-  font: 400 11px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--dim);
 }
 
@@ -1083,7 +1115,7 @@
 
 .bannerNote {
   margin-top: 7px;
-  font: 400 11px/1.4 var(--mono);
+  font: 400 12px/1.4 var(--mono);
   color: var(--dim);
 }
 
@@ -1097,7 +1129,7 @@
   padding: 8px 10px;
   cursor: pointer;
   transition: background var(--dur);
-  font: 600 11px/1 var(--sans);
+  font: 600 12px/1 var(--sans);
   letter-spacing: 0.03em;
   color: var(--chip-ink);
 }
@@ -1107,7 +1139,7 @@
 }
 
 .retryKey {
-  font: 500 10px/1 var(--mono);
+  font: 500 11px/1 var(--mono);
   border: 1px solid var(--accent);
   border-radius: 4px;
   padding: 2px 4px;
@@ -1128,6 +1160,6 @@
 
 .shellNote {
   margin-top: 7px;
-  font: 400 11px/1 var(--sans);
+  font: 400 12px/1 var(--sans);
   color: var(--faint);
 }
