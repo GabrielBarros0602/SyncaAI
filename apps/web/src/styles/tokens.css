@@ -18,6 +18,11 @@
   --rule2: rgba(244, 241, 238, 0.26);
   --fill: rgba(244, 241, 238, 0.1);
   --hover: rgba(244, 241, 238, 0.07);
+  /* Two grounds a shade off the page: a panel set apart without a rule to do it, and the
+     inside of a field you type into, one step further so an empty input still reads as a
+     place. Both were used by the sign-in screen long before anything defined them. */
+  --surface: rgba(244, 241, 238, 0.04);
+  --field: rgba(244, 241, 238, 0.05);
 
   /* One accent, and it means trouble: over capacity, a conflict, a failed request. It is
      absent from a healthy week on purpose — a colour that is everywhere is not a signal. */
@@ -46,6 +51,8 @@
   --rule2: rgba(28, 26, 25, 0.32);
   --fill: rgba(28, 26, 25, 0.11);
   --hover: rgba(28, 26, 25, 0.06);
+  --surface: rgba(28, 26, 25, 0.04);
+  --field: rgba(28, 26, 25, 0.05);
   --accent: #c9280c;
   --accent-ink: #f4f3f2;
   --accent-tint: rgba(201, 40, 12, 0.09);

@@ -274,7 +274,7 @@
   position: relative;
   border-left: 1px solid var(--rule2);
   overflow: hidden;
-  background: var(--surface, rgba(244, 241, 238, 0.03));
+  background: var(--surface);
   display: flex;
   align-items: flex-end;
 }
