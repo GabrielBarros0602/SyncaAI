@@ -257,6 +257,29 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
 
 ---
 
+## Aberto pelo ADR-0024 — a suavização da interface, 2026-10-19
+
+A mudança foi restrita às folhas de estilo de propósito, e quatro coisas ficaram do lado de
+fora dessa linha:
+
+- **O `--accent` do tema claro reprova sobre os próprios tons de alarme**: 4,35:1 no chip
+  `over by`, 3,88:1 numa linha aberta de dia estourado. É a única cor de sinal, então é
+  decisão de design.
+- **O tema claro não liga pela interface.** O `App.tsx` põe `data-theme` num `div` dentro do
+  `body`, e o fundo da página resolve contra `:root`; trocar o atributo nesse `div` desenha
+  tinta escura sobre página escura, a 1,05:1. Para conferir no DevTools, o atributo vai no
+  `<html>`.
+- **O padding do shell mora em dois lugares.** O `App.tsx` escreve `56px 64px` inline e o
+  `tokens.css` sobrescreve com `!important` abaixo de 1100px. Quando o padding sair do inline,
+  o override sai junto — o seletor casa com o próprio valor inline, então ele para de valer
+  sozinho, mas continua lá até alguém apagar.
+- **A faixa de 700–1099px começa na segunda-feira**, e numa sexta o dia de hoje fica fora da
+  tela até alguém arrastar. Rolar até hoje precisa de script.
+
+E uma fora do `docs/`: o `CLAUDE.md` diz que são 23 ADRs, e agora são 24.
+
+---
+
 ## Depois
 
 **S6 — a camada de IA**, contra um dublê de teste. É a tese do produto e ainda é invisível na
