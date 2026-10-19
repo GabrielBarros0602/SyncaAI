@@ -136,7 +136,7 @@
 .input {
   width: 100%;
   background: var(--field);
-  border: 1px solid var(--rule2);
+  border: 1px solid var(--field-border);
   padding: 14px;
   font: 400 14px/1.2 var(--mono);
   caret-color: var(--ink);

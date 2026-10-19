@@ -1,5 +1,8 @@
 /*
- * The design's tokens, as they arrived from Claude Design.
+ * The design's tokens, and the places they now depart from it.
+ *
+ * Text contrast, field borders, radius, the smallest text size and the week below 1100px
+ * follow ADR-0024 rather than docs/design/. Everything else is still the design's value.
  *
  * Four axes are exposed as data attributes on the root: theme, density, accent weight and
  * motion. They are attributes rather than classes because they are exclusive states, and
@@ -12,10 +15,16 @@
 :root {
   --bg: #0a0a0b;
   --ink: #f4f1ee;
-  --dim: rgba(244, 241, 238, 0.58);
-  --faint: rgba(244, 241, 238, 0.36);
+  /* Both are text, so both are held to 4.5:1 — against the page and against every tint text
+     sits on, the darkest being an opened row inside an overbooked day. --dim stays a clear
+     step above --faint; two greys that read the same are one grey with two names. */
+  --dim: rgba(244, 241, 238, 0.66);
+  --faint: rgba(244, 241, 238, 0.52);
   --rule: rgba(244, 241, 238, 0.12);
   --rule2: rgba(244, 241, 238, 0.26);
+  /* The edge of a field is how somebody finds where to type, so it is held to the 3:1 a
+     control's boundary needs. --rule2 reads 2.1:1 and stays for edges that only decorate. */
+  --field-border: rgba(244, 241, 238, 0.4);
   --fill: rgba(244, 241, 238, 0.1);
   --hover: rgba(244, 241, 238, 0.07);
   /* Two grounds a shade off the page: a panel set apart without a rule to do it, and the
@@ -45,10 +54,11 @@
 [data-theme="light"] {
   --bg: #f4f3f2;
   --ink: #1c1a19;
-  --dim: rgba(28, 26, 25, 0.66);
-  --faint: rgba(28, 26, 25, 0.42);
+  --dim: rgba(28, 26, 25, 0.76);
+  --faint: rgba(28, 26, 25, 0.64);
   --rule: rgba(28, 26, 25, 0.16);
   --rule2: rgba(28, 26, 25, 0.32);
+  --field-border: rgba(28, 26, 25, 0.54);
   --fill: rgba(28, 26, 25, 0.11);
   --hover: rgba(28, 26, 25, 0.06);
   --surface: rgba(28, 26, 25, 0.04);
