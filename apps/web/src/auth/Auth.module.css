@@ -79,6 +79,7 @@
 .alert {
   margin-top: 32px;
   border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
   background: var(--accent-tint);
   padding: 13px 14px;
   display: flex;
@@ -135,8 +136,10 @@
 
 .input {
   width: 100%;
+  min-height: 44px;
   background: var(--field);
   border: 1px solid var(--field-border);
+  border-radius: var(--radius-md);
   padding: 14px;
   font: 400 14px/1.2 var(--mono);
   caret-color: var(--ink);
@@ -215,9 +218,11 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
+  min-height: 48px;
   background: var(--ink);
   color: var(--bg);
   border: 1px solid var(--ink);
+  border-radius: var(--radius-md);
   padding: 15px;
   cursor: pointer;
   font: 600 13px/1 var(--sans);
@@ -232,6 +237,7 @@
 
 .submitKey {
   font: 500 11px/1 var(--mono);
+  border-radius: 4px;
   opacity: 0.6;
 }
 
@@ -270,9 +276,10 @@
   color: var(--faint);
 }
 
+/* The ground already separates the panel; the rule beside it only has to mark the seam. */
 .hero {
   position: relative;
-  border-left: 1px solid var(--rule2);
+  border-left: 1px solid var(--rule);
   overflow: hidden;
   background: var(--surface);
   display: flex;

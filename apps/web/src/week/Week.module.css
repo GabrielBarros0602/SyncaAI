@@ -14,8 +14,12 @@
   font-family: var(--sans);
 }
 
+/* Rounded, and clipping to its own corners: without the clip the first and last column paint
+   square fills straight through the curve. */
 .frame {
   border: 1px solid var(--rule2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .chrome {
@@ -66,13 +70,17 @@
   text-align: center;
 }
 
+/* A ground instead of an outline. The border only drew a box around a word, and a row of
+   boxes in the chrome read as a second set of columns. It stays as a transparent pixel so
+   `.home`, which does mean something by its border, keeps the same size. */
 .ghost {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 9px;
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: background var(--dur);
   font: 400 11px/1 var(--sans);
@@ -102,7 +110,7 @@
 }
 
 .home:disabled:hover {
-  background: transparent;
+  background: var(--surface);
 }
 
 .away {
@@ -115,6 +123,7 @@
 .key {
   font: 500 10px/1 var(--mono);
   border: 1px solid var(--rule2);
+  border-radius: 4px;
   padding: 2px 4px;
   color: var(--faint);
 }
@@ -642,13 +651,21 @@
   flex-wrap: wrap;
 }
 
+/*
+ * A filled pill rather than a ruled box, in the case it was typed in. A tag is a word somebody
+ * chose; set in capitals inside a border it read as a system label, and the border was one
+ * more frame in a row that already has a box, a title and a range.
+ *
+ * --dim, not --faint: the pill lays --fill under its own text, and on that ground inside an
+ * opened row of an overbooked day --faint reads 4.0:1. --dim reads 5.4.
+ */
 .tag {
   font: 400 10px/1 var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--faint);
-  border: 1px solid var(--rule2);
-  padding: 3px 5px;
+  color: var(--dim);
+  background: var(--fill);
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 8px;
 }
 
 .taskNote {
@@ -731,6 +748,7 @@
 .verbKey {
   font: 500 9px/1 var(--mono);
   border: 1px solid var(--rule);
+  border-radius: 4px;
   padding: 2px 3px;
   color: var(--faint);
 }
@@ -750,8 +768,10 @@
 
 .textarea {
   width: 100%;
-  background: transparent;
+  min-height: 44px;
+  background: var(--field);
   border: 1px solid var(--field-border);
+  border-radius: var(--radius-md);
   padding: 8px;
   font: 400 12px/1.55 var(--sans);
   caret-color: var(--ink);
@@ -850,6 +870,7 @@
   gap: 8px;
   border: 0;
   border-top: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   padding: var(--rowpad) var(--pad);
   background: transparent;
   color: var(--dim);
@@ -893,10 +914,14 @@
   color: var(--faint);
 }
 
+/* Filled, and 44px tall: the field is where the eye lands, and at 30px it was a target the
+   finger had to aim for. */
 .input {
   width: 100%;
-  background: transparent;
+  min-height: 44px;
+  background: var(--field);
   border: 1px solid var(--field-border);
+  border-radius: var(--radius-md);
   padding: 8px;
   font: 500 12px/1.2 var(--sans);
   caret-color: var(--ink);
@@ -952,6 +977,7 @@
 
 .error {
   border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
   background: var(--accent-tint);
   padding: 8px;
   font: 400 11px/1.45 var(--sans);
@@ -966,13 +992,17 @@
   margin-top: 2px;
 }
 
+/* 40px, under the 44 of the fields above it: a column is a narrow place, and the button is
+   the end of the form rather than the place it is filled in. */
 .submit {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 40px;
   background: var(--ink);
   color: var(--bg);
   border: 1px solid var(--ink);
+  border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
   font: 600 11px/1 var(--sans);
@@ -986,15 +1016,19 @@
 
 .submitKey {
   font: 500 10px/1 var(--mono);
+  border-radius: 4px;
   opacity: 0.65;
 }
 
+/* The same height as the button beside it, or the pair sits on two baselines. */
 .cancel {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 40px;
   background: transparent;
   border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
   font: 400 11px/1 var(--sans);
@@ -1027,6 +1061,7 @@
 
 .banner {
   border-bottom: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   background: var(--accent-tint);
   padding: 18px 20px;
   display: flex;
@@ -1053,6 +1088,7 @@
   gap: 8px;
   background: transparent;
   border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
   transition: background var(--dur);
@@ -1068,6 +1104,7 @@
 .retryKey {
   font: 500 10px/1 var(--mono);
   border: 1px solid var(--accent);
+  border-radius: 4px;
   padding: 2px 4px;
   color: var(--chip-ink);
 }
