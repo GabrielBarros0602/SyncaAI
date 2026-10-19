@@ -47,6 +47,13 @@
   --dur: 0.18s;
   --rev: 0.55s;
 
+  /* Three radii, and the step between them is what keeps a control inside a frame from
+     looking like a second frame. Keycaps take a fixed 4px of their own: a key is drawn at
+     the size of a letter, and any of these would turn it into a pill. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
   --sans: Archivo, system-ui, -apple-system, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 }
