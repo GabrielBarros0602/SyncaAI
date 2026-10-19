@@ -41,8 +41,8 @@
   --chip-bg: transparent;
   --chip-ink: var(--accent);
 
-  --pad: 16px;
-  --rowpad: 11px;
+  --pad: 18px;
+  --rowpad: 13px;
   --num: 34px;
   --dur: 0.18s;
   --rev: 0.55s;
