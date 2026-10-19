@@ -923,6 +923,15 @@
   caret-color: var(--ink);
 }
 
+/* A field already has an edge, so focus moves the edge rather than drawing a second ring
+   two pixels outside it. */
+.input:focus-visible,
+.textarea:focus-visible {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--fill);
+}
+
 .inputMono {
   composes: input;
   font: 400 12px/1.2 var(--mono);

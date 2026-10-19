@@ -158,9 +158,11 @@ button {
 }
 
 /* Half the use of this screen is by keyboard, so the focus ring is part of the design
-   rather than a browser default nobody looked at. */
+   rather than a browser default nobody looked at. At 55% of the ink it still reads 5.7:1
+   on the dark ground and 3.8:1 on the light one, over the 3:1 a focus indicator needs,
+   without being the brightest thing on a screen where everything else is grey. */
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid color-mix(in srgb, var(--ink) 55%, transparent);
   outline-offset: 2px;
 }
 
