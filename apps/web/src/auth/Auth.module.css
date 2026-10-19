@@ -21,10 +21,6 @@
   .screen {
     grid-template-columns: 1fr;
   }
-
-  .hero {
-    display: none;
-  }
 }
 
 .form {
@@ -292,6 +288,14 @@
   background: var(--surface);
   display: flex;
   align-items: flex-end;
+}
+
+/* After the rule it overrides, not before. At the top of the file, with the same
+   specificity, it lost to the `display: flex` above and the panel stacked under the form. */
+@media (max-width: 900px) {
+  .hero {
+    display: none;
+  }
 }
 
 .heroInner {
