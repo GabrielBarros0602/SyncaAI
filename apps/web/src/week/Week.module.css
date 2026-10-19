@@ -526,6 +526,13 @@
   background: var(--hover);
 }
 
+/* The fill is the same tint, and in the design the two are one background on one element, so
+   pointing at an open row changes nothing. Here they are two layers, and stacked they doubled
+   the tint under exactly the small text the contrast of --faint is measured against. */
+.task[data-open="1"] .fill {
+  background: transparent;
+}
+
 .taskLine {
   position: relative;
   margin-top: 8px;
