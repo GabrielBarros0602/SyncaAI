@@ -751,7 +751,7 @@
 .textarea {
   width: 100%;
   background: transparent;
-  border: 1px solid var(--rule2);
+  border: 1px solid var(--field-border);
   padding: 8px;
   font: 400 12px/1.55 var(--sans);
   caret-color: var(--ink);
@@ -896,7 +896,7 @@
 .input {
   width: 100%;
   background: transparent;
-  border: 1px solid var(--rule2);
+  border: 1px solid var(--field-border);
   padding: 8px;
   font: 500 12px/1.2 var(--sans);
   caret-color: var(--ink);
@@ -933,7 +933,7 @@
   min-width: 0;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--field-border);
   padding: 5px 0;
   font: 400 11px/1.2 var(--sans);
   caret-color: var(--ink);
