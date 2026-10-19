@@ -201,3 +201,25 @@ button {
 .skeleton {
   animation: pulse 1.6s ease-in-out infinite;
 }
+
+/*
+ * The shell's padding, overridden from here because it is not set here.
+ *
+ * App.tsx writes `padding: 56px 64px 96px` inline while the week is showing and `0` for the
+ * sign-in screen, and an inline style can only be beaten by !important. 128px of side
+ * padding is a fifth of a tablet and a third of a phone. The selector matches the inline
+ * value itself, which does two things: the sign-in screen, whose padding is zero on
+ * purpose, is never touched; and the day App.tsx stops writing that value, this stops
+ * applying instead of silently outliving what it corrected. Remove both together.
+ */
+@media (max-width: 1099px) {
+  #root > [data-theme][style*="padding: 56px"] {
+    padding: 24px !important;
+  }
+}
+
+@media (max-width: 699px) {
+  #root > [data-theme][style*="padding: 56px"] {
+    padding: 16px !important;
+  }
+}

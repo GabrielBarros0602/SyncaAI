@@ -1163,3 +1163,81 @@
   font: 400 12px/1 var(--sans);
   color: var(--faint);
 }
+
+/*
+ * Below 1100px seven columns stop being readable, and the week becomes a strip.
+ *
+ * The days keep their order and their width, at least 230px, and the strip scrolls sideways
+ * one day at a time. It keeps the thing a week view exists for, days side by side, at the
+ * price of not seeing all seven at once. Snapping makes a partial swipe land on a day
+ * rather than between two.
+ */
+@media (max-width: 1099px) {
+  .grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(230px, 1fr);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .day {
+    scroll-snap-align: start;
+  }
+
+  /* The chrome is a wordmark, four controls, an address and a button: at 768px it ran 83px
+     past the frame, and the frame clips, so the address and sign-out were cut off. It wraps
+     from here, not only on a phone. */
+  .chrome {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .range {
+    min-width: 0;
+  }
+
+  .identityEmail {
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/*
+ * On a phone, one column: the days stack, and the rule between them turns from vertical to
+ * horizontal. A sideways strip of 230px days on a 390px screen shows one day and a sliver,
+ * which is a day view without the day navigation.
+ */
+@media (max-width: 699px) {
+  .grid {
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .day {
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* The frame already draws the last edge. */
+  .day:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* A key nobody can press is a label for nothing. On a device with no hover and a coarse
+   pointer there is almost certainly no keyboard, so the shortcuts and their legend go. */
+@media (hover: none) and (pointer: coarse) {
+  .hint,
+  .key,
+  .verbKey,
+  .submitKey,
+  .retryKey {
+    display: none;
+  }
+}
