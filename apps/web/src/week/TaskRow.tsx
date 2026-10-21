@@ -1,6 +1,7 @@
 import { clock, formatMinutes } from "../lib/time";
-import type { Task, TaskChanges } from "../api/types";
+import type { DayCapacity, Task, TaskChanges } from "../api/types";
 import { EditPanel } from "./EditPanel";
+import { MovePanel } from "./MovePanel";
 import { NotePanel } from "./NotePanel";
 import { useDirectionalFill } from "./useDirectionalFill";
 import { cx } from "../lib/cx";
@@ -10,9 +11,9 @@ import styles from "./Week.module.css";
  * What an opened row is showing.
  *
  * `open` is the resting state the disclosure produces: note and checklist, no form. The rest
- * are verbs. `move`, `list` and `delete` join this as their pull requests land.
+ * are verbs. `list` and `delete` join this as their pull requests land.
  */
-export type Panel = "open" | "edit" | "note";
+export type Panel = "open" | "edit" | "move" | "note";
 
 interface Verb {
   panel: Panel;
@@ -20,10 +21,22 @@ interface Verb {
   key: string;
 }
 
-const VERBS: Verb[] = [
-  { panel: "edit", label: "edit", key: "E" },
-  { panel: "note", label: "note", key: "O" },
-];
+const EDIT: Verb = { panel: "edit", label: "edit", key: "E" };
+const MOVE: Verb = { panel: "move", label: "move", key: "M" };
+const NOTE: Verb = { panel: "note", label: "note", key: "O" };
+
+/**
+ * The verbs a row offers, in the design's order.
+ *
+ * `move` is withheld from a completed task. Completing early shortens `end_at` to the moment
+ * it was done (ADR-0022), so moving a finished task to a day after that moment gives it an
+ * empty range: it would appear to move and occupy nothing, and the plan-versus-actual record
+ * S6 reads from would stop meaning anything. Whether a finished task should move at all is an
+ * open decision in the backlog; until it is made, the verb is not offered.
+ */
+function verbsFor(task: Task): Verb[] {
+  return task.completed_at === null ? [EDIT, MOVE, NOTE] : [EDIT, NOTE];
+}
 
 interface Props {
   task: Task;
@@ -41,6 +54,9 @@ interface Props {
   /** `done 15:00 · 1h30 of 3h · −1h30`, or null while the task is still open. */
   doneLine: string | null;
   timezone: string;
+  /** The week on screen and every task it holds, which is what the move panel weighs. */
+  days: DayCapacity[];
+  allTasks: Task[];
   open: Panel | null;
   onOpen: (panel: Panel | null) => void;
   onSave: (changes: TaskChanges) => Promise<void>;
@@ -68,6 +84,8 @@ export function TaskRow({
   split,
   doneLine,
   timezone,
+  days,
+  allTasks,
   open,
   onOpen,
   onSave,
@@ -75,6 +93,7 @@ export function TaskRow({
 }: Props): React.ReactNode {
   const { onMouseEnter, onMouseLeave, fillRef } = useDirectionalFill();
   const done = task.completed_at !== null;
+  const verbs = verbsFor(task);
   const checked = task.items.filter((item) => item.completed_at !== null).length;
   const hasNote = task.notes !== null && task.notes.trim() !== "";
 
@@ -127,7 +146,7 @@ export function TaskRow({
             onOpen(open === null ? "open" : null);
           }}
           onKeyDown={(event) => {
-            const verb = VERBS.find((candidate) => candidate.key === event.key.toUpperCase());
+            const verb = verbs.find((candidate) => candidate.key === event.key.toUpperCase());
             if (verb === undefined) return;
             event.preventDefault();
             onOpen(verb.panel);
@@ -154,7 +173,7 @@ export function TaskRow({
       {open !== null && (
         <div className={styles.panel}>
           <div className={styles.panelTop}>
-            {VERBS.map((verb) => (
+            {verbs.map((verb) => (
               <span key={verb.panel} className={styles.verb}>
                 <button
                   type="button"
@@ -189,6 +208,10 @@ export function TaskRow({
                 onOpen("open");
               }}
             />
+          )}
+
+          {open === "move" && !done && (
+            <MovePanel task={task} days={days} tasks={allTasks} timezone={timezone} onSave={onSave} />
           )}
 
           {open === "note" && (

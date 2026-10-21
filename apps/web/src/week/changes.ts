@@ -57,6 +57,17 @@ export function changesFrom(task: Task, edited: EditedTask): TaskChanges {
   return changes;
 }
 
+/**
+ * A move, as a change: the start and nothing else.
+ *
+ * Same rule as an edit and for the same reason. Resending the title or the duration alongside
+ * would be harmless today and is still not what moving means, and the next field to gain a
+ * server-side check would make it harmful without anything here changing.
+ */
+export function moveTo(task: Task, startAt: string): TaskChanges {
+  return Date.parse(startAt) === Date.parse(task.start_at) ? {} : { start_at: startAt };
+}
+
 /** Whether an edit asked for anything at all. */
 export function isEmpty(changes: TaskChanges): boolean {
   return Object.keys(changes).length === 0;

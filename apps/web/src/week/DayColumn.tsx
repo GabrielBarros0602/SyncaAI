@@ -79,6 +79,9 @@ interface Props {
   /** The day in the week with the most room, when this one is heavy enough to say so. */
   lighter: DayCapacity | null;
   tasks: Task[];
+  /** All seven days and every task on screen. A row's move panel weighs the whole week. */
+  week: DayCapacity[];
+  allTasks: Task[];
   /** What the day before is still holding when this one starts. */
   carried: Carried[];
   /**
@@ -114,6 +117,8 @@ export function DayColumn({
   capacity,
   lighter,
   tasks,
+  week,
+  allTasks,
   carried,
   onGoToOwner,
   openTask,
@@ -284,6 +289,8 @@ export function DayColumn({
           split={splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday)}
           doneLine={doneText(task, timezone)}
           timezone={timezone}
+          days={week}
+          allTasks={allTasks}
           open={openTask?.id === task.id ? openTask.panel : null}
           onOpen={(panel) => {
             onOpenTask(panel === null ? null : { id: task.id, panel });
