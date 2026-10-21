@@ -793,6 +793,46 @@
   color: var(--dim);
 }
 
+/*
+ * The days a task can move to. Each is a real control with a field's edge, because a day that
+ * is open and one that is not must read apart without relying on colour alone — the disabled
+ * ones also lose their edge and their pointer.
+ */
+.moveDays {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.moveDay {
+  min-height: 32px;
+  min-width: 44px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font: 500 12px/1 var(--mono);
+  color: var(--ink);
+  transition: background var(--dur), border-color var(--dur);
+}
+
+.moveDay:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.moveDay:disabled {
+  color: var(--faint);
+  border-color: var(--rule);
+  cursor: default;
+}
+
+/* The lightest open day, in full ink rather than the accent: a suggestion is not trouble. */
+.moveDayLightest {
+  border-color: var(--ink);
+}
+
 .textarea {
   width: 100%;
   min-height: 44px;

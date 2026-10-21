@@ -11,6 +11,14 @@ import type { Panel } from "./TaskRow";
 import { useWeek } from "./useWeek";
 import styles from "./Week.module.css";
 
+/**
+ * Where focus goes once a write has come back.
+ *
+ * A task's title, or a day's `new task` button when the day has no row left to land on. By id
+ * and by day rather than by element: the element that had focus does not survive the reload.
+ */
+type FocusTarget = { task: string } | { newTaskOn: string };
+
 export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
   const week = useWeek();
@@ -19,6 +27,30 @@ export function WeekScreen(): React.ReactNode {
   // would each be offering to act on a different task with nothing saying which is in front.
   const [openTask, setOpenTask] = useState<{ id: string; panel: Panel } | null>(null);
   const hovered = useRef<string | null>(null);
+  // Every write reloads the week, and the reload puts the skeleton up in between, so the
+  // control somebody pressed is gone by the time the answer lands. Focus is put back on the
+  // screen that arrives after the write — `after` is the load it has to be newer than, so it
+  // is never applied to the old screen a moment before that screen is torn down. A ref, not
+  // state: nothing renders from it, and it is the arrival of the week that has to trigger it.
+  const pendingFocus = useRef<{ target: FocusTarget; after: number } | null>(null);
+  const { loaded, status } = week;
+
+  useEffect(() => {
+    const pending = pendingFocus.current;
+    if (pending === null || status !== "ready" || loaded <= pending.after) return;
+    pendingFocus.current = null;
+
+    const { target } = pending;
+    const element =
+      "task" in target
+        ? document.getElementById(`task-${target.task}`)?.querySelector<HTMLElement>("[aria-expanded]")
+        : document.querySelector<HTMLElement>(`[data-new-task="${target.newTaskOn}"]`);
+    element?.focus();
+  }, [loaded, status]);
+
+  function focusOnceReloaded(target: FocusTarget): void {
+    pendingFocus.current = { target, after: loaded };
+  }
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
@@ -204,6 +236,8 @@ export function WeekScreen(): React.ReactNode {
             capacity={capacity}
             lighter={capacity.load === "fine" ? null : lightestDay(week.days, capacity.day)}
             tasks={week.byDay.get(capacity.day) ?? []}
+            week={week.days}
+            allTasks={week.tasks}
             carried={week.carried.get(capacity.day) ?? []}
             // Null on the first column only. What Monday inherits comes from the Sunday
             // before the week — fetched so the figures are right, never rendered — so there
@@ -214,8 +248,9 @@ export function WeekScreen(): React.ReactNode {
             onSaveTask={async (taskId, changes) => {
               await week.update(taskId, changes);
               // Back to the resting panel rather than shut. The row stays where the reader
-              // was, and the change they just made is on it.
+              // was, and the change they just made is on it — on another column, after a move.
               setOpenTask({ id: taskId, panel: "open" });
+              focusOnceReloaded({ task: taskId });
             }}
             index={index}
             weekday={weekdayName(capacity.weekday)}

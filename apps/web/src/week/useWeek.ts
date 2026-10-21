@@ -23,6 +23,8 @@ export type WeekStatus = "loading" | "ready" | "unreachable";
 
 interface Snapshot {
   window: string;
+  /** How many snapshots had arrived before this one. Lets a caller wait for the next. */
+  sequence: number;
   me: Me;
   days: DayCapacity[];
   tasks: Task[];
@@ -34,6 +36,14 @@ export interface Week {
   days: DayCapacity[];
   /** Tasks keyed by the local date they start on — the day that owns the row. */
   byDay: Map<string, Task[]>;
+  /** Every task fetched, the evening before the week included: what occupancy is read from. */
+  tasks: Task[];
+  /**
+   * How many times the week has arrived. Every write reloads it, and the reload replaces the
+   * whole screen with the skeleton in between, so anything that has to happen *after* a write
+   * — putting focus back — waits for this to move rather than acting on the screen it was on.
+   */
+  loaded: number;
   /** What the previous day is still holding, keyed by the day receiving it. */
   carried: Map<string, Carried[]>;
   monday: Date;
@@ -93,7 +103,13 @@ export function useWeek(): Week {
       ]);
 
       if (cancelled) return;
-      setSnapshot({ window: currentWindow, me, days, tasks: page.items });
+      setSnapshot((previous) => ({
+        window: currentWindow,
+        sequence: (previous?.sequence ?? 0) + 1,
+        me,
+        days,
+        tasks: page.items,
+      }));
     }
 
     void load().catch(() => {
@@ -172,6 +188,8 @@ export function useWeek(): Week {
     me: ready?.me ?? null,
     days: ready?.days ?? [],
     byDay,
+    tasks: ready?.tasks ?? [],
+    loaded: snapshot?.sequence ?? 0,
     carried,
     monday,
     offset,

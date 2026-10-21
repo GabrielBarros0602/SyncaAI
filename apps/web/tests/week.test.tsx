@@ -118,6 +118,8 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       capacity={capacity}
       lighter={when.lighter ?? null}
       tasks={when.tasks ?? []}
+      week={[capacity]}
+      allTasks={when.tasks ?? []}
       carried={when.carried ?? []}
       onGoToOwner={when.onGoToOwner === undefined ? () => undefined : when.onGoToOwner}
       openTask={typeof when.openTask === "string" ? { id: when.openTask, panel: "open" } : (when.openTask ?? null)}
