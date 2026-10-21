@@ -772,6 +772,13 @@
   border-bottom-color: var(--ink);
 }
 
+/* Delete answers the pointer in the accent, as the design draws it: the one verb that can lose
+   something is the one verb allowed to look like trouble before it is pressed. */
+.verbDanger:hover {
+  color: var(--chip-ink);
+  border-bottom-color: var(--accent);
+}
+
 .verbKey {
   font: 500 11px/1 var(--mono);
   border: 1px solid var(--rule);
@@ -1110,6 +1117,33 @@
   cursor: pointer;
   font: 400 12px/1 var(--sans);
   color: var(--dim);
+}
+
+/*
+ * The confirming press of a delete that cannot be undone. Ruled in the accent rather than
+ * filled with it: it has to read as the dangerous one of the pair without becoming the
+ * loudest thing in the column. It is the error band's pairing — accent text on the accent
+ * tint — and so it shares that band's open contrast question: under 4.5:1 inside an
+ * overbooked day and in the light theme (backlog, ADR-0024).
+ */
+.danger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  background: var(--accent-tint);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  cursor: pointer;
+  font: 600 12px/1 var(--sans);
+  letter-spacing: 0.03em;
+  color: var(--chip-ink);
+}
+
+.danger:disabled {
+  opacity: 0.55;
+  cursor: progress;
 }
 
 .emptyWeek {

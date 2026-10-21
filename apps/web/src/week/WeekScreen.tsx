@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useSession } from "../auth/useSession";
 import { daysFrom, formatMinutes, isoWeek, stamp, weekdayName, zonedDay } from "../lib/time";
-import type { NewTask } from "../api/types";
+import type { NewTask, Task } from "../api/types";
 import { DayColumn } from "./DayColumn";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
@@ -120,6 +120,19 @@ export function WeekScreen(): React.ReactNode {
     const row = document.getElementById(`task-${taskId}`);
     row?.querySelector<HTMLElement>("[aria-expanded]")?.focus();
   }
+
+  // Focus may not stay on a row that no longer exists. It goes where the same convention
+  // already sends it — a row's title — and to the next row in the day, or the one before it,
+  // so a run of deletes walks down a day; with none left, to the day's `new task` button.
+  function focusAfterDeleting(task: Task, timezone: string): FocusTarget {
+    const day = zonedDay(task.start_at, timezone);
+    const rows = week.byDay.get(day) ?? [];
+    const at = rows.findIndex((row) => row.id === task.id);
+    const neighbour = rows[at + 1] ?? rows[at - 1];
+    return neighbour === undefined ? { newTaskOn: day } : { task: neighbour.id };
+  }
+
+  const timezone = week.me.timezone;
 
   return (
     <div className={styles.frame}>
@@ -251,6 +264,12 @@ export function WeekScreen(): React.ReactNode {
               // was, and the change they just made is on it — on another column, after a move.
               setOpenTask({ id: taskId, panel: "open" });
               focusOnceReloaded({ task: taskId });
+            }}
+            onDeleteTask={async (task) => {
+              const target = focusAfterDeleting(task, timezone);
+              await week.remove(task.id);
+              setOpenTask(null);
+              focusOnceReloaded(target);
             }}
             index={index}
             weekday={weekdayName(capacity.weekday)}

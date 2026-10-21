@@ -1,5 +1,6 @@
 import { clock, formatMinutes } from "../lib/time";
 import type { DayCapacity, Task, TaskChanges } from "../api/types";
+import { DeletePanel } from "./DeletePanel";
 import { EditPanel } from "./EditPanel";
 import { MovePanel } from "./MovePanel";
 import { NotePanel } from "./NotePanel";
@@ -11,19 +12,26 @@ import styles from "./Week.module.css";
  * What an opened row is showing.
  *
  * `open` is the resting state the disclosure produces: note and checklist, no form. The rest
- * are verbs. `list` and `delete` join this as their pull requests land.
+ * are verbs. `list` joins this when the checklist has an API to save to.
  */
-export type Panel = "open" | "edit" | "move" | "note";
+export type Panel = "open" | "edit" | "move" | "note" | "delete";
 
 interface Verb {
   panel: Panel;
   label: string;
+  /** What the key hint shows. */
   key: string;
+  /** The `KeyboardEvent.key` values that reach this verb from the title. */
+  keys: string[];
 }
 
-const EDIT: Verb = { panel: "edit", label: "edit", key: "E" };
-const MOVE: Verb = { panel: "move", label: "move", key: "M" };
-const NOTE: Verb = { panel: "note", label: "note", key: "O" };
+const EDIT: Verb = { panel: "edit", label: "edit", key: "E", keys: ["e", "E"] };
+const MOVE: Verb = { panel: "move", label: "move", key: "M", keys: ["m", "M"] };
+const NOTE: Verb = { panel: "note", label: "note", key: "O", keys: ["o", "O"] };
+// The design's key is ⌫. Delete is accepted beside Backspace because on a Mac keyboard the
+// key labelled delete sends Backspace, and on a PC the key labelled Delete sends Delete —
+// each person presses the one their keyboard calls delete.
+const DELETE: Verb = { panel: "delete", label: "delete", key: "⌫", keys: ["Backspace", "Delete"] };
 
 /**
  * The verbs a row offers, in the design's order.
@@ -35,7 +43,7 @@ const NOTE: Verb = { panel: "note", label: "note", key: "O" };
  * open decision in the backlog; until it is made, the verb is not offered.
  */
 function verbsFor(task: Task): Verb[] {
-  return task.completed_at === null ? [EDIT, MOVE, NOTE] : [EDIT, NOTE];
+  return task.completed_at === null ? [EDIT, MOVE, NOTE, DELETE] : [EDIT, NOTE, DELETE];
 }
 
 interface Props {
@@ -61,6 +69,8 @@ interface Props {
   onOpen: (panel: Panel | null) => void;
   onSave: (changes: TaskChanges) => Promise<void>;
   onToggle: (task: Task) => void;
+  /** Delete the task. Rejects with the server's `ApiError` so the panel can show it. */
+  onDelete: () => Promise<void>;
 }
 
 /**
@@ -90,6 +100,7 @@ export function TaskRow({
   onOpen,
   onSave,
   onToggle,
+  onDelete,
 }: Props): React.ReactNode {
   const { onMouseEnter, onMouseLeave, fillRef } = useDirectionalFill();
   const done = task.completed_at !== null;
@@ -146,7 +157,7 @@ export function TaskRow({
             onOpen(open === null ? "open" : null);
           }}
           onKeyDown={(event) => {
-            const verb = verbs.find((candidate) => candidate.key === event.key.toUpperCase());
+            const verb = verbs.find((candidate) => candidate.keys.includes(event.key));
             if (verb === undefined) return;
             event.preventDefault();
             onOpen(verb.panel);
@@ -177,7 +188,11 @@ export function TaskRow({
               <span key={verb.panel} className={styles.verb}>
                 <button
                   type="button"
-                  className={cx(styles.verbLabel, open === verb.panel && styles.verbActive)}
+                  className={cx(
+                    styles.verbLabel,
+                    open === verb.panel && styles.verbActive,
+                    verb === DELETE && styles.verbDanger,
+                  )}
                   aria-pressed={open === verb.panel}
                   onClick={() => {
                     onOpen(open === verb.panel ? "open" : verb.panel);
@@ -204,6 +219,15 @@ export function TaskRow({
               task={task}
               timezone={timezone}
               onSave={onSave}
+              onCancel={() => {
+                onOpen("open");
+              }}
+            />
+          )}
+
+          {open === "delete" && (
+            <DeletePanel
+              onConfirm={onDelete}
               onCancel={() => {
                 onOpen("open");
               }}
