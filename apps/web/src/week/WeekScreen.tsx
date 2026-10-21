@@ -244,12 +244,17 @@ export function WeekScreen(): React.ReactNode {
             </span>
           )}
         </div>
-        {/* Only the keys that do something today. The design's legend lists nine; the other
-            six belong to verbs that do not exist yet, and a legend that promises them is a
-            worse guide than a short one. It grows as they land. */}
+        {/* Only the keys that do something today, in the design's order. Its legend lists
+            nine; the one missing is `L` for `list`, which has no API to save to yet, and a
+            legend that promises it is a worse guide than a short one. */}
         <div className={styles.legend}>
           {[
             { key: "space", word: "complete" },
+            { key: "⏎", word: "open" },
+            { key: "E", word: "edit" },
+            { key: "M", word: "move" },
+            { key: "O", word: "note" },
+            { key: "⌫", word: "delete" },
             { key: "N", word: "new" },
             { key: "T", word: "this week" },
           ].map((entry) => (
