@@ -54,6 +54,8 @@ export interface Week {
   /** Send a partial change. Rejects with the server's `ApiError` so the panel can show it. */
   update: (taskId: string, changes: TaskChanges) => Promise<void>;
   toggle: (task: Task) => Promise<void>;
+  /** Delete a task. A 404 counts as done; anything else rejects with the server's `ApiError`. */
+  remove: (taskId: string) => Promise<void>;
   /** The server's word on the last create. A conflict is a 409 and the message is the API's. */
   createError: string | null;
   clearCreateError: () => void;
@@ -179,6 +181,21 @@ export function useWeek(): Week {
     [refetch],
   );
 
+  const remove = useCallback(
+    async (taskId: string) => {
+      try {
+        await api.delete<undefined>(`/tasks/${taskId}`);
+      } catch (problem) {
+        // A 404 is "not there for you" (ADR-0016): already deleted, from another tab or a
+        // moment ago, or never yours — indistinguishable on purpose. Either way the row is
+        // gone, so it is removed like any other delete rather than reported as a failure.
+        if (!(problem instanceof ApiError && problem.status === 404)) throw problem;
+      }
+      refetch();
+    },
+    [refetch],
+  );
+
   const clearCreateError = useCallback(() => {
     setCreateError(null);
   }, []);
@@ -198,6 +215,7 @@ export function useWeek(): Week {
     create,
     update,
     toggle,
+    remove,
     createError,
     clearCreateError,
     creating,

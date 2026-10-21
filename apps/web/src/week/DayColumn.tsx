@@ -95,6 +95,7 @@ interface Props {
   openTask: { id: string; panel: Panel } | null;
   onOpenTask: (open: { id: string; panel: Panel } | null) => void;
   onSaveTask: (taskId: string, changes: TaskChanges) => Promise<void>;
+  onDeleteTask: (task: Task) => Promise<void>;
   index: number;
   weekday: string;
   date: string;
@@ -124,6 +125,7 @@ export function DayColumn({
   openTask,
   onOpenTask,
   onSaveTask,
+  onDeleteTask,
   index,
   weekday,
   date,
@@ -297,6 +299,7 @@ export function DayColumn({
           }}
           onSave={(changes) => onSaveTask(task.id, changes)}
           onToggle={onToggle}
+          onDelete={() => onDeleteTask(task)}
         />
       ))}
 
@@ -323,6 +326,9 @@ export function DayColumn({
       ) : (
         <button
           type="button"
+          // Where focus goes when the last row of this day is deleted: the nearest thing in
+          // the column somebody can still act on.
+          data-new-task={capacity.day}
           className={styles.newTask}
           onClick={() => {
             onOpenForm(capacity.day);
