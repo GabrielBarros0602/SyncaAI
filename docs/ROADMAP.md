@@ -250,7 +250,7 @@ Antecipado de propósito. Sem esta fatia, nada do produto é visível antes do S
 entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada — nenhuma IA.
 
 - [x] **Decidido:** Vite + React + TypeScript, três telas, sem biblioteca de estado
-      → vitrine funcional, substituída no S8
+      → vitrine funcional, substituída no S8 — **revisto em 2026-10-21, ver o fim desta seção**
 - [x] **Decidido:** o navegador fala com **uma origem só** — o Vite encaminha `/api/*` para a
       API, e a API **não ganha CORS** → [ADR-0021](adr/0021-browser-session-and-origin.md)
 - [x] **Decidido:** access token **só em memória**, com refresh silencioso pelo cookie
@@ -275,8 +275,24 @@ entre S1 e S7 é onde a motivação morre. Depende do S2 e do S4 e de mais nada 
 código. Login de verdade, dado de verdade, a tese do produto na tela — "sua terça tem 90
 minutos livres". A camada de IA ainda não existe, e o produto já se explica sozinho.
 
-**O que fica devendo:** este front-end é deliberadamente mínimo e será substituído no S8,
-quando o protótipo inteiro entra. Trate como vitrine funcional, não como base definitiva.
+**O que fica devendo:** ~~este front-end é deliberadamente mínimo e será substituído no S8,
+quando o protótipo inteiro entra. Trate como vitrine funcional, não como base definitiva.~~
+
+> **Revisto em 2026-10-21: o front-end não é substituído no S8. Ele é a base.**
+>
+> A frase acima foi escrita quando este front-end era uma vitrine de três telas e o protótipo
+> em `docs/prototype/` era o destino. Desde então o item 2 do backlog está reconstruindo a
+> semana a partir da **segunda** rodada de design (`docs/design/`) — quatro das oito PRs
+> entraram —, as duas telas que faltam, confirmar endereço e configurações, vêm dessa mesma
+> rodada, a suíte do web tem 173 testes, e o
+> [ADR-0024](adr/0024-soften-the-visual-language-in-stylesheets-only.md) ajustou a linguagem
+> visual por cima. O protótipo é a primeira rodada, com outro design system (`_ds/modernist`).
+> Migrá-lo inteiro no S8 seria jogar fora esse trabalho para voltar a um estado já alcançado,
+> justamente no sprint cujo marco é ir para o currículo.
+>
+> Fica assim: o S8 acrescenta as superfícies da IA a este front-end. O protótipo continua sendo
+> referência para o que só ele desenha — as superfícies do S10 —, e cada uma entra no código
+> atual quando o sprint dela chegar, não numa migração em bloco.
 
 ---
 
@@ -339,8 +355,12 @@ de "nenhum projeto com testes automatizados publicados".
 
 ## S8 — Front-end ligado à API
 
-- [ ] Protótipo migrado do HTML estático para build real, preservando o design system em `_ds/`
-- [ ] Fluxo de autenticação
+- ~~Protótipo migrado do HTML estático para build real, preservando o design system em `_ds/`~~
+  — fora do plano desde 2026-10-21; o S8 constrói sobre o front-end atual (nota no fim do S5)
+- [ ] Fluxo de autenticação completo. Entrar, cadastrar e confirmar o endereço existem desde o
+      S5; faltam recuperar e trocar a senha, e as duas pedem ADR antes do endpoint, porque o
+      reset atual desloga todas as sessões e a troca desenhada em `docs/design/settings.html`
+      não desloga (backlog, rodada 4)
 - [ ] Terceiro destino `To plan` na Captura rápida, e o comando equivalente no `⌘K`
 - [ ] Card de revisão do draft: itens, dia sugerido de cada um, edição, Approve e Discard
 - [ ] Polling do status do job com backoff
