@@ -256,6 +256,19 @@ describe("deleting a task that cannot come back", () => {
     });
   });
 
+  it("says why this one cannot come back", async () => {
+    const server: Server = { tasks: [STARTED], calls: [] };
+    serve(server);
+    renderWeek();
+    await openRow("Standup");
+
+    fireEvent.click(screen.getByRole("button", { name: "delete" }));
+
+    expect(
+      screen.getByText(/It has already started, and the server will not book a start in the past\./),
+    ).toBeDefined();
+  });
+
   it("moves focus to the day's new-task button when nothing is left on it", async () => {
     const server: Server = { tasks: [STARTED], calls: [] };
     serve(server);
@@ -268,5 +281,108 @@ describe("deleting a task that cannot come back", () => {
     await waitFor(() => {
       expect(document.activeElement?.getAttribute("data-new-task")).toBe("2026-08-26");
     });
+  });
+});
+
+describe("deleting a task that can come back", () => {
+  // Tomorrow at 10:00, nothing ticked: a POST recreates it exactly, apart from its id.
+  const THESIS = aTask("thesis", "2026-08-27T10:00:00", "2026-08-27T12:00:00", {
+    title: "Thesis chapter",
+    notes: "Ask about the sources.",
+    tag: { id: "g1", name: "college" },
+    items: [
+      { id: "i2", label: "Sources", position: 1, completed_at: null },
+      { id: "i1", label: "Outline", position: 0, completed_at: null },
+    ],
+  });
+  const SNAPSHOT = {
+    title: "Thesis chapter",
+    start_at: THESIS.start_at,
+    duration_minutes: 120,
+    notes: "Ask about the sources.",
+    tag: "college",
+    items: [{ label: "Outline" }, { label: "Sources" }],
+  };
+
+  function posts(server: Server): Call[] {
+    return server.calls.filter((call) => call.method === "POST" && call.path === "/tasks");
+  }
+
+  async function deleteThesis(server: Server): Promise<void> {
+    serve(server);
+    renderWeek();
+    await openRow("Thesis chapter");
+    fireEvent.click(screen.getByRole("button", { name: "delete" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toContain("deleted · Thesis chapter");
+    });
+  }
+
+  it("sends the DELETE at once, without asking, and offers undo naming the task", async () => {
+    const server: Server = { tasks: [THESIS], calls: [] };
+    serve(server);
+    renderWeek();
+    await openRow("Thesis chapter");
+
+    fireEvent.click(screen.getByRole("button", { name: "delete" }));
+
+    // At once: on the press, before any notice or reload, and with no question in between.
+    expect(deletes(server)).toEqual([{ method: "DELETE", path: "/tasks/thesis", body: undefined }]);
+    expect(screen.queryByText(/There is no undo for this one\./)).toBeNull();
+
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toContain("deleted · Thesis chapter");
+    });
+    expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
+    expect(screen.getByRole("button", { name: "undo" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Thesis chapter", expanded: false })).toBeNull();
+  });
+
+  it("recreates exactly the snapshot taken before the delete", async () => {
+    const server: Server = { tasks: [THESIS], calls: [] };
+    await deleteThesis(server);
+
+    fireEvent.click(screen.getByRole("button", { name: "undo" }));
+
+    await waitFor(() => {
+      expect(posts(server)).toEqual([{ method: "POST", path: "/tasks", body: SNAPSHOT }]);
+    });
+    await waitFor(() => {
+      expect(title("Thesis chapter")).toBeDefined();
+    });
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("puts focus on the restored row, which has a new id", async () => {
+    const server: Server = { tasks: [THESIS], calls: [] };
+    await deleteThesis(server);
+
+    fireEvent.click(screen.getByRole("button", { name: "undo" }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(title("Thesis chapter"));
+    });
+    // Found by the id the server gave the recreate, not by the one that was deleted.
+    expect(document.activeElement?.closest("[id^=task-]")?.id).toMatch(/^task-created-/);
+  });
+
+  it("shows the server's refusal once, and does not try again", async () => {
+    // The start can pass during the nine seconds; then the server refuses the recreate.
+    const server: Server = {
+      tasks: [THESIS],
+      calls: [],
+      refuseCreate: { status: 422, detail: "A task cannot start in the past." },
+    };
+    await deleteThesis(server);
+
+    fireEvent.click(screen.getByRole("button", { name: "undo" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe(
+        "Thesis chapter was not brought back. A task cannot start in the past.",
+      );
+    });
+    expect(screen.queryByRole("button", { name: "undo" })).toBeNull();
+    expect(posts(server)).toHaveLength(1);
   });
 });

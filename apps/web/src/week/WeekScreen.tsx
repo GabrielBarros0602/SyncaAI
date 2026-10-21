@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
 import { daysFrom, formatMinutes, isoWeek, stamp, weekdayName, zonedDay } from "../lib/time";
 import type { NewTask, Task } from "../api/types";
@@ -8,6 +9,7 @@ import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
 import { lightestDay } from "./load";
 import type { Panel } from "./TaskRow";
+import type { Trash } from "./Trash";
 import { useWeek } from "./useWeek";
 import styles from "./Week.module.css";
 
@@ -18,6 +20,9 @@ import styles from "./Week.module.css";
  * and by day rather than by element: the element that had focus does not survive the reload.
  */
 type FocusTarget = { task: string } | { newTaskOn: string };
+
+/** How long `undo` stays on offer after a delete, as the design draws it. */
+const UNDO_WINDOW_MS = 9000;
 
 export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
@@ -34,6 +39,20 @@ export function WeekScreen(): React.ReactNode {
   // state: nothing renders from it, and it is the arrival of the week that has to trigger it.
   const pendingFocus = useRef<{ target: FocusTarget; after: number } | null>(null);
   const { loaded, status } = week;
+  // The last restorable delete, for as long as it can be undone. One across the week, like the
+  // open row: a second delete replaces the first notice, as the design does.
+  const [trash, setTrash] = useState<Trash | null>(null);
+
+  useEffect(() => {
+    if (trash === null) return;
+    // The design's window. A refusal restarts it, so the sentence is not gone before it is read.
+    const timer = setTimeout(() => {
+      setTrash(null);
+    }, UNDO_WINDOW_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [trash]);
 
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -265,11 +284,33 @@ export function WeekScreen(): React.ReactNode {
               setOpenTask({ id: taskId, panel: "open" });
               focusOnceReloaded({ task: taskId });
             }}
-            onDeleteTask={async (task) => {
+            onDeleteTask={async (task, snapshot) => {
               const target = focusAfterDeleting(task, timezone);
+              // Sent now, not when the window closes: holding the DELETE would keep the slot
+              // taken from somebody deleting precisely to free it (the division of item 2).
               await week.remove(task.id);
               setOpenTask(null);
+              // A confirmed delete has no undo, and leaves any notice already showing alone.
+              if (snapshot !== null) {
+                setTrash({ day: zonedDay(task.start_at, timezone), title: task.title, snapshot, failure: null });
+              }
               focusOnceReloaded(target);
+            }}
+            trash={trash?.day === capacity.day ? trash : null}
+            onUndo={async () => {
+              if (trash === null) return;
+              try {
+                // A recreate, so a new id. Focus follows the task that exists now, found by the
+                // id the server just gave it, never by the one that was deleted.
+                const restored = await week.restore(trash.snapshot);
+                setTrash(null);
+                focusOnceReloaded({ task: restored.id });
+              } catch (problem) {
+                setTrash({
+                  ...trash,
+                  failure: problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.",
+                });
+              }
             }}
             index={index}
             weekday={weekdayName(capacity.weekday)}

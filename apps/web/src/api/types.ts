@@ -91,6 +91,8 @@ export interface NewTask {
   title: string;
   start_at: string;
   duration_minutes: number;
+  /** Already accepted by `TaskCreate`; the new-task form never sent one, an undo does. */
+  notes?: string;
   tag?: string;
   items?: { label: string }[];
 }

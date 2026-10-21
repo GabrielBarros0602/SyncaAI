@@ -1,6 +1,10 @@
+import { useState } from "react";
+
+import { ApiError } from "../api/client";
 import { clock, formatMinutes } from "../lib/time";
-import type { DayCapacity, Task, TaskChanges } from "../api/types";
+import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
 import { DeletePanel } from "./DeletePanel";
+import { type RestoreBlocker, restoreBlocker, snapshotOf } from "./restore";
 import { EditPanel } from "./EditPanel";
 import { MovePanel } from "./MovePanel";
 import { NotePanel } from "./NotePanel";
@@ -46,6 +50,18 @@ function verbsFor(task: Task): Verb[] {
   return task.completed_at === null ? [EDIT, MOVE, NOTE, DELETE] : [EDIT, NOTE, DELETE];
 }
 
+/** Why the in-row confirmation says this one will not come back. Each names what is lost. */
+const WHY_NOT: Record<RestoreBlocker, string> = {
+  done: "It is done, and a task brought back would come back open.",
+  started: "It has already started, and the server will not book a start in the past.",
+  checked: "Part of its checklist is ticked, and it would come back unticked.",
+};
+
+function whyNot(task: Task): string | null {
+  const blocker = restoreBlocker(task, new Date());
+  return blocker === null ? null : WHY_NOT[blocker];
+}
+
 interface Props {
   task: Task;
   /** `03.02` — the day's number and the task's place in it. */
@@ -69,8 +85,11 @@ interface Props {
   onOpen: (panel: Panel | null) => void;
   onSave: (changes: TaskChanges) => Promise<void>;
   onToggle: (task: Task) => void;
-  /** Delete the task. Rejects with the server's `ApiError` so the panel can show it. */
-  onDelete: () => Promise<void>;
+  /**
+   * Delete the task. `snapshot` is what an undo would recreate, or null when the delete was
+   * confirmed because no faithful recreate exists. Rejects with the server's `ApiError`.
+   */
+  onDelete: (snapshot: NewTask | null) => Promise<void>;
 }
 
 /**
@@ -105,6 +124,21 @@ export function TaskRow({
   const { onMouseEnter, onMouseLeave, fillRef } = useDirectionalFill();
   const done = task.completed_at !== null;
   const verbs = verbsFor(task);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Judged at the press, not when the row was drawn: a task that could be put back when the
+  // screen loaded may have started since (ADR-0025). A faithful recreate exists, so the delete
+  // goes now and the undo is offered; otherwise the row asks first and promises nothing.
+  function startDelete(): void {
+    if (restoreBlocker(task, new Date()) !== null) {
+      onOpen("delete");
+      return;
+    }
+    setDeleteError(null);
+    onDelete(snapshotOf(task)).catch((problem: unknown) => {
+      setDeleteError(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
+    });
+  }
   const checked = task.items.filter((item) => item.completed_at !== null).length;
   const hasNote = task.notes !== null && task.notes.trim() !== "";
 
@@ -160,7 +194,8 @@ export function TaskRow({
             const verb = verbs.find((candidate) => candidate.keys.includes(event.key));
             if (verb === undefined) return;
             event.preventDefault();
-            onOpen(verb.panel);
+            if (verb === DELETE) startDelete();
+            else onOpen(verb.panel);
           }}
         >
           {task.title}
@@ -181,6 +216,14 @@ export function TaskRow({
 
       {doneLine !== null && <span className={styles.taskDoneLine}>{doneLine}</span>}
 
+      {/* Outside the panel, because a delete can be started from the title with the row shut,
+          and a refusal nobody can see is a refusal that did not happen. */}
+      {deleteError !== null && (
+        <div role="alert" className={cx(styles.error, styles.rowError)}>
+          {deleteError}
+        </div>
+      )}
+
       {open !== null && (
         <div className={styles.panel}>
           <div className={styles.panelTop}>
@@ -195,7 +238,9 @@ export function TaskRow({
                   )}
                   aria-pressed={open === verb.panel}
                   onClick={() => {
-                    onOpen(open === verb.panel ? "open" : verb.panel);
+                    if (open === verb.panel) onOpen("open");
+                    else if (verb === DELETE) startDelete();
+                    else onOpen(verb.panel);
                   }}
                 >
                   {verb.label}
@@ -227,7 +272,8 @@ export function TaskRow({
 
           {open === "delete" && (
             <DeletePanel
-              onConfirm={onDelete}
+              reason={whyNot(task)}
+              onConfirm={() => onDelete(null)}
               onCancel={() => {
                 onOpen("open");
               }}
