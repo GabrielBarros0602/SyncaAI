@@ -34,7 +34,7 @@ idna==3.19
     # via
     #   anyio
     #   email-validator
-mako==1.4.1
+mako==1.4.2
     # via alembic
 markupsafe==3.0.3
     # via mako
