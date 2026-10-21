@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 23 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 25 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -43,7 +43,7 @@ trace. Thinning them out to save effort is the one way this arrangement fails.
 So:
 
 - A commit body says **why**, not what. The diff already says what.
-- A non-trivial decision gets an ADR, in the format the existing 23 use.
+- A non-trivial decision gets an ADR, in the format the existing 25 use.
 - A comment in code explains the reason a line is surprising, not the mechanics of the line.
 - Anything discovered while working — a defect, an assumption that turned out false, a
   constraint nobody had noticed — belongs in the commit body or in `docs/backlog.md`, not only

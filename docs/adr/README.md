@@ -33,6 +33,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0022](0022-capacity-against-a-usable-day.md) | Capacity is real occupancy, measured against a usable day | Accepted |
 | [0023](0023-a-budget-you-choose-under-a-ceiling-you-do-not.md) | A budget you choose, under a ceiling you do not | Accepted |
 | [0024](0024-soften-the-visual-language-in-stylesheets-only.md) | Soften the visual language, in stylesheets only | Accepted |
+| [0025](0025-undo-is-a-recreate.md) | Undo is a recreate, so it is offered only where recreating is faithful | Accepted |
 
 ## Template
 
