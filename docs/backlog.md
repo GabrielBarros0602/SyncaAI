@@ -74,7 +74,7 @@ anterior e podem entrar em qualquer ponto.
 | 2 | ✅ A faixa herdada, o `+1` e a linha de split — fecha a metade visual do 1.2 | — | não |
 | 3 | ✅ A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
 | 4 | ✅ Verbos `edit` e `note` | 3 | não |
-| 5 | Verbos `move` e `delete` com undo | 3 | não |
+| 5 | ✅ Verbos `move` e `delete` com undo — o undo é recriação, só onde ela é fiel ([ADR-0025](adr/0025-undo-is-a-recreate.md)) | 3 | não |
 | 6 | A oferta de mover, do dia pesado | 5 | não |
 | 7 | Confirmar endereço, três estados | — | não |
 | 8 | Configurações — endereço, fuso, sair | — | `PATCH /me` |
@@ -107,6 +107,41 @@ inteira e as setas navegando dentro dela. Isso muda a navegação da tela toda, 
 de uma linha, e o `docs/design/` não especificou navegação por teclado além das teclas de
 atalho — então **é pergunta nova, não implementação faltando**. Provavelmente merece ADR
 próprio, porque decide como a semana inteira é percorrida.
+
+### Aberto pela PR 5, e é decisão sua
+
+**Mover uma tarefa já concluída.** A PR 5 não oferece o verbo numa linha concluída. Concluir
+cedo encurta o `end_at` para o momento da conclusão (ADR-0022); movida para um dia depois desse
+momento, a tarefa ganha um intervalo vazio — parece mudar de lugar e não ocupa nada, e o
+plano-contra-real que o S6 vai ler deixa de significar alguma coisa. As opções:
+
+- **Manter como está:** concluída não se move. Corrigir o dia de uma tarefa já feita vira editar
+  o horário, que esbarra na regra do passado (acima).
+- **Mover só para antes do `completed_at`**, onde o intervalo continua de pé. Exige o cliente
+  saber disso e o servidor concordar, e o caso é raro.
+- **Permitir e aceitar o intervalo vazio**, tratando a concluída como registro e não como
+  reserva. Muda o que o `end_at` significa para o S6.
+
+### Achados da PR 5
+
+- **Toda escrita recarrega a semana inteira pelo esqueleto.** O `refetch` muda a janela, o
+  status volta a `loading`, e o `WeekScreen` troca a tela toda pelo `WeekSkeleton` até a resposta
+  chegar — então o elemento focado some, em qualquer verbo. A PR 5 devolve o foco depois da
+  recarga para `edit`, `note`, `move`, excluir e desfazer. **A caixa de concluir, o verbo mais
+  usado, continua perdendo o foco.** Consertar de vez pede manter a semana anterior na tela
+  enquanto a nova chega, o que esbarra de propósito no `WeekUnreachable`, que prefere não mostrar
+  número velho. É decisão, não detalhe.
+- **A oferta do dia pesado sugere dia que já passou.** Numa quarta, a sexta estourada dizia
+  "Mon has 16h free". O `lightestDay` do `load.ts` não olha o relógio. É a PR 6, que vai
+  transformar a frase em botão — e um botão para mover algo para segunda-feira passada seria
+  recusado pelo servidor.
+- **Região viva inserida já com texto.** O aviso `deleted · título` é `role="status"` e
+  `aria-live="polite"`, e nasce junto com o texto, porque a semana inteira é remontada depois da
+  recarga. Leitores de tela anunciam esse caso de forma inconsistente. O jsdom confirma o papel e
+  o texto, não o que um leitor fala: falta uma passada com NVDA ou VoiceOver.
+- **O brief dizia que o projeto não usa `autoFocus`.** Usa: o `NewTaskForm` foca o título ao
+  abrir, com o `eslint-disable` justificado. A convenção de foco programático que existe é a do
+  `WeekScreen` — focar o título da linha pelo id —, e foi essa que a PR 5 seguiu.
 
 ### Aberto pela PR 4, e é decisão sua
 
@@ -264,7 +299,8 @@ fora dessa linha:
 
 - **O `--accent` do tema claro reprova sobre os próprios tons de alarme**: 4,35:1 no chip
   `over by`, 3,88:1 numa linha aberta de dia estourado. É a única cor de sinal, então é
-  decisão de design.
+  decisão de design. A PR 5 acrescentou mais um lugar com esse par — o botão que confirma uma
+  exclusão sem volta —, e ele herda o mesmo problema.
 - **O tema claro não liga pela interface.** O `App.tsx` põe `data-theme` num `div` dentro do
   `body`, e o fundo da página resolve contra `:root`; trocar o atributo nesse `div` desenha
   tinta escura sobre página escura, a 1,05:1. Para conferir no DevTools, o atributo vai no
@@ -276,7 +312,8 @@ fora dessa linha:
 - **A faixa de 700–1099px começa na segunda-feira**, e numa sexta o dia de hoje fica fora da
   tela até alguém arrastar. Rolar até hoje precisa de script.
 
-E uma fora do `docs/`: o `CLAUDE.md` diz que são 23 ADRs, e agora são 24.
+~~E uma fora do `docs/`: o `CLAUDE.md` diz que são 23 ADRs, e agora são 24.~~ Corrigido na
+PR 5, que levou a contagem a 25.
 
 ---
 
