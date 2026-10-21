@@ -159,6 +159,12 @@ Rules:
   failed to start locally for weeks, with a green build to look at the whole time.
 - The API venv lives at `apps/api/.venv` and has to be activated —
   `.\.venv\Scripts\Activate.ps1` — or `ruff`, `mypy` and `pytest` are simply not on the path.
+- **Never write a source file with `Set-Content`.** Reading a UTF-8 file and writing it back
+  through it, even with `-Encoding utf8`, turned `—` into `â€"` and `·` into `Â·` across
+  `WeekScreen.tsx`. Edit source files with an editor; keep PowerShell for running commands.
+- **Commit with `git commit -F <file>`, not `-m` with a here-string.** PowerShell re-parses the
+  arguments of a native executable, so a double quote inside the message splits it and git
+  reads the rest as a pathspec. A file never passes through that parsing.
 
 ---
 
