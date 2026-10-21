@@ -56,6 +56,8 @@ export interface Week {
   toggle: (task: Task) => Promise<void>;
   /** Delete a task. A 404 counts as done; anything else rejects with the server's `ApiError`. */
   remove: (taskId: string) => Promise<void>;
+  /** Recreate a deleted task from its snapshot. Resolves with the task the server created. */
+  restore: (snapshot: NewTask) => Promise<Task>;
   /** The server's word on the last create. A conflict is a 409 and the message is the API's. */
   createError: string | null;
   clearCreateError: () => void;
@@ -196,6 +198,17 @@ export function useWeek(): Week {
     [refetch],
   );
 
+  const restore = useCallback(
+    async (snapshot: NewTask) => {
+      // Not `create`: that one holds the new-task form's error and busy state, and an undo
+      // belongs to the notice that offered it, which shows its own refusal.
+      const task = await api.post<Task>("/tasks", snapshot);
+      refetch();
+      return task;
+    },
+    [refetch],
+  );
+
   const clearCreateError = useCallback(() => {
     setCreateError(null);
   }, []);
@@ -216,6 +229,7 @@ export function useWeek(): Week {
     update,
     toggle,
     remove,
+    restore,
     createError,
     clearCreateError,
     creating,

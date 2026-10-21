@@ -86,6 +86,8 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
       onOpenTask={onOpen ?? (() => undefined)}
       onSaveTask={onSave ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}
+      trash={null}
+      onUndo={() => Promise.resolve()}
       index={0}
       weekday="Mon"
       date="Aug 24"

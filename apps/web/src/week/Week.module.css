@@ -924,6 +924,49 @@
   text-decoration: line-through;
 }
 
+/*
+ * What was just deleted, below the day's rows, with the way back. Quieter than a row — it is
+ * not something to act on except in one way — and ruled like one, so it reads as a place in
+ * the column the task used to occupy.
+ */
+/* A refusal shown on the row itself, when the panel it would otherwise sit in is shut. */
+.rowError {
+  position: relative;
+  margin-top: 8px;
+}
+
+.trash {
+  border-top: 1px solid var(--rule);
+  padding: var(--rowpad) var(--pad);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.trashText {
+  min-width: 0;
+  font: 400 12px/1.4 var(--sans);
+  color: var(--faint);
+  text-wrap: pretty;
+}
+
+.trashUndo {
+  flex: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  padding: 0;
+  cursor: pointer;
+  font: 500 12px/1.4 var(--sans);
+  color: var(--ink);
+}
+
+.trashUndo:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 .emptyDay {
   border-top: 1px solid var(--rule);
   padding: var(--pad);

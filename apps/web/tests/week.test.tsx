@@ -126,6 +126,8 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       onOpenTask={when.onOpenTask ?? (() => undefined)}
       onSaveTask={when.onSaveTask ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}
+      trash={null}
+      onUndo={() => Promise.resolve()}
       index={0}
       weekday="Mon"
       date="Aug 24"
