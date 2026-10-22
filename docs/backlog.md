@@ -32,15 +32,50 @@ redesign.
 | 4 | Paradas de tabulação | **Decidir quando todas as telas estiverem prontas e definitivas.** Provável: padrão grid da ARIA | ADR na hora | — |
 | 5 | Etiqueta digitada errado | **Sugerir as existentes enquanto digita e avisar quando a etiqueta é nova** | front (`GET /tags` já existe); entra no redesign | não |
 | 6 | Como editar a checklist | **Recurso próprio** (`/tasks/{id}/items`), mais organizado e mais seguro para a API | ADR, rotas, testes | sim |
-| 7 | Conclusão tardia | **Voltar a mostrar o número**, porque ele ainda diz quanto tempo aquilo levou. *A confirmar:* o tempo real decorrido, ou o valor da fórmula do design | front; entra no redesign | não |
+| 7 | Conclusão tardia | **Voltar a mostrar o número, e o número é o tempo real decorrido** (`+53h52`). A fórmula do design era um atalho para preencher o protótipo; uma métrica de autoconhecimento sobre planejamento tem que refletir o relógio com exatidão, e um número plausível mas errado destrói a confiança na ferramenta | front; entra no redesign | não |
 | 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | teste automático de contraste dos tokens (sobrevive); tokens novos vêm do redesign | o teste, sim |
 | 9 | Celular | **Visão de um dia**, numa rodada de design. O prazo não pesa contra | redesign | — |
 | 10 | Design | **Terceira rodada completa.** O inventário de problemas está no brief local | — | — |
 | 11 | Dependabot nos lockfiles do Python | **Um check no CI** que regenera o lockfile com o `uv` e falha se diferir | job de CI | sim |
 | 12 | Horário útil | **Uma janela por pessoa** (início e fim). Simples para a maioria; nem todo mundo vai configurar dia a dia, e nem todo dia segue o mesmo plano | ADR que supere a decisão 3 do ADR-0022 e redefina os itens 7–9 do ADR-0023; migration; `PATCH /me` | sim |
 | 14 | Arrumação | `.gitignore` dos arquivos pessoais commitado; branches antigas apagadas | feito | — |
+| 15 | O front-end até o redesign voltar | **Congelado.** As PRs 6, 7 e 8 do item 2 estão pausadas, e nenhum componente, teste de UI ou CSS novo é escrito sobre um design system que vai ser refeito. O trabalho segue no que é base | — | — |
 
-A 13 — hospedagem, provedor de IA, e-mail, autenticação — continua em discussão.
+### A 13, decidida em seguida
+
+- **Hospedagem: tudo num host só, no Fly.io** — API, worker e front juntos, que é a forma
+  natural de manter a origem única do ADR-0021. *A premissa de custo precisa ser conferida
+  antes do ADR:* a decisão partiu de o Fly.io ser a única das três que roda um processo
+  contínuo de graça, e fontes de 2026 (de terceiros, não a página oficial) dizem que a cota
+  gratuita para contas novas acabou em 2024 e que hoje é cobrança por uso — da ordem de
+  US$ 2/mês por máquina pequena. A escolha de um host só continua de pé de qualquer jeito; o
+  que pode mudar é qual, se o custo pesar. ADR no S11.
+- **Autenticação: a própria, mantida.** Trocar argon2id, sessão revogável, cookie `HttpOnly` e
+  as respostas genéricas pelo Supabase Auth apagaria a parte mais forte do portfólio de
+  back-end e superaria seis ADRs.
+- **Banco: Supabase, só como host do PostgreSQL**, com a condição de suportar `btree_gist`, de
+  que a exclusion constraint depende. A documentação do Supabase lista a extensão entre as
+  suportadas; falta confirmar no projeto quando ele for criado.
+- **Domínio: em aberto**, para quando o site estiver pronto e for aberto ao cadastro de outras
+  pessoas. Uma restrição segue valendo e precisa entrar nessa conversa: sem domínio verificado,
+  um provedor transacional como o Resend só entrega para o dono da conta — ou seja, ninguém
+  além do autor completa o cadastro.
+- **Provedor de IA: no S7**, contra os critérios que os ADRs já impõem — não treinar com os
+  dados do usuário (ADR-0004), saída estruturada nativa (ADR-0005), teto de gasto rígido
+  (ADR-0006). O S6 roda contra um dublê e não depende dessa escolha.
+
+### O trabalho de base, na ordem
+
+O que o redesign não pode invalidar, e por isso segue enquanto o front está congelado:
+
+1. Check de lockfile no CI (decisão 11).
+2. ADR e serviço da correção de horário até 24h (decisão 1).
+3. ADR e rotas da checklist como recurso próprio (decisão 6).
+4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12).
+5. Teste automático de contraste dos tokens (decisão 8) — vale para qualquer token,
+   inclusive os que o redesign trouxer.
+
+O foco da caixa de concluir (decisão 3) é front e espera o descongelamento.
 
 **Uma correção ao que estava escrito na PR 4**, sobre a regra do passado. Duas das três opções
 estavam erradas. "Manter e consertar excluindo e recriando" não funcionava, porque recriar com
@@ -110,9 +145,9 @@ anterior e podem entrar em qualquer ponto.
 | 3 | ✅ A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
 | 4 | ✅ Verbos `edit` e `note` | 3 | não |
 | 5 | ✅ Verbos `move` e `delete` com undo — o undo é recriação, só onde ela é fiel ([ADR-0025](adr/0025-undo-is-a-recreate.md)) | 3 | não |
-| 6 | A oferta de mover, do dia pesado | 5 | não |
-| 7 | Confirmar endereço, três estados | — | não |
-| 8 | Configurações — endereço, fuso, sair | — | `PATCH /me` |
+| 6 | ⏸ A oferta de mover, do dia pesado — pausada até a terceira rodada de design | 5 | não |
+| 7 | ⏸ Confirmar endereço, três estados — pausada até a terceira rodada de design | — | não |
+| 8 | ⏸ Configurações — endereço, fuso, sair — pausada até a terceira rodada de design | — | `PATCH /me` |
 
 **O 409 que nomeia a tarefa não é pré-requisito de nada disto.** A rodada 2 o registra como
 bloqueio para "mover, encurtar ou substituir", e a leitura do design desfez isso: o painel de
@@ -201,7 +236,7 @@ O ADR-0012 registra a regra 1 como "recusada na camada de serviço" e diz que a 
 "permitir quando já concluída" supersede aquele registro se o registro retroativo fizer falta.
 Esta é a mesma discussão chegando por outra porta.
 
-### Aberto pela PR 3 — decidido em 2026-10-22: voltar a mostrar o número (decisão 7, qual número a confirmar)
+### Aberto pela PR 3 — decidido em 2026-10-22: voltar a mostrar o número, o tempo real decorrido (decisão 7)
 
 **Marcar uma tarefa antiga.** A caixa permanente tornou isso um clique: esquece a tarefa de
 segunda, marca na quarta. Medido literalmente, a linha diz `done 22:22 · 56h22 of 2h30 ·
