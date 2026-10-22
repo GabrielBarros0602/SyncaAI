@@ -2,7 +2,8 @@
 
 These need a migrated database, so they are marked ``integration`` and run in CI. They
 cover the two guarantees that do not exist anywhere in Python: the trigger that derives
-``end_at``, and the exclusion constraint that forbids a user's tasks from overlapping.
+``end_at``, and the exclusion constraint that forbids a user's tasks from overlapping —
+including when a start is reached by correcting it rather than by creating it.
 
 Nothing is committed — each test rolls back — so they leave no residue.
 """
@@ -15,7 +16,12 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from syncaai.db import get_session_factory
+from syncaai.errors import TaskOverlapsError
 from syncaai.models import ChecklistItem, Task, User
+from syncaai.repositories.tags import TagRepository
+from syncaai.repositories.tasks import TaskRepository
+from syncaai.schemas.tasks import TaskUpdate
+from syncaai.services.tasks import TaskService
 
 A_FIXED_FUTURE = datetime(2030, 1, 1, 10, 0, tzinfo=timezone.utc)
 
@@ -139,5 +145,40 @@ def test_deleting_a_user_removes_their_tasks_and_checklist_items() -> None:
 
         assert remaining_tasks == 0
         assert remaining_items == 0
+
+        session.rollback()
+
+
+@pytest.mark.integration
+def test_a_corrected_start_is_still_held_by_the_exclusion_constraint() -> None:
+    """Correcting into the past is a new path to a start, and it must not be a path around
+    the rule that a user's tasks never overlap (ADR-0027). Only PostgreSQL can say no here."""
+    now = datetime.now(timezone.utc)
+    with get_session_factory()() as session:
+        user = _a_user()
+        session.add(user)
+        session.flush()
+        # Both inserted directly: neither could be created through the service, which is the
+        # rule this record keeps for creation.
+        earlier = Task(
+            user_id=user.id,
+            title="earlier",
+            start_at=now - timedelta(hours=3),
+            duration_minutes=60,
+        )
+        begun = Task(
+            user_id=user.id,
+            title="under way",
+            start_at=now - timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        session.add_all([earlier, begun])
+        session.flush()
+
+        service = TaskService(TaskRepository(session, user.id), TagRepository(session, user.id))
+        into_the_earlier_one = now - timedelta(hours=2, minutes=30)
+
+        with pytest.raises(TaskOverlapsError):
+            service.update(begun.id, TaskUpdate(start_at=into_the_earlier_one))
 
         session.rollback()
