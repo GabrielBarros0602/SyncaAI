@@ -31,7 +31,7 @@ redesign.
 | 3 | A caixa de concluir perde o foco | **Devolver o foco também a ela**, pelo mesmo caminho da PR 5 | front, pequeno | provavelmente não, mas é barato |
 | 4 | Paradas de tabulação | **Decidir quando todas as telas estiverem prontas e definitivas.** Provável: padrão grid da ARIA | ADR na hora | — |
 | 5 | Etiqueta digitada errado | **Sugerir as existentes enquanto digita e avisar quando a etiqueta é nova** | front (`GET /tags` já existe); entra no redesign | não |
-| 6 | Como editar a checklist | **Recurso próprio** (`/tasks/{id}/items`), mais organizado e mais seguro para a API | ADR, rotas, testes | sim |
+| 6 | Como editar a checklist | **Recurso próprio** (`/tasks/{id}/items`), mais organizado e mais seguro para a API | ✅ ADR-0028, rotas e testes | sim |
 | 7 | Conclusão tardia | **Voltar a mostrar o número, e o número é o tempo real decorrido** (`+53h52`). A fórmula do design era um atalho para preencher o protótipo; uma métrica de autoconhecimento sobre planejamento tem que refletir o relógio com exatidão, e um número plausível mas errado destrói a confiança na ferramenta | front; entra no redesign | não |
 | 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | ✅ tokens da direção Papel e o teste de contraste (ADR-0026); falta o seletor, que é tela | o teste, sim |
 | 9 | Celular | **Visão de um dia**, numa rodada de design. O prazo não pesa contra | redesign | — |
@@ -74,9 +74,10 @@ O que o redesign não pode invalidar, e por isso segue enquanto o front está co
 2. ~~ADR e serviço da correção de horário até 24h (decisão 1).~~ ✅ ADR-0027. A janela é contada
    a partir de agora, vale também para tarefa concluída, e uma correção não pode pôr o início
    depois da conclusão (respondido em 2026-10-22).
-3. ADR e rotas da checklist como recurso próprio (decisão 6). **Respondido em 2026-10-22:** a
-   ordem se troca mandando a lista inteira de ids, numa transação; uma lista que não seja
-   exatamente os itens atuais recebe 409.
+3. ~~ADR e rotas da checklist como recurso próprio (decisão 6).~~ ✅ ADR-0028: adicionar no fim,
+   mudar (renomear, marcar), remover fechando o buraco, e reordenar com a lista inteira de ids
+   numa transação — uma lista que não seja exatamente os itens atuais recebe 409 (respondido
+   em 2026-10-22).
 4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12). **Respondido em
    2026-10-22:** a janela define só o tamanho do orçamento (`fim − início`), e a ocupação
    continua contada no dia inteiro; os horários ficam guardados para a IA. Ela não cruza a
