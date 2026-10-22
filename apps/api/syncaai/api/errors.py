@@ -16,12 +16,15 @@ from syncaai.errors import (
     InvertedWindowError,
     NotAuthenticatedError,
     RateLimitExceededError,
+    StartCorrectionTooFarBackError,
     TaskNotFoundError,
     TaskOverlapsError,
+    TaskStartsAfterCompletionError,
     TaskStartsInThePastError,
 )
 from syncaai.security.passwords import PasswordTooLongError
 from syncaai.services.capacity import MAX_HORIZON_DAYS
+from syncaai.services.tasks import START_CORRECTION_HOURS
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -115,6 +118,26 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": "A task cannot start in the past."},
+        )
+
+    @app.exception_handler(StartCorrectionTooFarBackError)
+    async def _correction_too_far_back(
+        _: Request, __: StartCorrectionTooFarBackError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "detail": f"A start can be corrected at most {START_CORRECTION_HOURS} hours back."
+            },
+        )
+
+    @app.exception_handler(TaskStartsAfterCompletionError)
+    async def _starts_after_completion(
+        _: Request, __: TaskStartsAfterCompletionError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "A task cannot start after it was completed."},
         )
 
     @app.exception_handler(PasswordTooLongError)
