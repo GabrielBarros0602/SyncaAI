@@ -1,0 +1,102 @@
+{
+  "description": "Every text/ground and edge/ground pair the SyncaAI screens use. Text needs 4.5:1, edges 3:1. The colours are read from tokens.css; tests/contrast.test.ts holds each pair to its minimum in every theme (ADR-0026).",
+  "text": {
+    "minimum": 4.5,
+    "pairs": {
+      "ink": [
+        "bg",
+        "surface",
+        "raised",
+        "sunken",
+        "hover",
+        "pressed",
+        "open",
+        "field",
+        "tag",
+        "alert-surface",
+        "alert-hover",
+        "alert-pressed",
+        "alert-open"
+      ],
+      "ink-2": [
+        "bg",
+        "surface",
+        "raised",
+        "sunken",
+        "hover",
+        "pressed",
+        "open",
+        "field",
+        "tag",
+        "alert-surface",
+        "alert-hover",
+        "alert-pressed",
+        "alert-open"
+      ],
+      "ink-3": [
+        "bg",
+        "surface",
+        "raised",
+        "sunken",
+        "hover",
+        "pressed",
+        "open",
+        "field",
+        "alert-surface",
+        "alert-hover",
+        "alert-pressed",
+        "alert-open"
+      ],
+      "alert-ink": [
+        "bg",
+        "surface",
+        "raised",
+        "hover",
+        "open",
+        "field",
+        "alert-surface",
+        "alert-hover",
+        "alert-pressed",
+        "alert-open"
+      ],
+      "on-primary": ["primary", "primary-hover", "primary-pressed"],
+      "on-alert": ["alert-solid", "alert-solid-hover"]
+    }
+  },
+  "graphics": {
+    "minimum": 3,
+    "pairs": {
+      "line-strong": [
+        "bg",
+        "surface",
+        "raised",
+        "hover",
+        "pressed",
+        "open",
+        "field",
+        "alert-surface",
+        "alert-hover",
+        "alert-pressed",
+        "alert-open"
+      ],
+      "focus": [
+        "bg",
+        "surface",
+        "raised",
+        "sunken",
+        "hover",
+        "pressed",
+        "open",
+        "field",
+        "tag",
+        "alert-surface",
+        "alert-hover",
+        "alert-pressed",
+        "alert-open"
+      ],
+      "alert": ["bg", "surface", "raised", "field", "track", "alert-surface", "alert-hover", "alert-open"],
+      "bar": ["bg", "surface", "track"],
+      "tick": ["bg", "surface", "track", "alert-surface"]
+    }
+  }
+}
