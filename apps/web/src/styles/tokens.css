@@ -1,126 +1,217 @@
 /*
- * The design's tokens, and the places they now depart from it.
+ * SyncaAI's design tokens: the third design round, direction Papel (ADR-0026).
  *
- * Text contrast, field borders, radius, the smallest text size and the week below 1100px
- * follow ADR-0024 rather than docs/design/. Everything else is still the design's value.
+ * Theme. <html data-theme="light|dark"> chooses, and with no attribute the operating system
+ * does. The attribute sits on <html> because the page background resolves against :root; on a
+ * div further down it drew dark ink on a dark page (ADR-0024, "To revisit"). index.html fixes
+ * it at "dark" until settings can write "light" or "dark", or remove it for "system".
  *
- * Four axes are exposed as data attributes on the root: theme, density, accent weight and
- * motion. They are attributes rather than classes because they are exclusive states, and
- * because a stylesheet can then reach them without a naming convention to remember.
+ * Colour. Every colour is opaque, and every ground text can sit on is a token of its own —
+ * including hover, pressed and the alert tints. Alpha over the ink made contrast depend on how
+ * many layers happened to stack (the opened row inside an overbooked day read 3.88:1); a fixed
+ * list of grounds is a list that can be tested, and tests/contrast.test.ts tests it against the
+ * pairs in contrast-pairs.json.
  *
- * Dark is the default, not the alternative. The design established that and the values are
- * tuned for it — the light theme is a genuine second set, not a filter.
+ *   text  ink, ink-2, ink-3, alert-ink         >= 4.5:1 on every ground they appear on
+ *   edges line-strong, focus, alert, bar, tick >= 3:1 against what is next to them
+ *   line, track                                decorative only — never the only carrier of meaning
+ *
+ * The accent means trouble and only trouble: over capacity, conflict, error. alert is for
+ * graphics (a bar, an edge), alert-ink is for text, alert-solid is a filled flag with on-alert.
  */
 
 :root {
-  --bg: #0a0a0b;
-  --ink: #f4f1ee;
-  /* Both are text, so both are held to 4.5:1 — against the page and against every tint text
-     sits on, the darkest being an opened row inside an overbooked day. --dim stays a clear
-     step above --faint; two greys that read the same are one grey with two names. */
-  --dim: rgba(244, 241, 238, 0.66);
-  --faint: rgba(244, 241, 238, 0.52);
-  --rule: rgba(244, 241, 238, 0.12);
-  --rule2: rgba(244, 241, 238, 0.26);
-  /* The edge of a field is how somebody finds where to type, so it is held to the 3:1 a
-     control's boundary needs. --rule2 reads 2.1:1 and stays for edges that only decorate. */
-  --field-border: rgba(244, 241, 238, 0.4);
-  --fill: rgba(244, 241, 238, 0.1);
-  --hover: rgba(244, 241, 238, 0.07);
-  /* Two grounds a shade off the page: a panel set apart without a rule to do it, and the
-     inside of a field you type into, one step further so an empty input still reads as a
-     place. Both were used by the sign-in screen long before anything defined them. */
-  --surface: rgba(244, 241, 238, 0.04);
-  --field: rgba(244, 241, 238, 0.05);
-
-  /* One accent, and it means trouble: over capacity, a conflict, a failed request. It is
-     absent from a healthy week on purpose — a colour that is everywhere is not a signal. */
-  --accent: #ff5a3c;
-  --accent-ink: #0a0a0b;
-  --accent-tint: rgba(255, 90, 60, 0.1);
-  --chip-bg: transparent;
-  --chip-ink: var(--accent);
-
-  --pad: 18px;
-  --rowpad: 13px;
-  --num: 34px;
-  --dur: 0.18s;
-  --rev: 0.55s;
-
-  /* Three radii, and the step between them is what keeps a control inside a frame from
-     looking like a second frame. Keycaps take a fixed 4px of their own: a key is drawn at
-     the size of a letter, and any of these would turn it into a pill. */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-
-  --sans: Archivo, system-ui, -apple-system, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  --font-display: var(--font-sans);
+  --display-stretch: 100%;
+  --text-1: 12px;
+  --leading-1: 16px;
+  --text-2: 13px;
+  --leading-2: 18px;
+  --text-3: 15px;
+  --leading-3: 22px;
+  --text-4: 18px;
+  --leading-4: 24px;
+  --text-5: 22px;
+  --leading-5: 28px;
+  --text-6: 28px;
+  --leading-6: 32px;
+  --text-7: 36px;
+  --leading-7: 40px;
+  --text-8: 48px;
+  --leading-8: 52px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 700;
+  --tracking-figure: -0.02em;
+  --tracking-tight: -0.015em;
+  --tracking-caps: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+  --pad-column: var(--space-5);
+  --pad-row-y: var(--space-3);
+  --pad-row-x: var(--space-3);
+  --gap-columns: var(--space-2);
+  --gap-rows: var(--space-1);
+  --radius-1: 6px;
+  --radius-2: 10px;
+  --radius-3: 14px;
+  --radius-4: 20px;
+  --radius-full: 999px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --target: 24px;
+  --target-touch: 44px;
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 380ms;
+  --stagger: 30ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: linear(0, 0.064, 0.209, 0.383, 0.554, 0.703, 0.822, 0.911, 0.971, 1.009, 1.029, 1.038, 1.038, 1.034, 1.027, 1.021, 1.014, 1.009, 1.005, 1.002, 1, 0.999, 0.999, 1);
+  --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  --press-scale: 0.97;
+  --press-shift: 0px;
 }
 
-[data-theme="light"] {
-  --bg: #f4f3f2;
-  --ink: #1c1a19;
-  --dim: rgba(28, 26, 25, 0.76);
-  --faint: rgba(28, 26, 25, 0.64);
-  --rule: rgba(28, 26, 25, 0.16);
-  --rule2: rgba(28, 26, 25, 0.32);
-  --field-border: rgba(28, 26, 25, 0.54);
-  --fill: rgba(28, 26, 25, 0.11);
-  --hover: rgba(28, 26, 25, 0.06);
-  --surface: rgba(28, 26, 25, 0.04);
-  --field: rgba(28, 26, 25, 0.05);
-  --accent: #c9280c;
-  --accent-ink: #f4f3f2;
-  --accent-tint: rgba(201, 40, 12, 0.09);
+/* Coarse pointers get the 44px target; the 24px floor is for a mouse. */
+@media (pointer: coarse) {
+  :root {
+    --target: var(--target-touch);
+  }
 }
 
-[data-density="compact"] {
-  --pad: 11px;
-  --rowpad: 7px;
-  --num: 29px;
-}
-
-[data-density="roomy"] {
-  --pad: 22px;
-  --rowpad: 15px;
-  --num: 40px;
-}
-
-[data-accent="subtle"] {
-  --accent-tint: transparent;
-}
-
-[data-accent="loud"] {
-  --accent-tint: rgba(255, 90, 60, 0.2);
-  --chip-bg: var(--accent);
-  --chip-ink: var(--accent-ink);
-}
-
-[data-accent="loud"][data-theme="light"] {
-  --accent-tint: rgba(201, 40, 12, 0.16);
-}
-
-[data-motion="off"] {
-  --dur: 0s;
-  --rev: 0.001s;
-}
-
-[data-motion="full"] {
-  --dur: 0.3s;
-  --rev: 0.85s;
-}
-
-/* The setting wins over the props. Somebody who asked their operating system for less
-   motion is not asking to be talked out of it. */
+/* The setting wins over everything. 1ms rather than 0, so transitionend still fires. */
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --dur: 0s;
-    --rev: 0.001s;
+    --dur-1: 1ms;
+    --dur-2: 1ms;
+    --dur-3: 1ms;
+    --stagger: 0ms;
+    --press-scale: 1;
+    --press-shift: 0px;
   }
+}
 
-  .skeleton {
-    animation: none !important;
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f1ec;
+  --surface: #fbf9f6;
+  --raised: #ffffff;
+  --sunken: #efebe4;
+  --hover: #ece8e1;
+  --pressed: #e4dfd6;
+  --open: #ffffff;
+  --field: #ffffff;
+  --tag: #e6e1d8;
+  --track: #e3ded5;
+  --alert-surface: #fbe9e3;
+  --alert-hover: #f6ddd4;
+  --alert-pressed: #f3d7ce;
+  --alert-open: #ffffff;
+  --primary: #1f1c18;
+  --primary-hover: #3a352e;
+  --primary-pressed: #4d473f;
+  --alert-solid: #b3261e;
+  --alert-solid-hover: #9a1f18;
+  --ink: #1f1c18;
+  --ink-2: #433d35;
+  --ink-3: #635c52;
+  --alert-ink: #a3260e;
+  --on-primary: #fbf9f6;
+  --on-alert: #ffffff;
+  --line: #e3ded5;
+  --line-strong: #7c756a;
+  --focus: #1f1c18;
+  --bar: #1f1c18;
+  --tick: #635c52;
+  --alert: #d4401f;
+  --shadow-raised: 0 1px 2px rgba(31, 28, 24, 0.06), 0 12px 28px -12px rgba(31, 28, 24, 0.28);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121110;
+  --surface: #1a1917;
+  --raised: #252320;
+  --sunken: #1e1c1a;
+  --hover: #211f1c;
+  --pressed: #2b2925;
+  --open: #252320;
+  --field: #161514;
+  --tag: #2e2b27;
+  --track: #2e2b27;
+  --alert-surface: #2a1814;
+  --alert-hover: #331d18;
+  --alert-pressed: #3d221c;
+  --alert-open: #252320;
+  --primary: #f3efe8;
+  --primary-hover: #e0dad0;
+  --primary-pressed: #cdc6ba;
+  --alert-solid: #ff6b4a;
+  --alert-solid-hover: #ff8566;
+  --ink: #f3efe8;
+  --ink-2: #c3bcb1;
+  --ink-3: #9c958a;
+  --alert-ink: #ff9b82;
+  --on-primary: #121110;
+  --on-alert: #121110;
+  --line: #2c2a26;
+  --line-strong: #7d776f;
+  --focus: #f3efe8;
+  --bar: #f3efe8;
+  --tick: #9c958a;
+  --alert: #ff6b4a;
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px -12px rgba(0, 0, 0, 0.75);
+}
+
+/* The block above, again, for a page with no attribute on a dark system. CSS has no way to
+   share one block between a selector and a media query, so the copy is checked instead:
+   contrast.test.ts fails the moment the two disagree. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #121110;
+    --surface: #1a1917;
+    --raised: #252320;
+    --sunken: #1e1c1a;
+    --hover: #211f1c;
+    --pressed: #2b2925;
+    --open: #252320;
+    --field: #161514;
+    --tag: #2e2b27;
+    --track: #2e2b27;
+    --alert-surface: #2a1814;
+    --alert-hover: #331d18;
+    --alert-pressed: #3d221c;
+    --alert-open: #252320;
+    --primary: #f3efe8;
+    --primary-hover: #e0dad0;
+    --primary-pressed: #cdc6ba;
+    --alert-solid: #ff6b4a;
+    --alert-solid-hover: #ff8566;
+    --ink: #f3efe8;
+    --ink-2: #c3bcb1;
+    --ink-3: #9c958a;
+    --alert-ink: #ff9b82;
+    --on-primary: #121110;
+    --on-alert: #121110;
+    --line: #2c2a26;
+    --line-strong: #7d776f;
+    --focus: #f3efe8;
+    --bar: #f3efe8;
+    --tick: #9c958a;
+    --alert: #ff6b4a;
+    --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px -12px rgba(0, 0, 0, 0.75);
   }
 }
 
@@ -133,23 +224,26 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--sans);
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 a {
   color: var(--ink);
-  text-decoration: none;
-  border-bottom: 1px solid var(--rule2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
 }
 
 a:hover {
-  border-bottom-color: var(--ink);
+  text-decoration-color: var(--ink);
 }
 
 input,
-button {
-  font-family: inherit;
+button,
+textarea,
+select {
+  font: inherit;
   color: inherit;
 }
 
@@ -157,17 +251,23 @@ button {
   outline: none;
 }
 
-/* Half the use of this screen is by keyboard, so the focus ring is part of the design
-   rather than a browser default nobody looked at. At 55% of the ink it still reads 5.7:1
-   on the dark ground and 3.8:1 on the light one, over the 3:1 a focus indicator needs,
-   without being the brightest thing on a screen where everything else is grey. */
+/* One ring, following the corner it surrounds, two pixels out. */
 :focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--ink) 55%, transparent);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
 }
 
 ::selection {
-  background: var(--fill);
+  background: var(--tag);
+  color: var(--ink);
+}
+
+/* Several fields here are named only by their placeholder and an aria-label, so a placeholder
+   is the label somebody reads, and text held to 4.5:1. Left to the browser it was #757575,
+   3.96:1 on the dark field, and Firefox fades it further. */
+::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
 }
 
 @keyframes rise {
@@ -185,41 +285,81 @@ button {
 @keyframes pulse {
   0%,
   100% {
-    opacity: 0.32;
+    opacity: 0.45;
   }
 
   50% {
-    opacity: 0.62;
+    opacity: 0.9;
   }
 }
 
-/* The one moment of motion that is not a hover: the week's numbers arriving, once. */
+/* The indeterminate line under something that is saving. It moves; nothing else on screen does. */
+@keyframes saving {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
 .rise {
-  animation: rise var(--rev) cubic-bezier(0.2, 0.75, 0.2, 1) both;
+  animation: rise var(--dur-3) var(--ease-out) both;
 }
 
 .skeleton {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
 /*
- * The shell's padding, overridden from here because it is not set here.
- *
- * App.tsx writes `padding: 56px 64px 96px` inline while the week is showing and `0` for the
- * sign-in screen, and an inline style can only be beaten by !important. 128px of side
- * padding is a fifth of a tablet and a third of a phone. The selector matches the inline
- * value itself, which does two things: the sign-in screen, whose padding is zero on
- * purpose, is never touched; and the day App.tsx stops writing that value, this stops
- * applying instead of silently outliving what it corrected. Remove both together.
+ * Legacy names, so the current markup renders with the new values before any component moves.
+ * Delete this block in the change that moves the last module off it.
+ */
+:root {
+  --dim: var(--ink-2);
+  --faint: var(--ink-3);
+  --rule: var(--line);
+  --rule2: var(--line-strong);
+  --field-border: var(--line-strong);
+  --fill: var(--tag);
+  --accent: var(--alert);
+  --accent-ink: var(--on-alert);
+  --accent-tint: var(--alert-surface);
+  --chip-bg: transparent;
+  --chip-ink: var(--alert-ink);
+  --pad: var(--pad-column);
+  --rowpad: var(--pad-row-y);
+  --num: var(--text-6);
+  --dur: var(--dur-2);
+  --rev: var(--dur-3);
+  --radius-sm: var(--radius-1);
+  --radius-md: var(--radius-2);
+  --radius-lg: var(--radius-3);
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
+}
+
+/*
+ * The shell's padding, overridden from here because App.tsx writes it inline (ADR-0024), and
+ * an inline style can only be beaten by !important. The selector matches the inline value
+ * itself: the sign-in screen, whose padding is zero on purpose, is never touched, and the day
+ * App.tsx stops writing that value this stops applying. Remove both together.
  */
 @media (max-width: 1099px) {
-  #root > [data-theme][style*="padding: 56px"] {
+  #root > [style*="padding: 56px"] {
     padding: 24px !important;
   }
 }
 
 @media (max-width: 699px) {
-  #root > [data-theme][style*="padding: 56px"] {
+  #root > [style*="padding: 56px"] {
     padding: 16px !important;
   }
 }

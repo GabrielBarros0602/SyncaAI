@@ -14,13 +14,7 @@ export function App(): React.ReactNode {
   const { status } = useSession();
 
   return (
-    <div
-      data-theme="dark"
-      data-density="default"
-      data-accent="default"
-      data-motion="default"
-      style={{ minHeight: "100vh", padding: status === "authenticated" ? "56px 64px 96px" : 0 }}
-    >
+    <div style={{ minHeight: "100vh", padding: status === "authenticated" ? "56px 64px 96px" : 0 }}>
       {status === "loading" && <WeekSkeleton />}
       {status === "anonymous" && <AuthScreen />}
       {status === "authenticated" && <WeekScreen />}
