@@ -65,6 +65,24 @@ class TaskStartsInThePastError(DomainError):
     """
 
 
+class StartCorrectionTooFarBackError(DomainError):
+    """Raised when a started task's start would move back further than the correction allows.
+
+    A task that has begun may have its start corrected, because a plan and the day it
+    describes rarely agree to the minute — but only within a day of now (ADR-0027). Further
+    back it stops being a correction and becomes the retroactive logging ADR-0012 declined.
+    """
+
+
+class TaskStartsAfterCompletionError(DomainError):
+    """Raised when a correction would put a completed task's start after its completion.
+
+    The trigger would accept it and record an empty occupancy (ADR-0022), so the database
+    cannot be the one to refuse. A correction exists to make the record true, and "it began
+    after it ended" never is (ADR-0027).
+    """
+
+
 class TaskNotFoundError(DomainError):
     """Raised for a task that does not exist, or belongs to somebody else.
 

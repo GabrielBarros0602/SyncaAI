@@ -3,14 +3,16 @@
 import uuid
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.exc import IntegrityError
 
 from syncaai.errors import (
     CannotReopenTaskError,
+    StartCorrectionTooFarBackError,
     TaskNotFoundError,
     TaskOverlapsError,
+    TaskStartsAfterCompletionError,
     TaskStartsInThePastError,
 )
 from syncaai.models import ChecklistItem, Tag, Task
@@ -23,6 +25,9 @@ OVERLAP_CONSTRAINT = "ex_tasks_no_overlap_per_user"
 # A caller that asks for everything is a caller that gets one page. The ceiling exists so a
 # listing cannot be turned into a way to make the server assemble unbounded work.
 MAX_PAGE_SIZE = 100
+
+# How far before now the start of a task that has already begun may be corrected (ADR-0027).
+START_CORRECTION_HOURS = 24
 
 
 @contextmanager
@@ -52,7 +57,7 @@ class TaskService:
         self._tags = tags
 
     def create(self, payload: TaskCreate) -> Task:
-        self._refuse_the_past(payload.start_at)
+        self._refuse_the_past(payload.start_at, datetime.now(timezone.utc))
 
         task = Task(
             user_id=self._tasks.owner_id,
@@ -81,8 +86,15 @@ class TaskService:
         # from a field the client never mentioned.
         provided = payload.model_fields_set
 
+        # One reading of the clock for the whole request. Whether the task has begun, how far
+        # back a correction may go and when a completion happened have to agree on "now".
+        now = datetime.now(timezone.utc)
+        completed_at = task.completed_at
+        if payload.completed is not None:
+            completed_at = now if payload.completed else None
+
         if payload.start_at is not None:
-            self._refuse_the_past(payload.start_at)
+            self._check_new_start(task.start_at, payload.start_at, completed_at, now)
             task.start_at = payload.start_at
         if payload.title is not None:
             task.title = payload.title
@@ -96,7 +108,7 @@ class TaskService:
         if payload.completed is not None:
             # A timestamp rather than a flag: the heatmap needs to know when, not only that.
             # It also decides the occupancy — end_at follows completion (ADR-0022).
-            task.completed_at = datetime.now(timezone.utc) if payload.completed else None
+            task.completed_at = completed_at
 
         with _overlap_translated(reopening=reopening):
             self._tasks.flush()
@@ -140,6 +152,23 @@ class TaskService:
         return self._tags.get_or_create(name).id if name else None
 
     @staticmethod
-    def _refuse_the_past(start_at: datetime) -> None:
-        if start_at <= datetime.now(timezone.utc):
+    def _refuse_the_past(start_at: datetime, now: datetime) -> None:
+        if start_at <= now:
             raise TaskStartsInThePastError
+
+    @classmethod
+    def _check_new_start(
+        cls, current: datetime, new: datetime, completed_at: datetime | None, now: datetime
+    ) -> None:
+        """Where a task's start may move to, which depends on whether it has begun (ADR-0027)."""
+        if current > now:
+            # Not begun: moving it is rescheduling, and scheduling in the past means nothing.
+            cls._refuse_the_past(new, now)
+            return
+        # Begun: this is a correction of what happened, so it may reach back, but only a day.
+        if new < now - timedelta(hours=START_CORRECTION_HOURS):
+            raise StartCorrectionTooFarBackError
+        # Judged against the completion as this request leaves it, so unticking in the same
+        # request lifts the bound. Ticking a task early never reaches here: it has not begun.
+        if completed_at is not None and new > completed_at:
+            raise TaskStartsAfterCompletionError
