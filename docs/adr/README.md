@@ -36,6 +36,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0025](0025-undo-is-a-recreate.md) | Undo is a recreate, so it is offered only where recreating is faithful | Accepted |
 | [0026](0026-adopt-the-papel-tokens-and-test-every-pair.md) | Adopt the Papel tokens, and test every pair they promise | Accepted |
 | [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
+| [0028](0028-the-checklist-is-its-own-resource.md) | The checklist is its own resource | Accepted |
 
 ## Template
 
