@@ -20,7 +20,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0009](0009-time-and-timezone-storage.md) | Store instants in UTC, derive the local day | Accepted |
 | [0010](0010-day-as-a-table-for-day-level-state.md) | A `days` table for day-level state only | Accepted |
 | [0011](0011-hard-delete-for-tasks.md) | Hard delete for tasks | Accepted |
-| [0012](0012-task-time-business-rules.md) | Business rules for a task's position in time | Accepted |
+| [0012](0012-task-time-business-rules.md) | Business rules for a task's position in time | Accepted; rule 1 amended by 0027 |
 | [0013](0013-derive-end-at-with-a-trigger.md) | Derive `end_at` with a trigger, not a generated column | Accepted |
 | [0014](0014-password-hashing-with-argon2id.md) | Hash passwords with argon2id | Accepted |
 | [0015](0015-session-model.md) | Short-lived access token with a revocable refresh token | Accepted |
@@ -35,6 +35,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0024](0024-soften-the-visual-language-in-stylesheets-only.md) | Soften the visual language, in stylesheets only | Accepted; tokens superseded by 0026 |
 | [0025](0025-undo-is-a-recreate.md) | Undo is a recreate, so it is offered only where recreating is faithful | Accepted |
 | [0026](0026-adopt-the-papel-tokens-and-test-every-pair.md) | Adopt the Papel tokens, and test every pair they promise | Accepted |
+| [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
 
 ## Template
 
