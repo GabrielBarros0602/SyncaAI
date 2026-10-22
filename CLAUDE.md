@@ -179,15 +179,20 @@ trigger derives `end_at`, and a CHECK caps a task at one day. The web app is Vit
 TypeScript in strict mode, CSS Modules, no component library. The AI layer is designed
 (ADR-0002 to ADR-0006) and not yet built.
 
+**The front end is frozen, since 2026-10-22.** A third design round is coming, with large
+changes likely. Build no screen, UI component, UI test or new CSS until it returns — PRs 6, 7
+and 8 of item 2 are paused, and work written against a design system about to be replaced is
+work done twice.
+
 **Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate:
 
-1. The three screens in `docs/design/` are not implemented. This is the large one, and it
-   carries most of rounds 2 and 3 of the backlog: the five verbs in an opened row, the
-   inherited band, today marked, delete with undo, the move panel. Read
-   `docs/design/README.md` before opening the HTML — it records what was decided and why, and
-   the files themselves are large.
-2. Items 7–9 of ADR-0023: the `users.usable_minutes` column with
-   `CHECK (usable_minutes BETWEEN 60 AND 1080)`, `PATCH /me`, and the settings screen.
+1. **Base work, while the front is frozen** — the list under "O trabalho de base" in the
+   backlog: the lockfile check in CI, the 24-hour correction of a started task's start, the
+   checklist as its own resource, the usable day as a per-person window, and a contrast test
+   for the tokens. The first four need an ADR before the code.
+2. The rest of the three screens, after the redesign: the day's "move something" offer,
+   address confirmation and settings. `docs/design/README.md` records what the second round
+   decided; the third round's brief is local, in `docs/design-brief-3.md`.
 3. S6 — the AI pipeline against a test double, no provider.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
