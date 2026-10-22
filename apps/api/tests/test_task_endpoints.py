@@ -345,6 +345,155 @@ def test_patching_a_start_into_the_past_is_refused(app: FastAPI, client: TestCli
     assert response.status_code == 422
 
 
+def _ago(**offset: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(**offset)).isoformat()
+
+
+def _begun(tasks: _FakeTasks, *, minutes_ago: int, completed_minutes_ago: int | None = None) -> str:
+    """A task that has already started, placed straight into the repository.
+
+    The API cannot create one — that is rule 1 of ADR-0012 — so this stands in for the time
+    that passed since it was scheduled.
+    """
+    now = datetime.now(timezone.utc)
+    task = Task(
+        user_id=AN_OWNER,
+        title="already under way",
+        start_at=now - timedelta(minutes=minutes_ago),
+        duration_minutes=60,
+        completed_at=(
+            None
+            if completed_minutes_ago is None
+            else now - timedelta(minutes=completed_minutes_ago)
+        ),
+    )
+    task.items = []
+    tasks.add(task)
+    return str(task.id)
+
+
+def test_a_started_task_can_have_its_start_corrected_back_within_a_day(
+    app: FastAPI, client: TestClient
+) -> None:
+    """It began earlier than planned, and the record should say so (ADR-0027)."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=30)
+    corrected = _ago(hours=23)
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": corrected})
+
+    assert response.status_code == 200, response.text
+    assert _parsed(response.json()["start_at"]) == _parsed(corrected)
+
+
+def test_a_correction_further_back_than_a_day_is_refused(app: FastAPI, client: TestClient) -> None:
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=30)
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": _ago(hours=24, minutes=5)})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A start can be corrected at most 24 hours back."
+
+
+def test_the_day_is_counted_from_now_not_from_the_planned_start(
+    app: FastAPI, client: TestClient
+) -> None:
+    """Counted from the plan, a task begun twenty hours ago could reach two days back."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=20 * 60)
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": _ago(hours=26)})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A start can be corrected at most 24 hours back."
+
+
+def test_a_task_that_has_not_begun_still_cannot_move_into_the_past(
+    app: FastAPI, client: TestClient
+) -> None:
+    """The window is for correcting what happened. Rescheduling into the past is still
+    meaningless, however recent."""
+    _wire(app, _FakeTasks())
+    task_id = _created(client)["id"]
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": _ago(hours=1)})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A task cannot start in the past."
+
+
+def test_creating_a_task_inside_the_correction_window_is_still_refused(
+    app: FastAPI, client: TestClient
+) -> None:
+    _wire(app, _FakeTasks())
+
+    response = client.post(
+        TASKS, json={"title": "an hour ago", "start_at": _ago(hours=1), "duration_minutes": 30}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A task cannot start in the past."
+
+
+def test_a_completed_task_can_be_corrected_to_start_earlier(
+    app: FastAPI, client: TestClient
+) -> None:
+    """Move is not offered on a completed task because this covers the real case."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=120, completed_minutes_ago=10)
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": _ago(hours=3)})
+
+    assert response.status_code == 200, response.text
+
+
+def test_a_correction_cannot_put_the_start_after_the_completion(
+    app: FastAPI, client: TestClient
+) -> None:
+    """The trigger would record an empty occupancy without complaint, so the service is the
+    only place this can be refused."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=120, completed_minutes_ago=60)
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": _ago(minutes=30)})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A task cannot start after it was completed."
+
+
+def test_unticking_in_the_same_request_lifts_the_completion_bound(
+    app: FastAPI, client: TestClient
+) -> None:
+    """The bound is the completion as the request leaves it, not as it found it."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=120, completed_minutes_ago=60)
+
+    response = client.patch(
+        f"{TASKS}/{task_id}", json={"completed": False, "start_at": _ago(minutes=30)}
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["completed_at"] is None
+
+
+def test_a_started_task_can_still_be_postponed(app: FastAPI, client: TestClient) -> None:
+    """A correction may move forward too: it did not really begin yet."""
+    tasks = _FakeTasks()
+    _wire(app, tasks)
+    task_id = _begun(tasks, minutes_ago=30)
+
+    response = client.patch(f"{TASKS}/{task_id}", json={"start_at": _future(hours=2)})
+
+    assert response.status_code == 200, response.text
+
+
 def test_deleting_a_task_answers_204_and_it_stops_existing(
     app: FastAPI, client: TestClient
 ) -> None:
