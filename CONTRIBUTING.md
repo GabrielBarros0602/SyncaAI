@@ -166,6 +166,10 @@ uv pip compile --universal --python-version 3.12 --upgrade requirements-dev.in -
 
 Use the plain form when the `.in` changed. Use `--upgrade` when the point is to move.
 
+CI reruns the plain form with the pinned `uv` and fails if either file changes. A lockfile
+edited by hand, or by a tool that never reads the `.in` files, still installs on Linux, so this
+is the only step that can tell.
+
 **Why uv resolves but pip installs.** Development happens on Windows; Docker and CI run Linux.
 `pip-compile` resolves only for the interpreter and platform it runs on, so a lockfile
 generated on Windows pins `colorama` unconditionally and omits Linux-only transitive
@@ -251,7 +255,8 @@ próprio PR, então todo merge ficaria impossível ou dependeria de bypass de ad
 
 **Dependências:** declaradas em `requirements.in` e `requirements-dev.in`; os `.txt` são
 gerados e nunca editados à mão. O resolvedor é o `uv` em modo universal com alvo 3.12, e a
-instalação continua `pip install -r`.
+instalação continua `pip install -r`. O CI regenera os dois com o `uv` fixado e falha se algum
+mudar.
 
 Por quê: você desenvolve em Windows e o runtime é Linux. O `pip-compile` resolve só para o
 interpretador e o sistema em que roda, então um lockfile gerado no Windows pina `colorama` sem
