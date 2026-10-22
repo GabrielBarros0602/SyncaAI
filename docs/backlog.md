@@ -26,7 +26,7 @@ redesign.
 
 | # | Pergunta | Decisão | O que exige | Sobrevive ao redesign? |
 |---|---|---|---|---|
-| 1 | O que a regra do passado recusa | **Correção limitada:** numa tarefa que já começou, a edição pode pôr o início até 24h antes de agora; criar no passado continua proibido | ADR que emende a regra 1 do ADR-0012; serviço e testes | sim |
+| 1 | O que a regra do passado recusa | **Correção limitada:** numa tarefa que já começou, a edição pode pôr o início até 24h antes de agora; criar no passado continua proibido | ✅ ADR-0027, serviço e testes | sim |
 | 2 | Mover tarefa concluída | **Não oferecer**, como a PR 5 já faz. A correção do horário (1) cobre o caso real | nada | — |
 | 3 | A caixa de concluir perde o foco | **Devolver o foco também a ela**, pelo mesmo caminho da PR 5 | front, pequeno | provavelmente não, mas é barato |
 | 4 | Paradas de tabulação | **Decidir quando todas as telas estiverem prontas e definitivas.** Provável: padrão grid da ARIA | ADR na hora | — |
@@ -71,9 +71,16 @@ O que o redesign não pode invalidar, e por isso segue enquanto o front está co
 1. ~~Check de lockfile no CI (decisão 11).~~ ✅ O job da API regenera os dois lockfiles com o
    `uv` fixado e falha se algum mudar. Conferido reproduzindo o defeito que motivou a decisão:
    sem o marcador do `uvloop`, o check reprova.
-2. ADR e serviço da correção de horário até 24h (decisão 1).
-3. ADR e rotas da checklist como recurso próprio (decisão 6).
-4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12).
+2. ~~ADR e serviço da correção de horário até 24h (decisão 1).~~ ✅ ADR-0027. A janela é contada
+   a partir de agora, vale também para tarefa concluída, e uma correção não pode pôr o início
+   depois da conclusão (respondido em 2026-10-22).
+3. ADR e rotas da checklist como recurso próprio (decisão 6). **Respondido em 2026-10-22:** a
+   ordem se troca mandando a lista inteira de ids, numa transação; uma lista que não seja
+   exatamente os itens atuais recebe 409.
+4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12). **Respondido em
+   2026-10-22:** a janela define só o tamanho do orçamento (`fim − início`), e a ocupação
+   continua contada no dia inteiro; os horários ficam guardados para a IA. Ela não cruza a
+   meia-noite, por enquanto.
 5. ~~Teste automático de contraste dos tokens (decisão 8).~~ ✅ Feito junto com a troca dos
    tokens pela direção Papel do design system (ADR-0026). O teste lê o `tokens.css` como ele é
    entregue; um par novo que as telas passem a usar tem que entrar no `contrast-pairs.json`,
@@ -217,7 +224,7 @@ plano-contra-real que o S6 vai ler deixa de significar alguma coisa. As opções
   abrir, com o `eslint-disable` justificado. A convenção de foco programático que existe é a do
   `WeekScreen` — focar o título da linha pelo id —, e foi essa que a PR 5 seguiu.
 
-### Aberto pela PR 4 — decidido em 2026-10-22: correção limitada a 24h (decisão 1)
+### Aberto pela PR 4 — decidido em 2026-10-22: correção limitada a 24h (decisão 1) — ✅ ADR-0027
 
 **O que a regra do passado deveria recusar.** Hoje `_refuse_the_past` recusa qualquer
 `start_at` no passado, tanto ao criar quanto ao atualizar. A PR 4 contornou o efeito colateral
