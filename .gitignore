@@ -52,3 +52,11 @@ docs/design-brief*.md
 
 # Scratch file for `gh pr create --body-file`.
 .pr-body.md
+
+# Nothing personal in this repository, which is public.
+#
+# Two rules with different jobs: the folder protects whatever is moved into it, and the
+# pattern protects a CV generated anywhere else in the tree.
+_pessoal/
+curriculo-*.tex
+curriculo-*.pdf
