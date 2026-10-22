@@ -68,7 +68,9 @@ redesign.
 
 O que o redesign não pode invalidar, e por isso segue enquanto o front está congelado:
 
-1. Check de lockfile no CI (decisão 11).
+1. ~~Check de lockfile no CI (decisão 11).~~ ✅ O job da API regenera os dois lockfiles com o
+   `uv` fixado e falha se algum mudar. Conferido reproduzindo o defeito que motivou a decisão:
+   sem o marcador do `uvloop`, o check reprova.
 2. ADR e serviço da correção de horário até 24h (decisão 1).
 3. ADR e rotas da checklist como recurso próprio (decisão 6).
 4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12).
