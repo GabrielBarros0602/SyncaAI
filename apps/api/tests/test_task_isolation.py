@@ -147,6 +147,33 @@ def test_a_stranger_cannot_delete_someone_elses_task(
     assert alice.get(f"{TASKS}/{task_id}").status_code == 200
 
 
+def test_a_stranger_cannot_reach_someone_elses_checklist(
+    two_clients: tuple[TestClient, TestClient],
+) -> None:
+    """Every item route goes through the task, and the task through the token (ADR-0028).
+    A route that looked the item up by its id alone would pass every other test."""
+    alice, bob = two_clients
+    task = _schedule(alice, items=[{"label": "alice's step"}])
+    task_id = task["id"]
+    items = task["items"]
+    assert isinstance(items, list)
+    item_id = items[0]["id"]
+    item_path = f"{TASKS}/{task_id}/items/{item_id}"
+
+    attempts = [
+        bob.post(f"{TASKS}/{task_id}/items", json={"label": "planted"}),
+        bob.patch(item_path, json={"completed": True, "label": "renamed"}),
+        bob.delete(item_path),
+        bob.put(f"{TASKS}/{task_id}/items/order", json={"item_ids": [item_id]}),
+    ]
+    invented = bob.post(f"{TASKS}/{uuid.uuid4()}/items", json={"label": "planted"})
+
+    assert [response.status_code for response in attempts] == [404, 404, 404, 404]
+    assert attempts[0].json() == invented.json()
+    after = alice.get(f"{TASKS}/{task_id}").json()["items"]
+    assert [(item["label"], item["completed_at"]) for item in after] == [("alice's step", None)]
+
+
 def test_a_listing_only_ever_contains_your_own_tasks(
     two_clients: tuple[TestClient, TestClient],
 ) -> None:

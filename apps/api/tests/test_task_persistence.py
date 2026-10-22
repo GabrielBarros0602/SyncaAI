@@ -12,8 +12,9 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from syncaai.db import get_session_factory
 from syncaai.errors import TaskOverlapsError
@@ -21,6 +22,7 @@ from syncaai.models import ChecklistItem, Task, User
 from syncaai.repositories.tags import TagRepository
 from syncaai.repositories.tasks import TaskRepository
 from syncaai.schemas.tasks import TaskUpdate
+from syncaai.services.checklist import ChecklistService
 from syncaai.services.tasks import TaskService
 
 A_FIXED_FUTURE = datetime(2030, 1, 1, 10, 0, tzinfo=timezone.utc)
@@ -180,5 +182,69 @@ def test_a_corrected_start_is_still_held_by_the_exclusion_constraint() -> None:
 
         with pytest.raises(TaskOverlapsError):
             service.update(begun.id, TaskUpdate(start_at=into_the_earlier_one))
+
+        session.rollback()
+
+
+def _positions(session: Session, task_id: uuid.UUID) -> list[tuple[int, str]]:
+    """Read back from the table, not from the objects the session already holds."""
+    rows = session.execute(
+        select(ChecklistItem.position, ChecklistItem.label)
+        .where(ChecklistItem.task_id == task_id)
+        .order_by(ChecklistItem.position)
+    )
+    return [(position, label) for position, label in rows]
+
+
+def _check_deferred_constraints_now(session: Session) -> None:
+    """The unique position is checked at commit, and these tests roll back. This runs the
+    pending check immediately, so a duplicate position fails here rather than never."""
+    session.execute(text("SET CONSTRAINTS ALL IMMEDIATE"))
+
+
+@pytest.mark.integration
+def test_a_full_reorder_passes_the_deferred_unique_position() -> None:
+    """Reversing three items makes every row collide with another on the way. An immediate
+    constraint would refuse the first UPDATE; the deferred one only cares about the end
+    state (ADR-0020), which is what lets a reorder be one request (ADR-0028)."""
+    with get_session_factory()() as session:
+        user = _a_user()
+        session.add(user)
+        session.flush()
+        task = Task(user_id=user.id, title="probe", start_at=A_FIXED_FUTURE, duration_minutes=60)
+        task.items = [
+            ChecklistItem(label=label, position=position)
+            for position, label in enumerate(["outline", "draft", "review"])
+        ]
+        session.add(task)
+        session.flush()
+        reversed_ids = [item.id for item in reversed(task.items)]
+
+        ChecklistService(TaskRepository(session, user.id)).reorder(task.id, reversed_ids)
+        _check_deferred_constraints_now(session)
+
+        assert _positions(session, task.id) == [(0, "review"), (1, "draft"), (2, "outline")]
+
+        session.rollback()
+
+
+@pytest.mark.integration
+def test_removing_an_item_closes_the_gap_in_the_table() -> None:
+    with get_session_factory()() as session:
+        user = _a_user()
+        session.add(user)
+        session.flush()
+        task = Task(user_id=user.id, title="probe", start_at=A_FIXED_FUTURE, duration_minutes=60)
+        task.items = [
+            ChecklistItem(label=label, position=position)
+            for position, label in enumerate(["outline", "draft", "review"])
+        ]
+        session.add(task)
+        session.flush()
+
+        ChecklistService(TaskRepository(session, user.id)).delete(task.id, task.items[0].id)
+        _check_deferred_constraints_now(session)
+
+        assert _positions(session, task.id) == [(0, "draft"), (1, "review")]
 
         session.rollback()
