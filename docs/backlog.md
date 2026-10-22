@@ -13,6 +13,41 @@ ordenou a rodada 1 continua valendo para tudo que ainda não é visual:
 Lógica de agrupamento, correção de servidor, teste e migration sobrevivem a qualquer mudança
 visual. Um botão, um estado de hover e um ícone não sobrevivem.
 
+**Isso pesa mais a partir de 2026-10-22:** o design vai passar por uma terceira rodada, com
+mudanças grandes prováveis (brief local em `docs/design-brief-3.md`). Tudo o que é tela pode
+ser refeito; servidor, ADR, teste e CI não.
+
+---
+
+## Decisões de 2026-10-22
+
+Fecham perguntas que estavam abertas abaixo. Cada uma diz onde vai parar e se sobrevive ao
+redesign.
+
+| # | Pergunta | Decisão | O que exige | Sobrevive ao redesign? |
+|---|---|---|---|---|
+| 1 | O que a regra do passado recusa | **Correção limitada:** numa tarefa que já começou, a edição pode pôr o início até 24h antes de agora; criar no passado continua proibido | ADR que emende a regra 1 do ADR-0012; serviço e testes | sim |
+| 2 | Mover tarefa concluída | **Não oferecer**, como a PR 5 já faz. A correção do horário (1) cobre o caso real | nada | — |
+| 3 | A caixa de concluir perde o foco | **Devolver o foco também a ela**, pelo mesmo caminho da PR 5 | front, pequeno | provavelmente não, mas é barato |
+| 4 | Paradas de tabulação | **Decidir quando todas as telas estiverem prontas e definitivas.** Provável: padrão grid da ARIA | ADR na hora | — |
+| 5 | Etiqueta digitada errado | **Sugerir as existentes enquanto digita e avisar quando a etiqueta é nova** | front (`GET /tags` já existe); entra no redesign | não |
+| 6 | Como editar a checklist | **Recurso próprio** (`/tasks/{id}/items`), mais organizado e mais seguro para a API | ADR, rotas, testes | sim |
+| 7 | Conclusão tardia | **Voltar a mostrar o número**, porque ele ainda diz quanto tempo aquilo levou. *A confirmar:* o tempo real decorrido, ou o valor da fórmula do design | front; entra no redesign | não |
+| 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | teste automático de contraste dos tokens (sobrevive); tokens novos vêm do redesign | o teste, sim |
+| 9 | Celular | **Visão de um dia**, numa rodada de design. O prazo não pesa contra | redesign | — |
+| 10 | Design | **Terceira rodada completa.** O inventário de problemas está no brief local | — | — |
+| 11 | Dependabot nos lockfiles do Python | **Um check no CI** que regenera o lockfile com o `uv` e falha se diferir | job de CI | sim |
+| 12 | Horário útil | **Uma janela por pessoa** (início e fim). Simples para a maioria; nem todo mundo vai configurar dia a dia, e nem todo dia segue o mesmo plano | ADR que supere a decisão 3 do ADR-0022 e redefina os itens 7–9 do ADR-0023; migration; `PATCH /me` | sim |
+| 14 | Arrumação | `.gitignore` dos arquivos pessoais commitado; branches antigas apagadas | feito | — |
+
+A 13 — hospedagem, provedor de IA, e-mail, autenticação — continua em discussão.
+
+**Uma correção ao que estava escrito na PR 4**, sobre a regra do passado. Duas das três opções
+estavam erradas. "Manter e consertar excluindo e recriando" não funcionava, porque recriar com
+início no passado esbarra na mesma regra. E "recusar só quando o novo início se afasta mais do
+agora" não resolvia o próprio exemplo que motivou a pergunta (corrigir 09:00 para 08:00 é se
+afastar do agora). A decisão 1 é a versão que resolve o exemplo.
+
 ---
 
 ## Rodada 1 — o que estava errado
@@ -85,7 +120,7 @@ mover calcula a disponibilidade no cliente, com as tarefas que a tela já tem, e
 a frase do servidor no conflito. Nenhuma das três telas precisa desse dado. Ele continua
 valendo por si — só não bloqueia o item 2.
 
-### Aberto pela PR 3, com gatilho: **depois da PR 6**
+### Aberto pela PR 3 — gatilho mudado em 2026-10-22: **quando todas as telas estiverem prontas e definitivas** (decisão 4)
 
 **Quantas paradas de tabulação uma semana tem.** A PR 3 tirou o `role="group"` com
 `tabIndex` e `aria-expanded` da linha, porque o `eslint-plugin-jsx-a11y` mostrou que `group`
@@ -108,7 +143,7 @@ de uma linha, e o `docs/design/` não especificou navegação por teclado além 
 atalho — então **é pergunta nova, não implementação faltando**. Provavelmente merece ADR
 próprio, porque decide como a semana inteira é percorrida.
 
-### Aberto pela PR 5, e é decisão sua
+### Aberto pela PR 5 — decidido em 2026-10-22: não oferecer (decisão 2)
 
 **Mover uma tarefa já concluída.** A PR 5 não oferece o verbo numa linha concluída. Concluir
 cedo encurta o `end_at` para o momento da conclusão (ADR-0022); movida para um dia depois desse
@@ -143,7 +178,7 @@ plano-contra-real que o S6 vai ler deixa de significar alguma coisa. As opções
   abrir, com o `eslint-disable` justificado. A convenção de foco programático que existe é a do
   `WeekScreen` — focar o título da linha pelo id —, e foi essa que a PR 5 seguiu.
 
-### Aberto pela PR 4, e é decisão sua
+### Aberto pela PR 4 — decidido em 2026-10-22: correção limitada a 24h (decisão 1)
 
 **O que a regra do passado deveria recusar.** Hoje `_refuse_the_past` recusa qualquer
 `start_at` no passado, tanto ao criar quanto ao atualizar. A PR 4 contornou o efeito colateral
@@ -166,7 +201,7 @@ O ADR-0012 registra a regra 1 como "recusada na camada de serviço" e diz que a 
 "permitir quando já concluída" supersede aquele registro se o registro retroativo fizer falta.
 Esta é a mesma discussão chegando por outra porta.
 
-### Aberto pela PR 3, e é decisão sua
+### Aberto pela PR 3 — decidido em 2026-10-22: voltar a mostrar o número (decisão 7, qual número a confirmar)
 
 **Marcar uma tarefa antiga.** A caixa permanente tornou isso um clique: esquece a tarefa de
 segunda, marca na quarta. Medido literalmente, a linha diz `done 22:22 · 56h22 of 2h30 ·
@@ -229,7 +264,8 @@ que só ele consegue distinguir.
 
 Resolver isso é decisão de design, não de implementação: sugerir enquanto digita, oferecer as
 existentes num menu, ou avisar quando a etiqueta digitada não existe ainda. As três mudam o
-campo, e o `docs/design/` desenhou o campo sem nenhuma delas.
+campo, e o `docs/design/` desenhou o campo sem nenhuma delas. **Decidido em 2026-10-22:
+sugerir e avisar** (decisão 5), na terceira rodada de design.
 
 Duas precisam de servidor e não dependem de tela nenhuma:
 
@@ -237,8 +273,8 @@ Duas precisam de servidor e não dependem de tela nenhuma:
   esse dado a tela não consegue oferecer mover, encurtar ou substituir. Substituir tem que ser
   atômico no servidor — excluir e criar em duas chamadas deixa o horário livre no meio.
 - **Editar a checklist.** `TaskUpdate` não tem campo de itens e nenhuma rota toca em
-  `ChecklistItem`. Decisão de API pendente: itens dentro do `PATCH` da tarefa, ou recurso
-  próprio em `/tasks/{id}/items`.
+  `ChecklistItem`. **Decidido em 2026-10-22: recurso próprio em `/tasks/{id}/items`**
+  (decisão 6). Falta o ADR e as rotas.
 
 ---
 
