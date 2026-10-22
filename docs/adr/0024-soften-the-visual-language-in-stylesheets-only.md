@@ -1,6 +1,7 @@
 # ADR-0024: Soften the visual language, in stylesheets only
 
-**Status:** Accepted
+**Status:** Accepted; its token table and two of its open points superseded by
+[ADR-0026](0026-adopt-the-papel-tokens-and-test-every-pair.md)
 **Date:** 2026-10-19
 **Deciders:** Gabriel Barros
 
