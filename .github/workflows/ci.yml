@@ -56,6 +56,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
+      - name: Verify the lockfiles are what their .in files produce
+        # A requirements.txt edited by anything but uv still installs here on Linux, so no
+        # other step can tell: that is how a bot's edit dropped uvloop's win32 marker and broke
+        # every Windows install while CI stayed green. Regenerating with the pinned uv and
+        # diffing is the check that can. The plain form keeps every pin, so a branch that
+        # touched no dependency regenerates byte for byte. The version comes from
+        # .python-version, the one place it is written.
+        run: |
+          python_version="$(cat .python-version)"
+          uv pip compile --universal --python-version "$python_version" requirements.in -o requirements.txt > /dev/null
+          uv pip compile --universal --python-version "$python_version" requirements-dev.in -o requirements-dev.txt > /dev/null
+          if ! git diff --exit-code -- requirements.txt requirements-dev.txt; then
+            echo "::error::A lockfile is not what its .in file produces. Regenerate it with the commands in CONTRIBUTING.md and commit the result."
+            exit 1
+          fi
+
       - name: Lint
         run: ruff check .
 
