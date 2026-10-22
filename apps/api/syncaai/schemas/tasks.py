@@ -67,6 +67,24 @@ class ChecklistItemCreate(BaseModel):
     label: str = Field(min_length=1, max_length=200)
 
 
+class ChecklistItemUpdate(BaseModel):
+    """A change to one item. Absent leaves a field alone; neither field can be cleared."""
+
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    completed: bool | None = None
+
+    @field_validator("label", "completed")
+    @classmethod
+    def refuse_a_null(cls, value: object) -> object:
+        return _reject_an_explicit_null(value)
+
+
+class ChecklistOrder(BaseModel):
+    """Every item of a task, in the order it should have (ADR-0028)."""
+
+    item_ids: list[uuid.UUID] = Field(max_length=MAX_CHECKLIST_ITEMS)
+
+
 class ChecklistItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

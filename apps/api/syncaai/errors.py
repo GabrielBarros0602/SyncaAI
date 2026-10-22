@@ -91,6 +91,27 @@ class TaskNotFoundError(DomainError):
     """
 
 
+class ChecklistItemNotFoundError(DomainError):
+    """Raised for an item that is not on the task named in the path.
+
+    Separate from :class:`TaskNotFoundError` only for the sentence. The task has already
+    been found for this owner, so saying the item is missing discloses nothing about anybody
+    else's checklist (ADR-0028).
+    """
+
+
+class ChecklistFullError(DomainError):
+    """Raised when adding an item to a task that already holds the most a checklist may."""
+
+
+class ChecklistOrderStaleError(DomainError):
+    """Raised when a new order does not name exactly the items the task has.
+
+    An item added or removed since the client read the list. Merging the two would produce an
+    order nobody chose, so the client is told to read again instead (ADR-0028).
+    """
+
+
 class InvertedWindowError(DomainError):
     """Raised when a capacity window ends before it starts."""
 

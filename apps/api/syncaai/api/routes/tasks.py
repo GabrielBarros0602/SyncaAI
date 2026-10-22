@@ -18,8 +18,19 @@ from syncaai.db import get_session
 from syncaai.errors import HorizonTooLongError, InvertedWindowError
 from syncaai.repositories.tags import TagRepository
 from syncaai.repositories.tasks import TaskRepository
-from syncaai.schemas.tasks import Page, TagRead, TaskCreate, TaskRead, TaskUpdate
+from syncaai.schemas.tasks import (
+    ChecklistItemCreate,
+    ChecklistItemRead,
+    ChecklistItemUpdate,
+    ChecklistOrder,
+    Page,
+    TagRead,
+    TaskCreate,
+    TaskRead,
+    TaskUpdate,
+)
 from syncaai.services.capacity import MAX_HORIZON_DAYS
+from syncaai.services.checklist import ChecklistService
 from syncaai.services.tasks import MAX_PAGE_SIZE, TaskService
 from syncaai.time_windows import utc_window
 
@@ -33,6 +44,13 @@ def get_task_service(session: SessionDep, user_id: CurrentUserId) -> TaskService
 
 
 ServiceDep = Annotated[TaskService, Depends(get_task_service)]
+
+
+def get_checklist_service(session: SessionDep, user_id: CurrentUserId) -> ChecklistService:
+    return ChecklistService(TaskRepository(session, user_id))
+
+
+ChecklistDep = Annotated[ChecklistService, Depends(get_checklist_service)]
 
 
 @router.post("/tasks", status_code=status.HTTP_201_CREATED, summary="Schedule a task")
@@ -103,6 +121,56 @@ def update_task(
 def delete_task(task_id: uuid.UUID, service: ServiceDep, session: SessionDep) -> None:
     service.delete(task_id)
     session.commit()
+
+
+@router.post(
+    "/tasks/{task_id}/items",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a checklist item at the end",
+)
+def add_item(
+    task_id: uuid.UUID, payload: ChecklistItemCreate, checklist: ChecklistDep, session: SessionDep
+) -> ChecklistItemRead:
+    item = checklist.add(task_id, payload)
+    session.commit()
+    return ChecklistItemRead.model_validate(item)
+
+
+@router.patch("/tasks/{task_id}/items/{item_id}", summary="Rename, tick or untick an item")
+def update_item(
+    task_id: uuid.UUID,
+    item_id: uuid.UUID,
+    payload: ChecklistItemUpdate,
+    checklist: ChecklistDep,
+    session: SessionDep,
+) -> ChecklistItemRead:
+    item = checklist.update(task_id, item_id, payload)
+    session.commit()
+    return ChecklistItemRead.model_validate(item)
+
+
+@router.delete(
+    "/tasks/{task_id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove an item; the ones after it move up",
+)
+def delete_item(
+    task_id: uuid.UUID, item_id: uuid.UUID, checklist: ChecklistDep, session: SessionDep
+) -> None:
+    checklist.delete(task_id, item_id)
+    session.commit()
+
+
+@router.put("/tasks/{task_id}/items/order", summary="Set the order of every item at once")
+def reorder_items(
+    task_id: uuid.UUID, payload: ChecklistOrder, checklist: ChecklistDep, session: SessionDep
+) -> list[ChecklistItemRead]:
+    """The whole list, in one transaction, which is what the deferred unique position
+    exists for (ADR-0020). A list that is not exactly the current items is refused with 409
+    rather than merged (ADR-0028)."""
+    items = checklist.reorder(task_id, payload.item_ids)
+    session.commit()
+    return [ChecklistItemRead.model_validate(item) for item in items]
 
 
 @router.get("/tags", summary="List the tags you have used")
