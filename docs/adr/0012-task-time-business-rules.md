@@ -1,6 +1,7 @@
 # ADR-0012: Business rules for a task's position in time
 
-**Status:** Accepted — one consequence corrected below
+**Status:** Accepted — one consequence corrected below; rule 1 amended by
+[ADR-0027](0027-correct-a-started-task-up-to-a-day-back.md) for tasks that have begun
 **Date:** 2026-08-11
 **Deciders:** Gabriel Barros
 
