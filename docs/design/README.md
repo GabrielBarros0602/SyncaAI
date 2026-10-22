@@ -12,11 +12,13 @@ for the front end, not source to be imported: the implementation is React with C
 
 Open them in a browser. They are large because the fonts are inlined; nothing is fetched.
 
-**Five properties no longer follow these files.** Text contrast, field borders, radius, the
-smallest text size and the week's layout below 1100px follow
-[ADR-0024](../adr/0024-soften-the-visual-language-in-stylesheets-only.md) instead, and the
-screen differs from the drawings there on purpose. Everything below — what a row is, where
-the verbs live, which number is big — is still decided here.
+**The tokens no longer follow these files.** Colour, type, spacing, radius, focus and motion
+come from the third round's design system, direction Papel
+([ADR-0026](../adr/0026-adopt-the-papel-tokens-and-test-every-pair.md)); the smallest text
+size inside the modules and the week's layout below 1100px follow
+[ADR-0024](../adr/0024-soften-the-visual-language-in-stylesheets-only.md). The screen differs
+from the drawings there on purpose. Everything below — what a row is, where the verbs live,
+which number is big — is still decided here.
 
 ## What was decided in them, and why it matters when reading the code
 
