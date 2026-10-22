@@ -34,5 +34,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     include: ["tests/**/*.test.{ts,tsx}"],
+    // The contrast test reads tokens.css as text. Vitest empties every stylesheet it is not
+    // told to process, `?raw` imports included, and the test would then find no tokens.
+    css: { include: [/styles\/tokens\.css/] },
   },
 });
