@@ -10,6 +10,9 @@ from fastapi.responses import JSONResponse
 from syncaai.errors import (
     AccountNotVerifiedError,
     CannotReopenTaskError,
+    ChecklistFullError,
+    ChecklistItemNotFoundError,
+    ChecklistOrderStaleError,
     HorizonTooLongError,
     InvalidCredentialsError,
     InvalidLinkTokenError,
@@ -22,6 +25,7 @@ from syncaai.errors import (
     TaskStartsAfterCompletionError,
     TaskStartsInThePastError,
 )
+from syncaai.schemas.tasks import MAX_CHECKLIST_ITEMS
 from syncaai.security.passwords import PasswordTooLongError
 from syncaai.services.capacity import MAX_HORIZON_DAYS
 from syncaai.services.tasks import START_CORRECTION_HOURS
@@ -95,6 +99,28 @@ def register_error_handlers(app: FastAPI) -> None:
         # them apart, which is the point (ADR-0016).
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such task."}
+        )
+
+    @app.exception_handler(ChecklistItemNotFoundError)
+    async def _item_missing(_: Request, __: ChecklistItemNotFoundError) -> JSONResponse:
+        # Reached only once the task was found for this owner, so naming the item as the
+        # missing thing says nothing about anybody else's checklist (ADR-0028).
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such checklist item."}
+        )
+
+    @app.exception_handler(ChecklistFullError)
+    async def _checklist_full(_: Request, __: ChecklistFullError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": f"A task holds at most {MAX_CHECKLIST_ITEMS} checklist items."},
+        )
+
+    @app.exception_handler(ChecklistOrderStaleError)
+    async def _order_stale(_: Request, __: ChecklistOrderStaleError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "The checklist changed since it was read. Read it again."},
         )
 
     @app.exception_handler(CannotReopenTaskError)
