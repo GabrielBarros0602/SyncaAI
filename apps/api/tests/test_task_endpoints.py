@@ -565,6 +565,10 @@ def test_tags_are_listed_but_cannot_be_created_on_their_own(
         ("get", f"{TASKS}/{uuid.uuid4()}"),
         ("patch", f"{TASKS}/{uuid.uuid4()}"),
         ("delete", f"{TASKS}/{uuid.uuid4()}"),
+        ("post", f"{TASKS}/{uuid.uuid4()}/items"),
+        ("patch", f"{TASKS}/{uuid.uuid4()}/items/{uuid.uuid4()}"),
+        ("delete", f"{TASKS}/{uuid.uuid4()}/items/{uuid.uuid4()}"),
+        ("put", f"{TASKS}/{uuid.uuid4()}/items/order"),
         ("get", TAGS),
     ],
 )
