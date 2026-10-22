@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 25 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 26 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -184,12 +184,16 @@ changes likely. Build no screen, UI component, UI test or new CSS until it retur
 and 8 of item 2 are paused, and work written against a design system about to be replaced is
 work done twice.
 
+The round's first step, the design system, is in: `tokens.css` is direction Papel and a test
+holds every contrast pair it promises (ADR-0026). Its legacy block keeps the old names working;
+moving a module to the new ones is screen work, and waits with the screens.
+
 **Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate:
 
 1. **Base work, while the front is frozen** — the list under "O trabalho de base" in the
    backlog: the lockfile check in CI, the 24-hour correction of a started task's start, the
-   checklist as its own resource, the usable day as a per-person window, and a contrast test
-   for the tokens. The first four need an ADR before the code.
+   checklist as its own resource, and the usable day as a per-person window. All four need an
+   ADR before the code.
 2. The rest of the three screens, after the redesign: the day's "move something" offer,
    address confirmation and settings. `docs/design/README.md` records what the second round
    decided; the third round's brief is local, in `docs/design-brief-3.md`.

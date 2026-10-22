@@ -33,7 +33,7 @@ redesign.
 | 5 | Etiqueta digitada errado | **Sugerir as existentes enquanto digita e avisar quando a etiqueta é nova** | front (`GET /tags` já existe); entra no redesign | não |
 | 6 | Como editar a checklist | **Recurso próprio** (`/tasks/{id}/items`), mais organizado e mais seguro para a API | ADR, rotas, testes | sim |
 | 7 | Conclusão tardia | **Voltar a mostrar o número, e o número é o tempo real decorrido** (`+53h52`). A fórmula do design era um atalho para preencher o protótipo; uma métrica de autoconhecimento sobre planejamento tem que refletir o relógio com exatidão, e um número plausível mas errado destrói a confiança na ferramenta | front; entra no redesign | não |
-| 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | teste automático de contraste dos tokens (sobrevive); tokens novos vêm do redesign | o teste, sim |
+| 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | ✅ tokens da direção Papel e o teste de contraste (ADR-0026); falta o seletor, que é tela | o teste, sim |
 | 9 | Celular | **Visão de um dia**, numa rodada de design. O prazo não pesa contra | redesign | — |
 | 10 | Design | **Terceira rodada completa.** O inventário de problemas está no brief local | — | — |
 | 11 | Dependabot nos lockfiles do Python | **Um check no CI** que regenera o lockfile com o `uv` e falha se diferir | job de CI | sim |
@@ -72,8 +72,10 @@ O que o redesign não pode invalidar, e por isso segue enquanto o front está co
 2. ADR e serviço da correção de horário até 24h (decisão 1).
 3. ADR e rotas da checklist como recurso próprio (decisão 6).
 4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12).
-5. Teste automático de contraste dos tokens (decisão 8) — vale para qualquer token,
-   inclusive os que o redesign trouxer.
+5. ~~Teste automático de contraste dos tokens (decisão 8).~~ ✅ Feito junto com a troca dos
+   tokens pela direção Papel do design system (ADR-0026). O teste lê o `tokens.css` como ele é
+   entregue; um par novo que as telas passem a usar tem que entrar no `contrast-pairs.json`,
+   senão o teste não sabe que ele existe.
 
 O foco da caixa de concluir (decisão 3) é front e espera o descongelamento.
 
@@ -368,14 +370,12 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
 A mudança foi restrita às folhas de estilo de propósito, e quatro coisas ficaram do lado de
 fora dessa linha:
 
-- **O `--accent` do tema claro reprova sobre os próprios tons de alarme**: 4,35:1 no chip
-  `over by`, 3,88:1 numa linha aberta de dia estourado. É a única cor de sinal, então é
-  decisão de design. A PR 5 acrescentou mais um lugar com esse par — o botão que confirma uma
-  exclusão sem volta —, e ele herda o mesmo problema.
-- **O tema claro não liga pela interface.** O `App.tsx` põe `data-theme` num `div` dentro do
-  `body`, e o fundo da página resolve contra `:root`; trocar o atributo nesse `div` desenha
-  tinta escura sobre página escura, a 1,05:1. Para conferir no DevTools, o atributo vai no
-  `<html>`.
+- ~~**O `--accent` do tema claro reprova sobre os próprios tons de alarme**: 4,35:1 no chip
+  `over by`, 3,88:1 numa linha aberta de dia estourado.~~ ✅ Resolvido pelo ADR-0026: o texto
+  de problema passou a ser `alert-ink`, a 6,29:1 sobre `alert-surface` no claro.
+- **O tema claro não liga pela interface.** ~~O `App.tsx` põe `data-theme` num `div`.~~ O
+  atributo foi para o `<html>`, fixo em `dark`, e o claro renderiza certo quando ele muda
+  (ADR-0026). Falta o seletor nas configurações, que é tela.
 - **O padding do shell mora em dois lugares.** O `App.tsx` escreve `56px 64px` inline e o
   `tokens.css` sobrescreve com `!important` abaixo de 1100px. Quando o padding sair do inline,
   o override sai junto — o seletor casa com o próprio valor inline, então ele para de valer
