@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 27 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 28 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -105,7 +105,7 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 45 today, and a run
+  them is not a green run. `pytest -m integration` counts them; there are 48 today, and a run
   that reports fewer found no database.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
@@ -194,9 +194,8 @@ moving a module to the new ones is screen work, and waits with the screens.
 **Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate:
 
 1. **Base work, while the front is frozen** — the list under "O trabalho de base" in the
-   backlog: the checklist as its own resource, and the usable day as a per-person window.
-   Each needs an ADR before the code; their open questions were answered on 2026-10-22 and
-   are recorded in the backlog.
+   backlog: the usable day as a per-person window. It needs an ADR before the code; its open
+   questions were answered on 2026-10-22 and are recorded in the backlog.
 2. The rest of the three screens, after the redesign: the day's "move something" offer,
    address confirmation and settings. `docs/design/README.md` records what the second round
    decided; the third round's brief is local, in `docs/design-brief-3.md`.
