@@ -204,10 +204,11 @@ base work that list began with is done (ADR-0027 to ADR-0029).
    `docs/design-brief-3-passo-2.md`; the desktop week went back for two corrections, recorded
    in the backlog.
 2. S7 — the real provider, its guardrails and its degradation. Like S6 it does not depend
-   on the redesign. Two things come before any client code, and both are already
-   scheduled: choosing the provider against the criteria the ADRs impose (`docs/backlog.md`,
-   decision 13), and the threat-model review whose second trigger is a real provider being
-   wired in (`docs/threat-model.md`).
+   on the redesign. The threat-model review its second trigger asked for is done
+   (2026-10-23). What comes before any client code is choosing the provider against the
+   criteria the ADRs impose (`docs/backlog.md`, decision 13), which also closes threat 22:
+   what the provider keeps of what it is sent. The rate limit, the monthly cap and the kill
+   switch (threat 13) come before the first real call.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when
