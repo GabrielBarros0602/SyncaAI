@@ -5,6 +5,7 @@ tag: the capacity query returns minutes per day, and the occupied ranges are a s
 end. What the assembler cannot be handed it cannot send.
 """
 
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -38,7 +39,12 @@ def plan_prompt_for(
 
 
 def plannable_days(
-    session: Session, user: User, *, horizon_days: int, now: datetime
+    session: Session,
+    user: User,
+    *,
+    horizon_days: int,
+    now: datetime,
+    held: Sequence[tuple[datetime, datetime]] = (),
 ) -> list[DaySlots]:
     """Every day of the horizon that is not a day off, with its free gaps and its budget.
 
@@ -60,4 +66,5 @@ def plannable_days(
         zone_name=zone_name,
         days_off=frozenset(user.days_off),
         now=now,
+        held=held,
     )

@@ -138,7 +138,12 @@ def week_end(today: date) -> date:
 
 
 def schedule_this_week(
-    steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime, week_ends: date
+    steps: Sequence[Step],
+    days: Sequence[DaySlots],
+    *,
+    now: datetime,
+    week_ends: date,
+    placed: Mapping[int, datetime] | None = None,
 ) -> list[Placement]:
     """Place on the days up to ``week_ends`` only, as a new plan is placed (ADR-0033).
 
@@ -146,7 +151,9 @@ def schedule_this_week(
     this week, so the draft can offer to send it on. A step waiting for one of those goes
     with it. When they do not, there is nowhere to send it, and the reason stays as it was.
     """
-    placements = schedule(steps, [day for day in days if day.day <= week_ends], now=now)
+    placements = schedule(
+        steps, [day for day in days if day.day <= week_ends], now=now, placed=placed
+    )
     if not any(day.day > week_ends for day in days):
         return placements
     return [

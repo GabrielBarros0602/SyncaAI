@@ -481,3 +481,43 @@ def test_the_window_is_read_through_the_zone_on_a_day_the_clock_changes() -> Non
 
     ((opens, closes),) = day.free
     assert closes - opens == timedelta(hours=7)
+
+
+# --- Time the plan's own steps hold (ADR-0033) ---------------------------------------------
+
+
+def _held(*held: tuple[datetime, datetime]) -> list[DaySlots]:
+    return build_slots(
+        [_capacity(MONDAY), _capacity(TUESDAY)],
+        [],
+        window=UsableWindow(),
+        zone_name=SAO_PAULO,
+        days_off=frozenset(),
+        now=MONDAY_MIDNIGHT_UTC,
+        held=held,
+    )
+
+
+def test_a_step_the_plan_keeps_takes_its_time_out_of_the_gaps_and_the_budget() -> None:
+    """Placing a plan again, the steps that stay are not tasks: the capacity query cannot see
+    them, so the slots take them out themselves, from the gap and from the day's minutes."""
+    monday, tuesday = _held((_local(MONDAY, 10), _local(MONDAY, 11)))
+
+    assert monday.free == (
+        (_local(MONDAY, 6), _local(MONDAY, 10)),
+        (_local(MONDAY, 11), _local(MONDAY, 22)),
+    )
+    assert (monday.budget_minutes, tuesday.budget_minutes) == (900, 960)
+
+
+def test_a_step_held_across_midnight_spends_each_day_the_part_it_holds() -> None:
+    monday, tuesday = _held((_local(MONDAY, 23, 30), _local(TUESDAY, 0, 30)))
+
+    assert (monday.budget_minutes, tuesday.budget_minutes) == (930, 930)
+
+
+def test_an_empty_held_range_holds_nothing() -> None:
+    [monday, _] = _held((_local(MONDAY, 10), _local(MONDAY, 10)))
+
+    assert monday.free == ((_local(MONDAY, 6), _local(MONDAY, 22)),)
+    assert monday.budget_minutes == 960
