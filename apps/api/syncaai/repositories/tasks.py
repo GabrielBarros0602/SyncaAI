@@ -181,6 +181,37 @@ class TaskRepository(OwnedRepository[Task]):
         )
         return statement
 
+    def occupied_ranges(
+        self, *, starts: datetime, ends: datetime
+    ) -> list[tuple[datetime, datetime]]:
+        """Run :meth:`ranges_statement` and return each booking as ``(start_at, end_at)``."""
+        rows = self._session.execute(self.ranges_statement(starts=starts, ends=ends))
+        return [(start_at, end_at) for start_at, end_at in rows]
+
+    def ranges_statement(
+        self, *, starts: datetime, ends: datetime
+    ) -> Select[tuple[datetime, datetime]]:
+        """Every booking that touches ``[starts, ends)``, as its range and nothing else.
+
+        A plan's free gaps are built from these (ADR-0030). The two columns are a privacy
+        boundary as much as the assembler is: a title that is never selected cannot reach a
+        prompt, a log line or a stack trace (ADR-0004).
+
+        Bounded on ``start_at`` with a day's margin, for the reason the capacity query is:
+        the scan stays on ``ix_tasks_user_start_at``, and the CHECK that caps a task at one
+        day means nothing starting earlier can still be running.
+        """
+        return (
+            select(Task.start_at, Task.end_at)
+            .where(
+                Task.user_id == self._owner_id,
+                Task.start_at >= starts - MAX_TASK_LENGTH,
+                Task.start_at < ends,
+                Task.end_at > starts,
+            )
+            .order_by(Task.start_at)
+        )
+
 
 class ChecklistItemRepository(OwnedRepository[ChecklistItem]):
     """The owner is on the parent task, so reaching it is a join.
