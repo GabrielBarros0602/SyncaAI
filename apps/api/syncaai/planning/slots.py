@@ -76,7 +76,9 @@ def _subtract(span: Interval, taken: Sequence[Interval]) -> list[Interval]:
     left: list[Interval] = []
     cursor = start
     for busy_start, busy_end in taken:
-        if busy_end <= cursor or busy_start >= end:
+        # An empty range is a task completed before it began: it holds nothing, and the
+        # exclusion constraint agrees, so it must not split the gap it sits in.
+        if busy_end <= cursor or busy_start >= end or busy_start >= busy_end:
             continue
         if busy_start > cursor:
             left.append((cursor, busy_start))
