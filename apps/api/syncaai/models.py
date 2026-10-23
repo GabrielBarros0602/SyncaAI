@@ -31,6 +31,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     MetaData,
@@ -47,7 +48,16 @@ from sqlalchemy.dialects.postgresql import ARRAY, ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.schema import FetchedValue
 
-from syncaai.planning.contract import MAX_HORIZON_DAYS, MAX_REQUEST_CHARS, MIN_HORIZON_DAYS
+from syncaai.planning.contract import (
+    MAX_DESCRIPTION_CHARS,
+    MAX_HORIZON_DAYS,
+    MAX_LINK_LABEL_CHARS,
+    MAX_LINKS_PER_ITEM,
+    MAX_REQUEST_CHARS,
+    MAX_TITLE_CHARS,
+    MAX_URL_CHARS,
+    MIN_HORIZON_DAYS,
+)
 from syncaai.security.opaque import TOKEN_HASH_LENGTH
 
 MINUTES_IN_A_DAY = 1440
@@ -255,6 +265,9 @@ class Task(Base, TimestampMixin):
         # The capacity query filters by owner and a UTC range computed at the edge
         # (ADR-0009), which is exactly this index.
         Index("ix_tasks_user_start_at", "user_id", "start_at"),
+        # A plan's progress counts its tasks, and deleting a draft clears them; only the
+        # tasks that came from a plan are indexed.
+        Index("ix_tasks_plan_id", "plan_id", postgresql_where=text("plan_id IS NOT NULL")),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -277,6 +290,11 @@ class Task(Base, TimestampMixin):
     # because its label was removed would be the wrong loss.
     tag_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("tags.id", ondelete="SET NULL"), nullable=True
+    )
+    # The plan a task was committed from (ADR-0030). Cleared, never cascaded: deleting a
+    # draft must not delete the work a person accepted from it.
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("plan_drafts.id", ondelete="SET NULL"), nullable=True
     )
 
     user: Mapped[User] = relationship(back_populates="tasks")
@@ -539,3 +557,187 @@ class AiJobAnswer(Base):
     )
 
     job: Mapped[AiJob] = relationship(back_populates="answers")
+
+
+class PlanDraft(Base, TimestampMixin):
+    """A plan under review, before any of it is a task (ADR-0030, ADR-0033, ADR-0037).
+
+    Only an approved draft outlives thirty days: a discarded or expired one is deleted thirty
+    days after ``ended_at``, on its job's clock, so no copy of the request survives the job's
+    purge.
+    """
+
+    __tablename__ = "plan_drafts"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'approved', 'discarded', 'expired')", name="status"),
+        CheckConstraint(
+            f"char_length(request) BETWEEN 1 AND {MAX_REQUEST_CHARS}", name="request_length"
+        ),
+        CheckConstraint(
+            f"last_day >= first_day AND last_day - first_day < {MAX_HORIZON_DAYS}",
+            name="horizon",
+        ),
+        CheckConstraint("(status = 'pending') = (ended_at IS NULL)", name="ended_unless_pending"),
+        CheckConstraint(
+            "(status = 'approved') = (idempotency_key IS NOT NULL)", name="key_when_approved"
+        ),
+        Index(
+            "ux_plan_drafts_one_pending",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index("ix_plan_drafts_user_id_created_at", "user_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("ai_jobs.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    request: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending", server_default=text("'pending'")
+    )
+    prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: The horizon in the person's local days. The Sunday it fills first is derived from
+    #: ``first_day``, never stored (ADR-0010, ADR-0033).
+    first_day: Mapped[date] = mapped_column(Date, nullable=False)
+    last_day: Mapped[date] = mapped_column(Date, nullable=False)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    items: Mapped[list[PlanDraftItem]] = relationship(
+        back_populates="draft",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="PlanDraftItem.position",
+    )
+    discards: Mapped[list[PlanDraftDiscard]] = relationship(
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="PlanDraftDiscard.position",
+    )
+
+
+class PlanDraftItem(Base, TimestampMixin):
+    """A step that can become a task: placed, or with the reason it is not (ADR-0037).
+
+    Its minutes are a task's, not the model's. The block bounds what the model proposes and
+    never what the person edits (ADR-0032).
+    """
+
+    __tablename__ = "plan_draft_items"
+    __table_args__ = (
+        CheckConstraint("position >= 0", name="position_non_negative"),
+        CheckConstraint("btrim(title) <> ''", name="title_not_blank"),
+        CheckConstraint(
+            f"char_length(description) <= {MAX_DESCRIPTION_CHARS}", name="description_length"
+        ),
+        CheckConstraint(f"minutes BETWEEN 1 AND {MINUTES_IN_A_DAY}", name="minutes"),
+        CheckConstraint(
+            "placement IN ('placed', 'no_room', 'not_this_week', 'after_unplaced')",
+            name="placement",
+        ),
+        CheckConstraint(
+            "(placement = 'placed') = (start_at IS NOT NULL)", name="start_when_placed"
+        ),
+        UniqueConstraint("draft_id", "position"),
+        # The target of the prerequisites' composite keys, which is what holds a dependency
+        # to items of one draft.
+        UniqueConstraint("draft_id", "id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    draft_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("plan_drafts.id", ondelete="CASCADE"), nullable=False
+    )
+    #: The model's order, which is also the order the scheduler places in.
+    position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    title: Mapped[str] = mapped_column(String(MAX_TITLE_CHARS), nullable=False)
+    description: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=text("''")
+    )
+    minutes: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    placement: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    draft: Mapped[PlanDraft] = relationship(back_populates="items")
+    links: Mapped[list[PlanDraftItemLink]] = relationship(
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="PlanDraftItemLink.position",
+    )
+
+
+class PlanDraftItemPrerequisite(Base):
+    """One step that must end before another starts (ADR-0037).
+
+    Both keys include the draft, so a dependency between items of two drafts has nothing to
+    reference. Removing a prerequisite cascades here, which is ADR-0030's rule applied by the
+    database: the constraint goes, the dependent step stays.
+    """
+
+    __tablename__ = "plan_draft_item_prerequisites"
+    __table_args__ = (
+        CheckConstraint("item_id <> prerequisite_id", name="not_itself"),
+        ForeignKeyConstraint(
+            ["draft_id", "item_id"],
+            ["plan_draft_items.draft_id", "plan_draft_items.id"],
+            ondelete="CASCADE",
+            name="fk_plan_draft_item_prerequisites_item",
+        ),
+        ForeignKeyConstraint(
+            ["draft_id", "prerequisite_id"],
+            ["plan_draft_items.draft_id", "plan_draft_items.id"],
+            ondelete="CASCADE",
+            name="fk_plan_draft_item_prerequisites_prerequisite",
+        ),
+        # The cascade from a removed prerequisite looks its dependants up by this.
+        Index("ix_plan_draft_item_prerequisites_prerequisite", "draft_id", "prerequisite_id"),
+    )
+
+    draft_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    item_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    prerequisite_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+
+
+class PlanDraftItemLink(Base):
+    """A resource for one step, kept as it came so the note is written only at commit."""
+
+    __tablename__ = "plan_draft_item_links"
+    __table_args__ = (
+        CheckConstraint(f"position BETWEEN 0 AND {MAX_LINKS_PER_ITEM - 1}", name="position"),
+        CheckConstraint("btrim(label) <> ''", name="label_not_blank"),
+        # The scheme is the part that matters: whatever reaches a note is rendered as a link
+        # one day, and javascript: there is a script (ADR-0030).
+        CheckConstraint("url ~ '^https?://'", name="web_address"),
+    )
+
+    item_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("plan_draft_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    label: Mapped[str] = mapped_column(String(MAX_LINK_LABEL_CHARS), nullable=False)
+    url: Mapped[str] = mapped_column(String(MAX_URL_CHARS), nullable=False)
+
+
+class PlanDraftDiscard(Base):
+    """A step the domain check discarded, kept so the review can say why (ADR-0035)."""
+
+    __tablename__ = "plan_draft_discards"
+    __table_args__ = (
+        CheckConstraint("position >= 0", name="position_non_negative"),
+        CheckConstraint("cardinality(reasons) >= 1", name="has_reasons"),
+    )
+
+    draft_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("plan_drafts.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: Its position in the answer, as the model and the reasons number it.
+    position: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    #: As it came, which may be empty or too long: those are among the reasons.
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    reasons: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
