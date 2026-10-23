@@ -26,7 +26,7 @@ MAX_TAG_LENGTH = 50
 MAX_NOTES_LENGTH = 4000
 
 
-def _require_an_offset(value: datetime) -> datetime:
+def require_an_offset(value: datetime) -> datetime:
     """Refuse a naive timestamp.
 
     Accepting one would mean guessing which zone the caller meant, and a calendar that
@@ -38,7 +38,7 @@ def _require_an_offset(value: datetime) -> datetime:
     return value
 
 
-def _reject_an_explicit_null(value: object) -> object:
+def reject_an_explicit_null(value: object) -> object:
     """Refuse ``null`` for a field that cannot be cleared.
 
     A validator does not run on a default, so this only fires when the client actually sent
@@ -76,7 +76,7 @@ class ChecklistItemUpdate(BaseModel):
     @field_validator("label", "completed")
     @classmethod
     def refuse_a_null(cls, value: object) -> object:
-        return _reject_an_explicit_null(value)
+        return reject_an_explicit_null(value)
 
 
 class ChecklistOrder(BaseModel):
@@ -110,7 +110,7 @@ class TaskCreate(BaseModel):
     @field_validator("start_at")
     @classmethod
     def require_an_offset(cls, value: datetime) -> datetime:
-        return _require_an_offset(value)
+        return require_an_offset(value)
 
 
 class TaskUpdate(BaseModel):
@@ -131,12 +131,12 @@ class TaskUpdate(BaseModel):
     @field_validator("title", "start_at", "duration_minutes", "completed")
     @classmethod
     def refuse_a_null(cls, value: object) -> object:
-        return _reject_an_explicit_null(value)
+        return reject_an_explicit_null(value)
 
     @field_validator("start_at")
     @classmethod
     def require_an_offset(cls, value: datetime) -> datetime:
-        return _require_an_offset(value)
+        return require_an_offset(value)
 
     @field_validator("tag")
     @classmethod
