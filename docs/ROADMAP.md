@@ -351,9 +351,9 @@ errado.
       `plan_id`, e tudo o que se faz com o plano acontece em `/plans/{plan_id}`
       → [ADR-0038](adr/0038-a-job-and-its-plan-are-two-resources-linked-by-id.md)
 - [x] Pedir um plano (`POST /ai/plans`, 409 de um por vez), ver o job e ler o plano
-- [ ] Endpoint de commit do draft: uma transação e idempotency key
+- [x] Endpoint de commit do draft: uma transação e idempotency key
 - [ ] `prompt_version` no job e na chave de cache desde o primeiro commit deste sprint
-- [ ] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
+- [x] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
 - [x] Itens do rascunho editáveis — título, minutos, horário, remover — revalidados contra as
       regras de criar tarefa ([ADR-0030](adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md))
 - [x] Expurgo, de hora em hora no worker, das tabelas de token e de rate limit, e do conteúdo
