@@ -275,6 +275,23 @@ ao pé da letra e aceitar um número plausível e errado, ou recusar a marcaçã
 - **Checklist segue pendente** e mantém o verbo `list` fora dos oito. A decisão de API não
   mudou: itens dentro do `PATCH` da tarefa, ou recurso próprio em `/tasks/{id}/items`.
 
+### A semana no desktop da terceira rodada — revisada em 2026-10-22
+
+O Claude Design entregou a semana no desktop sobre o Papel, e a revisão está no brief local
+(`docs/design-brief-3-passo-2.md`). Duas escolhas da tela mudam comportamento, e foram
+decididas:
+
+- **A oferta do dia pesado passa a escolher a tarefa.** A regra é aritmética: a menor tarefa
+  ainda não começada que, sozinha, tira o dia do excesso, levada para o dia mais leve depois de
+  hoje. Ela vale até o S6, quando a escolha passa para a IA, a quem o ADR-0022 a tinha
+  reservado. A regra vira ADR quando a tela for implementada.
+- **Concluir continua sendo Espaço, e a legenda de atalhos continua visível.** A tela tinha
+  trocado para X e escondido a legenda, o que deixava os atalhos invisíveis para quem não usa
+  leitor de tela. Entra a tecla C, que abre a checklist.
+
+Dois pontos voltaram para correção. A escada de carga: a tela a recalculava com limites
+próprios (12h, 14h, 16h), em vez de usar o `load` do servidor. E o criar tarefa, que faltava.
+
 ---
 
 ## Rodada 2 — os verbos que faltam
