@@ -47,6 +47,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.schema import FetchedValue
 
+from syncaai.planning.contract import MAX_HORIZON_DAYS, MAX_REQUEST_CHARS, MIN_HORIZON_DAYS
 from syncaai.security.opaque import TOKEN_HASH_LENGTH
 
 MINUTES_IN_A_DAY = 1440
@@ -59,6 +60,9 @@ DEFAULT_DAY_ENDS_AT = time(22, 0)
 
 # How long a step the planner proposes may be, for an account that has not said (ADR-0032).
 DEFAULT_BLOCK_MINUTES = 60
+
+# How many times a job may be claimed. A worker that dies mid-job spends one (ADR-0031).
+MAX_JOB_ATTEMPTS = 3
 
 # Deterministic constraint names. Without them PostgreSQL invents names, which means a
 # downgrade cannot drop what an upgrade created and every future ALTER becomes guesswork.
@@ -424,3 +428,114 @@ class PasswordResetToken(Base, TimestampMixin):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship()
+
+
+class AiJob(Base, TimestampMixin):
+    """One request to the AI layer, from queued to done or failed (ADR-0031, ADR-0036).
+
+    The states hold their own facts in CHECKs, so whichever code writes a job, it cannot be
+    running without a lock, failed without a reason, or finished without saying when. One job
+    in progress per person is a partial unique index rather than a read before the insert: a
+    double submit loses the race at the index instead of producing two jobs (ADR-0033).
+    """
+
+    __tablename__ = "ai_jobs"
+    __table_args__ = (
+        CheckConstraint("kind IN ('plan')", name="kind"),
+        CheckConstraint("status IN ('queued', 'running', 'done', 'failed')", name="status"),
+        CheckConstraint(
+            f"horizon_days BETWEEN {MIN_HORIZON_DAYS} AND {MAX_HORIZON_DAYS}", name="horizon"
+        ),
+        CheckConstraint(f"attempts BETWEEN 0 AND {MAX_JOB_ATTEMPTS}", name="attempts"),
+        CheckConstraint(
+            f"request IS NULL OR char_length(request) BETWEEN 1 AND {MAX_REQUEST_CHARS}",
+            name="request_length",
+        ),
+        # Cleared by the thirty-day purge, and by nothing while the job can still need it.
+        CheckConstraint(
+            "request IS NOT NULL OR finished_at IS NOT NULL", name="request_kept_until_finished"
+        ),
+        CheckConstraint(
+            "status <> 'running' OR locked_until IS NOT NULL", name="running_is_locked"
+        ),
+        CheckConstraint(
+            "(status IN ('done', 'failed')) = (finished_at IS NOT NULL)",
+            name="finished_when_done_or_failed",
+        ),
+        CheckConstraint(
+            "(status = 'failed') = (failure_reason IS NOT NULL)", name="reason_when_failed"
+        ),
+        CheckConstraint("(status = 'done') = (chosen_answer IS NOT NULL)", name="answer_when_done"),
+        CheckConstraint("chosen_answer IN (0, 1)", name="chosen_answer"),
+        Index(
+            "ux_ai_jobs_one_in_progress",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
+        # What the claim and the sweep read: only the unfinished jobs, oldest first, which
+        # stays small however many finished jobs accumulate.
+        Index(
+            "ix_ai_jobs_claimable",
+            "created_at",
+            postgresql_where=text("status IN ('queued', 'running')"),
+        ),
+        # The owner's jobs, and the cascade when an account is deleted.
+        Index("ix_ai_jobs_user_id_created_at", "user_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="plan", server_default=text("'plan'")
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="queued", server_default=text("'queued'")
+    )
+    request: Mapped[str | None] = mapped_column(Text, nullable=True)
+    horizon_days: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: Claims, not model calls: a worker that dies spends one (ADR-0031).
+    attempts: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default=text("0")
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The position of the answer the draft was built from; it outlives the answers.
+    chosen_answer: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    answers: Mapped[list[AiJobAnswer]] = relationship(
+        back_populates="job",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="AiJobAnswer.position",
+    )
+
+
+class AiJobAnswer(Base):
+    """One answer a model gave for a job: the first, or its repair (ADR-0035, ADR-0036).
+
+    The key and the CHECK are ADR-0005's "one repair, never two", held by the database: a
+    third answer for a job has no position to take.
+    """
+
+    __tablename__ = "ai_job_answers"
+    __table_args__ = (CheckConstraint("position IN (0, 1)", name="position"),)
+
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("ai_jobs.id", ondelete="CASCADE"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
+    raw: Mapped[str] = mapped_column(Text, nullable=False)
+    errors: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, default=list, server_default=text("'{}'")
+    )
+    model: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    job: Mapped[AiJob] = relationship(back_populates="answers")
