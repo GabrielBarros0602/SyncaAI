@@ -45,6 +45,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0034](0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md) | The model sees the room each day has, and nothing it cannot use | Accepted |
 | [0035](0035-repair-whenever-a-step-fails-and-keep-the-better-answer.md) | Repair whenever a step fails, and keep the better of the two answers | Accepted |
 | [0036](0036-a-job-s-answers-are-rows-of-their-own.md) | A job's answers are rows of their own | Accepted |
+| [0037](0037-a-draft-in-five-tables-and-only-an-approved-one-stays.md) | A draft is held in five tables, and only an approved one stays | Accepted |
 
 ## Template
 
