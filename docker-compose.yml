@@ -44,5 +44,23 @@ services:
       db:
         condition: service_healthy
 
+  # The AI worker (ADR-0031): the same image, its own process. It has no reload, so a change
+  # to its code needs `docker compose restart worker`. On stop it finishes the job in hand;
+  # one that outlasts the grace period is left to its lock, which another claim takes back.
+  worker:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./apps/api:/app
+    command: ["python", "-m", "syncaai.worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
