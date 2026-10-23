@@ -105,7 +105,7 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 190 today, and a run
+  them is not a green run. `pytest -m integration` counts them; there are 209 today, and a run
   that reports fewer found no database.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
@@ -182,7 +182,7 @@ trigger derives `end_at`, and a CHECK caps a task at one day. The web app is Vit
 TypeScript in strict mode, CSS Modules, no component library. The AI layer runs end to end
 against a sample generator: the queue, the worker (`python -m syncaai.worker`, its own compose
 service), the prompt, the repair ladder, the scheduler and the draft are built (ADR-0030 to
-ADR-0038). A plan can be asked for and read over HTTP; editing it, committing and discarding
+ADR-0038). A plan can be asked for, read, edited and discarded over HTTP; committing it
 cannot yet, and the real provider is S7.
 
 **The front end is frozen, since 2026-10-22.** A third design round is coming, with large
