@@ -20,6 +20,9 @@ from syncaai.errors import (
     InvertedWindowError,
     NoDayToPlanError,
     NotAuthenticatedError,
+    PlanInProgressError,
+    PlanJobNotFoundError,
+    PlanNotFoundError,
     RateLimitExceededError,
     StartCorrectionTooFarBackError,
     TaskNotFoundError,
@@ -35,6 +38,7 @@ from syncaai.planning.contract import MAX_ITEM_MINUTES, MIN_ITEM_MINUTES
 from syncaai.schemas.tasks import MAX_CHECKLIST_ITEMS
 from syncaai.security.passwords import PasswordTooLongError
 from syncaai.services.capacity import MAX_HORIZON_DAYS, MAX_USABLE_MINUTES, MIN_USABLE_MINUTES
+from syncaai.services.plan_jobs import PLAN_IN_PROGRESS
 from syncaai.services.tasks import START_CORRECTION_HOURS
 
 
@@ -232,4 +236,23 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": "Password is too long."},
+        )
+
+    @app.exception_handler(PlanInProgressError)
+    async def _plan_in_progress(_: Request, __: PlanInProgressError) -> JSONResponse:
+        # The same sentence the worker gives a job that loses this race (ADR-0033).
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT, content={"detail": PLAN_IN_PROGRESS}
+        )
+
+    @app.exception_handler(PlanJobNotFoundError)
+    async def _plan_job_missing(_: Request, __: PlanJobNotFoundError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such plan request."}
+        )
+
+    @app.exception_handler(PlanNotFoundError)
+    async def _plan_missing(_: Request, __: PlanNotFoundError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such plan."}
         )
