@@ -319,7 +319,7 @@ errado.
       → [ADR-0036](adr/0036-a-job-s-answers-are-rows-of-their-own.md)
 - [x] Modelo `ai_job` e fila em PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED`
 - [x] Visibility timeout: job de worker que morreu volta para a fila
-- [ ] Worker como serviço separado no compose
+- [x] Worker como serviço separado no compose
 - [x] **Decidido:** o modelo vê, por dia, os minutos planejáveis e o maior trecho, calculados
       pelo agendador; saem o fuso, a janela, os minutos ocupados e a contagem de tarefas; o
       fingerprint cobre tudo o que o modelo vê
