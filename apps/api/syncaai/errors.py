@@ -176,3 +176,11 @@ class CannotReopenTaskError(DomainError):
     take it; marking the task unfinished tries to grow its range into that time, and the
     exclusion constraint refuses. Correct, and it needs a sentence rather than a driver error.
     """
+
+
+class PlanInProgressError(DomainError):
+    """Raised when a person asks for a plan while another is still being made (ADR-0033).
+
+    Recognised by the partial unique index's name, as an overlap is by the exclusion
+    constraint's: a double submit loses the race at the index, and this is what it is told.
+    """
