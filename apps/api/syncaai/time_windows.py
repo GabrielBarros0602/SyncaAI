@@ -12,6 +12,8 @@ are covered by tests:
   on 2018-11-04 the clock went from 23:59:59 straight to 01:00:00 and 00:00 never
   happened. The first instant of that local day is 01:00 local.
 - A day is not always 1440 minutes. The same date lasted 23 hours; 2019-02-16 lasted 25.
+  Nor is any stretch of it that contains the change, which is why a person's usable window
+  is measured here too.
 """
 
 # timezone.utc rather than the datetime.UTC alias: identical object, and the older
@@ -65,3 +67,22 @@ def minutes_in_local_day(day: date, zone_name: str) -> int:
     """
     start, end = utc_window(day, day, zone_name)
     return int((end - start).total_seconds() // SECONDS_IN_A_MINUTE)
+
+
+def minutes_between(day: date, starts_at: time, ends_at: time, zone_name: str) -> int:
+    """Return how many minutes really pass between two wall-clock times on one local day.
+
+    The same fact ``minutes_in_local_day`` accounts for, applied to part of a day: usually
+    the difference on the clock, an hour more or less when the clock changes in between
+    (ADR-0029). A time inside a skipped hour does not exist and is read the way ``zoneinfo``
+    reads it, with the offset in force before the change; one inside a repeated hour is its
+    first occurrence.
+    """
+    zone = ZoneInfo(zone_name)
+    start = datetime.combine(day, starts_at, tzinfo=zone)
+    end = datetime.combine(day, ends_at, tzinfo=zone)
+    # Through UTC on purpose. Subtracting two aware datetimes that share a tzinfo compares
+    # their wall clocks and ignores the offsets, which would erase the very hour this exists
+    # to count.
+    elapsed = end.astimezone(timezone.utc) - start.astimezone(timezone.utc)
+    return int(elapsed.total_seconds() // SECONDS_IN_A_MINUTE)

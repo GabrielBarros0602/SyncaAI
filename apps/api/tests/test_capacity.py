@@ -9,7 +9,7 @@ real database in ``test_capacity_query.py``.
 """
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, NamedTuple
 
 import pytest
@@ -21,16 +21,21 @@ from syncaai.api.routes.capacity import get_capacity_service
 from syncaai.db import get_session
 from syncaai.errors import HorizonTooLongError, InvertedWindowError
 from syncaai.services.capacity import (
-    DEFAULT_USABLE_MINUTES,
     MAX_HORIZON_DAYS,
     MAX_USABLE_MINUTES,
     STRAINED_ABOVE,
     UNSUSTAINABLE_ABOVE,
     CapacityService,
+    UsableWindow,
 )
 
 CAPACITY = "/api/v1/capacity"
 SAO_PAULO = "America/Sao_Paulo"
+LISBON = "Europe/Lisbon"
+
+# The default window's length: 06:00 to 22:00, the budget every account had while it was a
+# constant (ADR-0029).
+SIXTEEN_HOURS = 16 * 60
 
 # Brazil no longer observes daylight saving, but the time zone database remembers when it
 # did, and a stored zone is only as good as its history.
@@ -59,9 +64,15 @@ class _FakeTasks:
 def _service(
     rows: list[_Row] | None = None,
     zone: str = SAO_PAULO,
-    usable: int = DEFAULT_USABLE_MINUTES,
+    window: UsableWindow | None = None,
 ) -> CapacityService:
-    return CapacityService(_FakeTasks(rows), zone, usable)  # type: ignore[arg-type]
+    return CapacityService(_FakeTasks(rows), zone, window or UsableWindow())  # type: ignore[arg-type]
+
+
+def _lasting(minutes: int) -> UsableWindow:
+    """A window of that length from midnight. Built directly, not through ``check``, so a
+    test can hand the service one past the ceiling and see what the service does with it."""
+    return UsableWindow(time(0), time(minutes // 60, minutes % 60))
 
 
 def _booked(day: date, minutes: float, tasks: int = 1) -> list[_Row]:
@@ -76,8 +87,14 @@ def test_a_day_offers_sixteen_usable_hours_not_twenty_four() -> None:
     # screen asked why a day was only full at 24 hours — "doesn't he sleep?".
     day = _service().by_day(A_MONDAY, A_MONDAY)[0]
 
-    assert day.usable_minutes == DEFAULT_USABLE_MINUTES
-    assert day.free_minutes == DEFAULT_USABLE_MINUTES
+    assert day.usable_minutes == SIXTEEN_HOURS
+    assert day.free_minutes == SIXTEEN_HOURS
+
+
+def test_the_default_window_is_six_to_ten() -> None:
+    """The same sixteen hours the constant gave, so no account's numbers moved when the
+    budget became a window (ADR-0029)."""
+    assert (UsableWindow().starts_at, UsableWindow().ends_at) == (time(6), time(22))
 
 
 def test_the_real_length_of_the_day_is_still_reported() -> None:
@@ -91,15 +108,42 @@ def test_the_real_length_of_the_day_is_still_reported() -> None:
 
 
 def test_a_daylight_saving_day_still_offers_the_same_budget() -> None:
-    # The hour that disappears is one nobody was going to work through.
-    assert _service().by_day(A_SHORT_DAY, A_SHORT_DAY)[0].usable_minutes == DEFAULT_USABLE_MINUTES
+    # The hour that disappears is one nobody was going to work through: São Paulo changed at
+    # midnight, outside the default window.
+    assert _service().by_day(A_SHORT_DAY, A_SHORT_DAY)[0].usable_minutes == SIXTEEN_HOURS
+    assert _service().by_day(A_LONG_DAY, A_LONG_DAY)[0].usable_minutes == SIXTEEN_HOURS
+
+
+def test_a_window_the_clock_changes_inside_offers_its_real_minutes() -> None:
+    """Lisbon jumped an hour on 2026-03-29. A window from midnight to six that day was five
+    real hours, and offering six would offer an hour that did not exist (ADR-0029)."""
+    window = UsableWindow(time(0), time(6))
+    sunday = date(2026, 3, 29)
+
+    day = _service(zone=LISBON, window=window).by_day(sunday, sunday)[0]
+
+    assert day.usable_minutes == 5 * 60
+
+
+def test_the_ceiling_holds_on_the_day_the_clock_falls_back() -> None:
+    """An eighteen-hour window from midnight is nineteen real hours on 2026-10-25 in Lisbon.
+    Left alone, a nineteen-hour day would read `strained` inside its own budget — the
+    inversion ADR-0023's ceiling exists to make impossible."""
+    sunday = date(2026, 10, 25)
+    service = _service(_booked(sunday, 18 * 60 + 30), zone=LISBON, window=_lasting(18 * 60))
+
+    day = service.by_day(sunday, sunday)[0]
+
+    assert day.usable_minutes == MAX_USABLE_MINUTES
+    assert day.load == "strained"
+    assert day.over_capacity is True
 
 
 def test_free_minutes_come_off_the_budget_not_off_the_calendar_day() -> None:
     day = _service(_booked(A_MONDAY, 120, 2)).by_day(A_MONDAY, A_MONDAY)[0]
 
     assert day.occupied_minutes == 120
-    assert day.free_minutes == DEFAULT_USABLE_MINUTES - 120
+    assert day.free_minutes == SIXTEEN_HOURS - 120
     assert day.task_count == 2
 
 
@@ -115,9 +159,9 @@ def test_a_day_with_nothing_on_it_is_still_in_the_answer() -> None:
     ("booked", "expected"),
     [
         (0, "fine"),
-        (DEFAULT_USABLE_MINUTES - 1, "fine"),
-        (DEFAULT_USABLE_MINUTES, "fine"),
-        (DEFAULT_USABLE_MINUTES + 1, "heavy"),
+        (SIXTEEN_HOURS - 1, "fine"),
+        (SIXTEEN_HOURS, "fine"),
+        (SIXTEEN_HOURS + 1, "heavy"),
         (STRAINED_ABOVE, "heavy"),
         (STRAINED_ABOVE + 1, "strained"),
         (UNSUSTAINABLE_ABOVE, "strained"),
@@ -134,14 +178,14 @@ def test_over_capacity_is_measured_against_the_budget() -> None:
     # Against the calendar day this flag would be unreachable: minutes are clipped at
     # midnight and overlaps are impossible, so a day can never exceed its own length. The
     # budget is what keeps it meaning something (ADR-0022).
-    days = _service(_booked(A_MONDAY, DEFAULT_USABLE_MINUTES + 60)).by_day(A_MONDAY, A_MONDAY)
+    days = _service(_booked(A_MONDAY, SIXTEEN_HOURS + 60)).by_day(A_MONDAY, A_MONDAY)
 
     assert days[0].over_capacity is True
     assert days[0].free_minutes == 0
 
 
 def test_exactly_the_budget_is_full_but_not_over() -> None:
-    day = _service(_booked(A_MONDAY, DEFAULT_USABLE_MINUTES)).by_day(A_MONDAY, A_MONDAY)[0]
+    day = _service(_booked(A_MONDAY, SIXTEEN_HOURS)).by_day(A_MONDAY, A_MONDAY)[0]
 
     assert day.free_minutes == 0
     assert day.over_capacity is False
@@ -184,7 +228,7 @@ def test_heavy_is_measured_against_this_person_s_budget() -> None:
     # Somebody who says their day is eight hours is heavy at eight hours and one minute, not
     # at sixteen. `heavy` is the one step that is a statement about a plan (ADR-0023).
     eight_hours = 8 * 60
-    service = _service(_booked(A_MONDAY, eight_hours + 1), usable=eight_hours)
+    service = _service(_booked(A_MONDAY, eight_hours + 1), window=UsableWindow(time(9), time(17)))
 
     day = service.by_day(A_MONDAY, A_MONDAY)[0]
     assert day.usable_minutes == eight_hours
@@ -196,22 +240,23 @@ def test_the_two_loud_levels_ignore_the_budget_entirely() -> None:
     # A shorter budget must not make a nineteen-hour day sound worse than it is, nor a
     # longer one make it sound better. These two are claims about a person (ADR-0023).
     for usable in (6 * 60, 12 * 60, MAX_USABLE_MINUTES):
-        day = _service(_booked(A_MONDAY, 19 * 60), usable=usable).by_day(A_MONDAY, A_MONDAY)[0]
-        assert day.load == "strained"
+        service = _service(_booked(A_MONDAY, 19 * 60), window=_lasting(usable))
+        assert service.by_day(A_MONDAY, A_MONDAY)[0].load == "strained"
 
 
 def test_a_budget_past_the_ceiling_is_brought_back_to_it() -> None:
     # The single reason the ladder cannot invert. Left alone, a twenty-hour budget would let
     # a nineteen-hour day report `strained` while sitting inside its own budget — an extreme
     # -day warning beside a figure saying there is an hour left (ADR-0023).
-    day = _service(_booked(A_MONDAY, 19 * 60), usable=20 * 60).by_day(A_MONDAY, A_MONDAY)[0]
+    service = _service(_booked(A_MONDAY, 19 * 60), window=_lasting(20 * 60))
+    day = service.by_day(A_MONDAY, A_MONDAY)[0]
 
     assert day.usable_minutes == MAX_USABLE_MINUTES
     assert day.load == "strained"
     assert day.over_capacity is True
 
 
-@pytest.mark.parametrize("usable", [60, 8 * 60, DEFAULT_USABLE_MINUTES, MAX_USABLE_MINUTES])
+@pytest.mark.parametrize("usable", [60, 8 * 60, SIXTEEN_HOURS, MAX_USABLE_MINUTES])
 def test_over_capacity_is_exactly_load_other_than_fine(usable: int) -> None:
     """The invariant the ceiling buys, at every budget a person can choose.
 
@@ -220,7 +265,8 @@ def test_over_capacity_is_exactly_load_other_than_fine(usable: int) -> None:
     rather than assumed (ADR-0023).
     """
     for booked in range(0, 24 * 60 + 1, 30):
-        day = _service(_booked(A_MONDAY, booked), usable=usable).by_day(A_MONDAY, A_MONDAY)[0]
+        service = _service(_booked(A_MONDAY, booked), window=_lasting(usable))
+        day = service.by_day(A_MONDAY, A_MONDAY)[0]
         assert day.over_capacity is (day.load != "fine"), f"{usable=} {booked=} {day.load=}"
 
 

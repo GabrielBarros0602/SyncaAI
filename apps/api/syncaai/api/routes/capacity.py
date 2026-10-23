@@ -13,13 +13,16 @@ from fastapi import APIRouter, Depends, Query
 from syncaai.api.dependencies import CurrentUser, SessionDep
 from syncaai.repositories.tasks import TaskRepository
 from syncaai.schemas.tasks import DayCapacityRead
-from syncaai.services.capacity import CapacityService
+from syncaai.services.capacity import CapacityService, UsableWindow
 
 router = APIRouter(tags=["capacity"])
 
 
 def get_capacity_service(session: SessionDep, user: CurrentUser) -> CapacityService:
-    return CapacityService(TaskRepository(session, user.id), user.timezone)
+    # The zone and the window come from the same row: the window's hours mean nothing
+    # until a zone says which instants they are (ADR-0029).
+    window = UsableWindow(user.day_starts_at, user.day_ends_at)
+    return CapacityService(TaskRepository(session, user.id), user.timezone, window)
 
 
 ServiceDep = Annotated[CapacityService, Depends(get_capacity_service)]

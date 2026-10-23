@@ -14,10 +14,11 @@ Two details carry that weight:
   (ADR-0022), because a tool that says you have twenty-four hours free is not helping
   anybody plan. The first person other than the author to see the screen said so in one
   sentence: "why is it only full at 24 hours — doesn't he sleep?"
-- **The budget belongs to the person; the last two warnings do not.** Sixteen hours is a
-  default, not a law (ADR-0023). What a preference may never move is the point at which the
-  day is called extreme — a setting that did would let somebody configure their way out of
-  being told, which is the one thing a tool about overwork must not offer.
+- **The budget belongs to the person; the last two warnings do not.** It is the window of
+  the day each person sets, sixteen hours by default (ADR-0023, ADR-0029). What a
+  preference may never move is the point at which the day is called extreme — a setting
+  that did would let somebody configure their way out of being told, which is the one thing
+  a tool about overwork must not offer.
 - **Minutes count where they happen.** A task crossing midnight gives its minutes to both
   days, clipped, and one completed early stops occupying the time it gave back. Both come
   out of the query rather than out of arithmetic here.
@@ -25,21 +26,27 @@ Two details carry that weight:
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from typing import Literal
 
-from syncaai.errors import HorizonTooLongError, InvertedWindowError
+from syncaai.errors import (
+    HorizonTooLongError,
+    InvertedWindowError,
+    UsableWindowInvertedError,
+    UsableWindowTooLongError,
+    UsableWindowTooShortError,
+)
+from syncaai.models import DEFAULT_DAY_ENDS_AT, DEFAULT_DAY_STARTS_AT
 from syncaai.repositories.tasks import TaskRepository
-from syncaai.time_windows import minutes_in_local_day, utc_window
+from syncaai.time_windows import minutes_between, minutes_in_local_day, utc_window
 
 # The horizon a caller may ask for at once. ADR-0004's planning window is 14 days; this is
 # well past it and still bounded, because the query is cheap per day but the response is
 # not free and an unbounded range is an easy way to make the server assemble a year.
 MAX_HORIZON_DAYS = 90
 
-# Sixteen hours, leaving eight for sleep. The default a person starts with, not a law: it is
-# a per-user preference (ADR-0023), and this is only what the preference defaults to.
-DEFAULT_USABLE_MINUTES = 16 * 60
+# The shortest window a person may set. Under an hour is not a day anyone plans (ADR-0023).
+MIN_USABLE_MINUTES = 60
 
 # Where the day stops being merely full and starts being worth saying something about. These
 # two are *not* preferences and never scale with one: eighteen hours booked is a claim about
@@ -62,6 +69,53 @@ UNSUSTAINABLE_ABOVE = 20 * 60
 MAX_USABLE_MINUTES = STRAINED_ABOVE
 
 Load = Literal["fine", "heavy", "strained", "unsustainable"]
+
+
+@dataclass(frozen=True)
+class UsableWindow:
+    """The part of every local day a person plans to spend (ADR-0029).
+
+    Wall-clock times with no zone, read in the account's own. The budget is derived from
+    them per day and never stored, so it cannot disagree with the hours it comes from.
+    """
+
+    starts_at: time = DEFAULT_DAY_STARTS_AT
+    ends_at: time = DEFAULT_DAY_ENDS_AT
+
+    @property
+    def nominal_minutes(self) -> int:
+        """The length on the clock. Negative for a window that ends before it starts."""
+        return _minute_of_day(self.ends_at) - _minute_of_day(self.starts_at)
+
+    def check(self) -> None:
+        """Refuse a window a person may not set: ADR-0023's bounds, applied to the pair.
+
+        The column carries the same rule as a CHECK. This is the copy that can say which
+        part of it was broken.
+        """
+        if self.nominal_minutes <= 0:
+            raise UsableWindowInvertedError
+        if self.nominal_minutes < MIN_USABLE_MINUTES:
+            raise UsableWindowTooShortError
+        if self.nominal_minutes > MAX_USABLE_MINUTES:
+            raise UsableWindowTooLongError
+
+    def minutes_on(self, day: date, zone_name: str) -> int:
+        """The budget on that day: the real time from start to end, within ADR-0023's ceiling.
+
+        Equal to the nominal length unless the clock changes inside the window. The clamp is
+        for the day it falls back: an eighteen-hour window is nineteen real hours then, and
+        left alone that would let a nineteen-hour day read ``strained`` inside its own budget.
+        """
+        real = minutes_between(day, self.starts_at, self.ends_at, zone_name)
+        return max(0, min(real, MAX_USABLE_MINUTES))
+
+
+def _minute_of_day(moment: time) -> int:
+    return moment.hour * 60 + moment.minute
+
+
+DEFAULT_WINDOW = UsableWindow()
 
 
 @dataclass(frozen=True)
@@ -135,15 +189,14 @@ class CapacityService:
         self,
         tasks: TaskRepository,
         zone_name: str,
-        usable_minutes: int = DEFAULT_USABLE_MINUTES,
+        window: UsableWindow = DEFAULT_WINDOW,
     ) -> None:
         self._tasks = tasks
         self._zone_name = zone_name
-        # Clamped here as well as at the edge. The column will carry a CHECK and the schema
-        # a validator, and this still holds: it is the last place before the number is used
-        # to decide what a person is told about their own day, and the cost of a second
-        # guard on that is one call to `min`.
-        self._usable_minutes = min(usable_minutes, MAX_USABLE_MINUTES)
+        # Clamped per day inside the window as well as refused at the edge. The column
+        # carries a CHECK and PATCH /me checks the pair, and this still holds: it is the last
+        # place before the number decides what a person is told about their own day.
+        self._window = window
 
     def by_day(self, first_day: date, last_day: date) -> list[DayCapacity]:
         """Every day in the window, including the empty ones.
@@ -169,9 +222,9 @@ class CapacityService:
 
     def _for(self, day: date, occupied: int, task_count: int) -> DayCapacity:
         total = minutes_in_local_day(day, self._zone_name)
-        # Clamped by the real day, so a hypothetically short day cannot offer more usable
-        # minutes than it has hours.
-        usable = min(self._usable_minutes, total)
+        # Clamped by the real day too. A window inside one day cannot outlast it, so this
+        # only matters if that ever stops being true; it costs one call to `min`.
+        usable = min(self._window.minutes_on(day, self._zone_name), total)
         return DayCapacity(
             day=day,
             # ISO: Monday is 1. Included so the assembler does not recompute it, and because
