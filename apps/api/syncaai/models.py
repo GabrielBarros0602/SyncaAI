@@ -500,6 +500,13 @@ class AiJob(Base, TimestampMixin):
         ),
         # The owner's jobs, and the cascade when an account is deleted.
         Index("ix_ai_jobs_user_id_created_at", "user_id", "created_at"),
+        # What the hourly purge reads: only the finished jobs still holding a request. The
+        # table grows for ever in metadata; this stays the size of thirty days of content.
+        Index(
+            "ix_ai_jobs_purgeable",
+            "finished_at",
+            postgresql_where=text("request IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -588,6 +595,12 @@ class PlanDraft(Base, TimestampMixin):
             postgresql_where=text("status = 'pending'"),
         ),
         Index("ix_plan_drafts_user_id_created_at", "user_id", "created_at"),
+        # What the purge deletes from: approved drafts stay for ever and are left out.
+        Index(
+            "ix_plan_drafts_purgeable",
+            "ended_at",
+            postgresql_where=text("status IN ('discarded', 'expired')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
