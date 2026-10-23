@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 34 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 35 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -201,7 +201,7 @@ base work that list began with is done (ADR-0027 to ADR-0029).
    in the backlog.
 2. S6 — the AI pipeline against a test double, no provider. It does not depend on the
    redesign, so it is the work that can move while the front is frozen. What ADRs 0002 to
-   0006 left open was answered on 2026-10-23 and is recorded in ADR-0030 to ADR-0034; the
+   0006 left open was answered on 2026-10-23 and is recorded in ADR-0030 to ADR-0035; the
    checklist in `docs/ROADMAP.md` is the order of work.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
