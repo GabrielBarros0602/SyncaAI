@@ -21,10 +21,15 @@ from syncaai.errors import (
     NoDayToPlanError,
     NotAuthenticatedError,
     PlanInProgressError,
+    PlanItemNotFoundError,
     PlanJobNotFoundError,
     PlanNotFoundError,
+    PlanNotPendingError,
     RateLimitExceededError,
     StartCorrectionTooFarBackError,
+    StepOverlapsStepError,
+    StepOverlapsTaskError,
+    StepStartsInThePastError,
     TaskNotFoundError,
     TaskOverlapsError,
     TaskStartsAfterCompletionError,
@@ -255,4 +260,38 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _plan_missing(_: Request, __: PlanNotFoundError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such plan."}
+        )
+
+    @app.exception_handler(PlanNotPendingError)
+    async def _plan_not_pending(_: Request, __: PlanNotPendingError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "This plan is no longer open for review."},
+        )
+
+    @app.exception_handler(PlanItemNotFoundError)
+    async def _plan_item_missing(_: Request, __: PlanItemNotFoundError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND, content={"detail": "No such step."}
+        )
+
+    @app.exception_handler(StepStartsInThePastError)
+    async def _step_in_the_past(_: Request, __: StepStartsInThePastError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "A step cannot start in the past."},
+        )
+
+    @app.exception_handler(StepOverlapsTaskError)
+    async def _step_overlaps_task(_: Request, __: StepOverlapsTaskError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "That time is already taken by a task."},
+        )
+
+    @app.exception_handler(StepOverlapsStepError)
+    async def _step_overlaps_step(_: Request, __: StepOverlapsStepError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "That time is taken by another step of this plan."},
         )

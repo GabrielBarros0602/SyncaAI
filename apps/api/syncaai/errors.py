@@ -192,3 +192,23 @@ class PlanJobNotFoundError(DomainError):
 
 class PlanNotFoundError(DomainError):
     """Raised for a plan that does not exist, or belongs to somebody else (ADR-0016)."""
+
+
+class PlanNotPendingError(DomainError):
+    """Raised when a plan that was approved, discarded or has expired is changed (ADR-0038)."""
+
+
+class PlanItemNotFoundError(DomainError):
+    """Raised for a step that is not in the plan named, which may be somebody else's."""
+
+
+class StepStartsInThePastError(DomainError):
+    """Raised when a step is moved to a start that has passed, as a task would be (ADR-0030)."""
+
+
+class StepOverlapsTaskError(DomainError):
+    """Raised when a step is moved onto time a task already holds (ADR-0030)."""
+
+
+class StepOverlapsStepError(DomainError):
+    """Raised when a step is moved onto time another step of the same plan holds (ADR-0030)."""
