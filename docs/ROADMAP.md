@@ -42,12 +42,12 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 |---|---|
 | Domínio próprio com SPF, DKIM e DMARC, e conta no provedor. Sem isso o envio fica restrito ao próprio dono da conta, então ninguém mais completa o cadastro. O código está pronto e testado contra o dublê — falta a decisão | antes de demonstrar ou publicar |
 | Cliente real do provedor de email. Um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
-| Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker | S6 |
+| Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker. Decidido no [ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md): de hora em hora, no worker | S6 |
 | Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar. **O [ADR-0021](adr/0021-browser-session-and-origin.md) tornou isso certo em vez de hipotético:** uma origem só em desenvolvimento significa um proxy em produção | S11, no deploy |
 | **Entrar com o Google.** É bom material de back-end — OAuth 2.0 / OpenID Connect e federação de identidade —, mas o vínculo entre contas exige ADR próprio: casar por email de forma ingênua é caminho de **sequestro de conta** (o atacante cadastra o seu endereço antes de você, e o vínculo entrega a conta dele para você). Só vincular com a conta existente já verificada, o `email_verified` do provedor confirmado, e ainda assim pedindo a senha uma vez. O segredo do cliente nunca chega ao navegador (mesma regra da chave de IA, [ADR-0001](adr/0001-backend-stack.md)) | mesmo gatilho do domínio: **antes de demonstrar ou publicar**. É quando "crie uma conta com senha" vira atrito para quem não é você |
 | **Recuperação de senha não tem tela.** Os dois endpoints existem e funcionam; nenhum tem interface, e link que não vai a lugar nenhum é pior que link ausente — por isso a tela de entrar não oferece "forgot your password". É também a primeira coisa que justifica um roteador de verdade, porque o link do email carrega token na URL | S8, ou antes de publicar, o que vier primeiro |
 | O caminho **logado** nunca foi exercitado de ponta a ponta: conta real, cookie real, token de 30 minutos que expirou de verdade. O que existe hoje prova o caminho **deslogado** — o `401` atravessando o proxy foi verificado com os dois processos no ar. Metade disso vira teste de CI permanente (cadastro → token do `RecordingMailer` → verificação → login `web` → `/refresh` **só com o cookie** → `/me`, tudo no `TestClient`, que guarda cookie). A outra metade exige navegador de verdade e fica manual: uma passada sua com `docker compose up -d db` | teste de CI **no PR das telas**; a passada manual, uma vez, no mesmo PR |
-| **Horário útil por usuário como preferência.** A constante de 16h já existe ([ADR-0022](adr/0022-capacity-against-a-usable-day.md)); falta virar coluna e tela. O `GET /me` é a casa | A capacidade livre é medida contra o dia inteiro, então às 3 da manhã existem 60 minutos livres e nada impede o agendador de usá-los. Numa demo isso não parece arredondamento errado, parece produto quebrado. Exige ADR quando chegar: muda schema (preferências por usuário) e muda o que "capacidade livre" significa. O `GET /me` já é a casa disso, e o ADR-0004 já lista as três preferências que o planejador precisa — duração de bloco preferida, dias de folga, horário útil | **S6**, antes do agendador |
+| ✅ **Horário útil por usuário como preferência** — feito como janela no [ADR-0029](adr/0029-the-usable-day-is-a-window-each-person-sets.md); os dias de folga e o bloco vêm no [ADR-0032](adr/0032-days-off-and-a-preferred-block-length.md). A constante de 16h já existe ([ADR-0022](adr/0022-capacity-against-a-usable-day.md)); falta virar coluna e tela. O `GET /me` é a casa | A capacidade livre é medida contra o dia inteiro, então às 3 da manhã existem 60 minutos livres e nada impede o agendador de usá-los. Numa demo isso não parece arredondamento errado, parece produto quebrado. Exige ADR quando chegar: muda schema (preferências por usuário) e muda o que "capacidade livre" significa. O `GET /me` já é a casa disso, e o ADR-0004 já lista as três preferências que o planejador precisa — duração de bloco preferida, dias de folga, horário útil | **S6**, antes do agendador |
 | Serviço `web` no `docker-compose.yml`. Hoje a demo exige dois terminais. Adiado de propósito: Vite em container costuma quebrar o HMR por sincronia de arquivos, e a decisão pertence à mesma conversa de proxy reverso que o [ADR-0021](adr/0021-browser-session-and-origin.md) empurrou para lá | S11, no deploy |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S10 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S10 |
@@ -301,6 +301,18 @@ quando o protótipo inteiro entra. Trate como vitrine funcional, não como base 
 Sprint inteiro construído contra um dublê. Se qualquer coisa aqui custar dinheiro, algo está
 errado.
 
+- [x] **Decidido:** cada item ganha um horário concreto, dentro dos intervalos livres reais e
+      dos minutos livres do dia; o rascunho tem itens editáveis; a tarefa aprovada guarda o
+      `plan_id`; os links vão para a nota; o commit é tudo ou nada, com idempotency key; e
+      limites de 500 caracteres, 12 itens, 14 dias e 15 a 240 minutos
+      → [ADR-0030](adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md)
+- [x] **Decidido:** a fila acorda o worker por `NOTIFY` e faz varredura a cada 5 s, com
+      visibility timeout de 120 s e três tentativas; a resposta bruta fica no job por 30 dias;
+      o mesmo worker expurga as tabelas de token e de rate limit
+      → [ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md)
+- [x] **Decidido:** dias de folga e duração de bloco preferida como preferências do planejador,
+      sem mexer na capacidade → [ADR-0032](adr/0032-days-off-and-a-preferred-block-length.md)
+- [ ] Colunas `days_off` e `preferred_block_minutes`, no `GET` e no `PATCH /me`
 - [ ] Interface `PlanGenerator` e `FakeGenerator` — antes do cliente real, não depois
 - [ ] Modelo `ai_job` e fila em PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED`
 - [ ] Visibility timeout: job de worker que morreu volta para a fila
@@ -316,15 +328,19 @@ errado.
       níveis de carga e nada bloqueado → [ADR-0022](adr/0022-capacity-against-a-usable-day.md)
 - [x] Implementado: trigger, query com recorte por dia, `usable_minutes`, `load` e as três
       mensagens. Falta só o botão de mover, que precisa da interação, não do dado
-- [ ] **Horário útil por usuário, antes do agendador.** Sem isso o agendador distribui nos
-      minutos livres que existirem, e às 3 da manhã existem 60. Precisa de ADR: muda schema e
-      muda o significado de "capacidade livre"
+- [x] **Horário útil por usuário, antes do agendador.** Sem isso o agendador distribui nos
+      minutos livres que existirem, e às 3 da manhã existem 60. Feito como uma janela por
+      pessoa → [ADR-0029](adr/0029-the-usable-day-is-a-window-each-person-sets.md)
 - [ ] Agendador como função pura: itens e capacidades entram, atribuições saem. Fronteiras
       primeiro — capacidade insuficiente, zero dias livres, item maior que qualquer bloco
 - [ ] `plan_draft` e `draft_item`
 - [ ] Endpoint de commit do draft: uma transação e idempotency key
 - [ ] `prompt_version` no job e na chave de cache desde o primeiro commit deste sprint
 - [ ] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
+- [ ] Itens do rascunho editáveis — título, minutos, horário, remover — revalidados contra as
+      regras de criar tarefa ([ADR-0030](adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md))
+- [ ] Expurgo, de hora em hora no worker, das tabelas de token e de rate limit, e do conteúdo
+      dos jobs com mais de 30 dias ([ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md))
 
 **Por que o dublê primeiro:** o agendador e o validador são as partes mais arriscadas e as
 mais testáveis do projeto — funções puras sobre fixture. Construídas contra `FakeGenerator`,
