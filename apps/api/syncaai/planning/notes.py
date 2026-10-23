@@ -16,10 +16,13 @@ def note_for(item: CheckedItem) -> str | None:
     Bounded by construction: the contract's limits add up to well under the 4000
     characters a note may hold, which a test asserts rather than assumes.
     """
-    return _compose(item.description, item.links)
+    return compose_note(item.description, item.links)
 
 
-def _compose(description: str, links: Sequence[tuple[str, str]]) -> str | None:
+def compose_note(description: str, links: Sequence[tuple[str, str]]) -> str | None:
+    """The same note from the fields a draft keeps, which is how a committed step gets one:
+    the draft stores a description and links as they came, and only commit writes the text
+    (ADR-0037)."""
     parts: list[str] = []
     if description:
         parts.append(description)
