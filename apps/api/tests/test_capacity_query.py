@@ -15,10 +15,11 @@ scan no matter how good the index is, and the assertion would prove nothing.
 import uuid
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
-from sqlalchemy import delete, insert, text
+from sqlalchemy import Select, delete, insert, text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
@@ -302,19 +303,40 @@ def test_the_capacity_query_reaches_the_rows_through_the_index(
     predicate. If a future change moves the time zone conversion into the WHERE clause, the
     index stops being usable and this test is what says so."""
     with get_session_factory()() as session:
-        plan = _explain(
-            session, a_populated_table, _windows(A_MONDAY, A_MONDAY + timedelta(days=6))
+        statement = TaskRepository(session, a_populated_table).capacity_statement(
+            windows=_windows(A_MONDAY, A_MONDAY + timedelta(days=6))
         )
+        plan = _explain(session, statement)
 
     assert "ix_tasks_user_start_at" in plan, plan
     assert "Seq Scan on tasks" not in plan, plan
 
 
-def _explain(
-    session: Session, owner_id: uuid.UUID, windows: list[tuple[date, datetime, datetime]]
-) -> str:
+def test_the_occupied_ranges_reach_the_rows_through_the_index(
+    a_populated_table: uuid.UUID,
+) -> None:
+    """The plan's gaps are read with the same margin on ``start_at``, for the same reason.
+
+    Both bounds have to be in the index condition, not only the index in the plan: without
+    the lower one the scan still uses the index, from a person's very first task, and the
+    rows it reads grow with their whole history while every result stays the same.
+    """
+    starts, ends = utc_window(A_MONDAY, A_MONDAY + timedelta(days=13), SAO_PAULO)
+    with get_session_factory()() as session:
+        statement = TaskRepository(session, a_populated_table).ranges_statement(
+            starts=starts, ends=ends
+        )
+        plan = _explain(session, statement)
+
+    assert "ix_tasks_user_start_at" in plan, plan
+    assert "Seq Scan on tasks" not in plan, plan
+    [index_condition] = [line for line in plan.splitlines() if "Index Cond" in line]
+    assert "start_at >=" in index_condition, plan
+    assert "start_at <" in index_condition, plan
+
+
+def _explain(session: Session, statement: Select[Any]) -> str:
     """EXPLAIN ANALYZE over the statement the repository actually builds."""
-    statement = TaskRepository(session, owner_id).capacity_statement(windows=windows)
     # Sent to the driver rather than through `text()`, and that is the whole trick.
     #
     # A compiled statement already carries the driver's own placeholders — `%(name)s` for
