@@ -34,6 +34,7 @@ from sqlalchemy import (
     Index,
     Integer,
     MetaData,
+    SmallInteger,
     String,
     Text,
     Time,
@@ -42,7 +43,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import ExcludeConstraint
+from sqlalchemy.dialects.postgresql import ARRAY, ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.schema import FetchedValue
 
@@ -55,6 +56,9 @@ MINUTES_IN_A_DAY = 1440
 # it became a window.
 DEFAULT_DAY_STARTS_AT = time(6, 0)
 DEFAULT_DAY_ENDS_AT = time(22, 0)
+
+# How long a step the planner proposes may be, for an account that has not said (ADR-0032).
+DEFAULT_BLOCK_MINUTES = 60
 
 # Deterministic constraint names. Without them PostgreSQL invents names, which means a
 # downgrade cannot drop what an upgrade created and every future ALTER becomes guesswork.
@@ -110,6 +114,14 @@ class User(Base, TimestampMixin):
             "day_ends_at - day_starts_at BETWEEN interval '1 hour' AND interval '18 hours'",
             name="usable_window",
         ),
+        # ISO weekdays only, and at least one day left to plan in: a week with none is not a
+        # preference, it is a planner that can never answer (ADR-0032). The service stores
+        # the set sorted and without repeats, so the count here is a count of days.
+        CheckConstraint(
+            "days_off <@ ARRAY[1, 2, 3, 4, 5, 6, 7]::smallint[] AND cardinality(days_off) < 7",
+            name="days_off",
+        ),
+        CheckConstraint("preferred_block_minutes BETWEEN 15 AND 240", name="preferred_block"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -131,6 +143,15 @@ class User(Base, TimestampMixin):
     )
     day_ends_at: Mapped[time] = mapped_column(
         Time, nullable=False, default=DEFAULT_DAY_ENDS_AT, server_default=text("'22:00'")
+    )
+
+    # What the planner may not propose on, and how long a step it may propose (ADR-0032).
+    # Neither touches capacity: a day off is still a day the person can book.
+    days_off: Mapped[list[int]] = mapped_column(
+        ARRAY(SmallInteger), nullable=False, default=list, server_default=text("'{}'")
+    )
+    preferred_block_minutes: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=DEFAULT_BLOCK_MINUTES, server_default=text("60")
     )
 
     days: Mapped[list[Day]] = relationship(
