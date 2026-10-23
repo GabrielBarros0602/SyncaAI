@@ -6,11 +6,11 @@ asserting: daylight saving there began *at* midnight, so a date could have no mi
 a day could be shorter or longer than 1440 minutes.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 
 import pytest
 
-from syncaai.time_windows import minutes_in_local_day, utc_window
+from syncaai.time_windows import minutes_between, minutes_in_local_day, utc_window
 
 SAO_PAULO = "America/Sao_Paulo"
 LISBON = "Europe/Lisbon"
@@ -62,3 +62,24 @@ def test_a_single_day_window_covers_exactly_that_day() -> None:
 def test_an_inverted_range_is_rejected() -> None:
     with pytest.raises(ValueError, match="precedes"):
         utc_window(date(2026, 8, 16), date(2026, 8, 10), SAO_PAULO)
+
+
+def test_part_of_an_ordinary_day_is_its_length_on_the_clock() -> None:
+    assert minutes_between(date(2026, 8, 10), time(6), time(22), SAO_PAULO) == 960
+
+
+def test_part_of_a_day_loses_the_hour_the_clock_skips_inside_it() -> None:
+    """Lisbon moved from 01:00 to 02:00 on 2026-03-29. Eighteen hours on the clock, from
+    midnight, were seventeen real ones (ADR-0029)."""
+    assert minutes_between(date(2026, 3, 29), time(0), time(18), LISBON) == 17 * 60
+
+
+def test_part_of_a_day_gains_the_hour_the_clock_repeats_inside_it() -> None:
+    """And moved back from 02:00 to 01:00 on 2026-10-25, the Sunday the week designs use."""
+    assert minutes_between(date(2026, 10, 25), time(0), time(18), LISBON) == 19 * 60
+
+
+def test_a_change_outside_the_stretch_does_not_touch_it() -> None:
+    """São Paulo's change happened at midnight, so a day that began at six never saw it."""
+    assert minutes_between(date(2018, 11, 4), time(6), time(22), SAO_PAULO) == 960
+    assert minutes_between(date(2019, 2, 16), time(6), time(22), SAO_PAULO) == 960

@@ -112,6 +112,26 @@ class ChecklistOrderStaleError(DomainError):
     """
 
 
+class UsableWindowInvertedError(DomainError):
+    """Raised when a usable day would end before it starts, or at the same moment.
+
+    The window does not cross midnight (ADR-0029): an end earlier than the start is not the
+    next morning, it is a window the account cannot have.
+    """
+
+
+class UsableWindowTooShortError(DomainError):
+    """Raised when a usable day would be shorter than the floor ADR-0023 set."""
+
+
+class UsableWindowTooLongError(DomainError):
+    """Raised when a usable day would pass the ceiling ADR-0023 set.
+
+    The ceiling is what keeps the load ladder from inverting: past eighteen hours a day is
+    called extreme whatever the budget says, so no budget may reach past it.
+    """
+
+
 class InvertedWindowError(DomainError):
     """Raised when a capacity window ends before it starts."""
 
