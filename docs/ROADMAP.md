@@ -313,7 +313,7 @@ errado.
 - [x] **Decidido:** dias de folga e duração de bloco preferida como preferências do planejador,
       sem mexer na capacidade → [ADR-0032](adr/0032-days-off-and-a-preferred-block-length.md)
 - [x] Colunas `days_off` e `preferred_block_minutes`, no `GET` e no `PATCH /me`
-- [ ] Interface `PlanGenerator` e `FakeGenerator` — antes do cliente real, não depois
+- [x] Interface `PlanGenerator` e `FakeGenerator` — antes do cliente real, não depois
 - [ ] Modelo `ai_job` e fila em PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED`
 - [ ] Visibility timeout: job de worker que morreu volta para a fila
 - [ ] Worker como serviço separado no compose
@@ -327,7 +327,10 @@ errado.
       de privacidade — sem ele a política do ADR-0004 é só texto
 - [x] Modelo Pydantic da resposta; JSON schema gerado a partir dele, fonte única
 - [x] Validação de invariantes de domínio separada da validação de schema (ADR-0005)
-- [ ] Uma tentativa de reparo, alimentada pelos erros de validação
+- [x] **Decidido:** qualquer item descartado pede o reparo, e fica a resposta que manteve mais
+      itens, com empate para o reparo
+      → [ADR-0035](adr/0035-repair-whenever-a-step-fails-and-keep-the-better-answer.md)
+- [x] Uma tentativa de reparo, alimentada pelos erros de validação
 - [x] **Decidido:** capacidade é ocupação real medida contra um dia útil de 16h, com quatro
       níveis de carga e nada bloqueado → [ADR-0022](adr/0022-capacity-against-a-usable-day.md)
 - [x] Implementado: trigger, query com recorte por dia, `usable_minutes`, `load` e as três
