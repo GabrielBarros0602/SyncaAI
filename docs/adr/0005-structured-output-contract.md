@@ -2,7 +2,9 @@
 
 **Status:** Accepted; decision 1 amended by
 [ADR-0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) — the
-scheduler assigns a start time, not only a date
+scheduler assigns a start time, not only a date; decision 4 amended by
+[ADR-0035](0035-repair-whenever-a-step-fails-and-keep-the-better-answer.md) — any failed step
+asks for the repair, and the better of the two answers is kept
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 

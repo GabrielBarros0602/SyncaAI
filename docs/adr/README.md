@@ -13,7 +13,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0002](0002-mvp-scope-ai-features.md) | MVP scope of the AI layer and its UI entry point | Accepted |
 | [0003](0003-ai-request-lifecycle.md) | AI request lifecycle and transport | Accepted |
 | [0004](0004-context-assembly-policy.md) | Calendar context assembly policy | Accepted; field list and fingerprint amended by 0034 |
-| [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted; decision 1 amended by 0030 |
+| [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted; decision 1 amended by 0030, decision 4 by 0035 |
 | [0006](0006-cost-limits-cache-degradation.md) | Cost control, rate limiting, caching and degradation | Accepted |
 | [0007](0007-synchronous-persistence.md) | Synchronous SQLAlchemy for persistence | Accepted |
 | [0008](0008-task-time-block.md) | Task time block: start plus duration, generated end | Accepted |
@@ -43,6 +43,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0032](0032-days-off-and-a-preferred-block-length.md) | Days off and a preferred block length, for the planner | Accepted |
 | [0033](0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md) | A plan fills this week first, in the request's language, one at a time | Accepted |
 | [0034](0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md) | The model sees the room each day has, and nothing it cannot use | Accepted |
+| [0035](0035-repair-whenever-a-step-fails-and-keep-the-better-answer.md) | Repair whenever a step fails, and keep the better of the two answers | Accepted |
 
 ## Template
 
