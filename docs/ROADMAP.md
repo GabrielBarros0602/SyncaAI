@@ -347,6 +347,10 @@ errado.
       descartados à parte; só o aprovado dura, e o resto some trinta dias depois de terminar
       → [ADR-0037](adr/0037-a-draft-in-five-tables-and-only-an-approved-one-stays.md)
 - [x] `plan_draft` e `draft_item`
+- [x] **Decidido:** o job e o plano são dois recursos; o job aponta para o plano pelo
+      `plan_id`, e tudo o que se faz com o plano acontece em `/plans/{plan_id}`
+      → [ADR-0038](adr/0038-a-job-and-its-plan-are-two-resources-linked-by-id.md)
+- [x] Pedir um plano (`POST /ai/plans`, 409 de um por vez), ver o job e ler o plano
 - [ ] Endpoint de commit do draft: uma transação e idempotency key
 - [ ] `prompt_version` no job e na chave de cache desde o primeiro commit deste sprint
 - [ ] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
