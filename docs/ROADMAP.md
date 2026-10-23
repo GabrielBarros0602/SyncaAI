@@ -352,7 +352,7 @@ errado.
 - [ ] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
 - [ ] Itens do rascunho editáveis — título, minutos, horário, remover — revalidados contra as
       regras de criar tarefa ([ADR-0030](adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md))
-- [ ] Expurgo, de hora em hora no worker, das tabelas de token e de rate limit, e do conteúdo
+- [x] Expurgo, de hora em hora no worker, das tabelas de token e de rate limit, e do conteúdo
       dos jobs com mais de 30 dias ([ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md))
 - [x] **Decidido:** o plano é escrito no idioma do pedido; o horizonte padrão é de 14 dias,
       mas o plano só ocupa sozinho até o domingo da semana atual, e o resto vira "não cabe
