@@ -181,6 +181,15 @@ class TaskRepository(OwnedRepository[Task]):
         )
         return statement
 
+    def ids_from_plan(self, plan_id: "uuid.UUID") -> list["uuid.UUID"]:
+        """This owner's tasks committed from a plan, soonest first (ADR-0030)."""
+        statement = (
+            select(Task.id)
+            .where(Task.user_id == self._owner_id, Task.plan_id == plan_id)
+            .order_by(Task.start_at)
+        )
+        return list(self._session.scalars(statement).all())
+
     def occupied_ranges(
         self, *, starts: datetime, ends: datetime
     ) -> list[tuple[datetime, datetime]]:
