@@ -1,6 +1,8 @@
 # ADR-0030: A plan is placed in real free time, reviewed item by item, and committed whole
 
-**Status:** Accepted
+**Status:** Accepted; amended by
+[ADR-0033](0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md) — a default
+horizon, this week first, the life of an unreviewed draft, and one plan at a time
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
