@@ -314,8 +314,11 @@ errado.
       sem mexer na capacidade → [ADR-0032](adr/0032-days-off-and-a-preferred-block-length.md)
 - [x] Colunas `days_off` e `preferred_block_minutes`, no `GET` e no `PATCH /me`
 - [x] Interface `PlanGenerator` e `FakeGenerator` — antes do cliente real, não depois
-- [ ] Modelo `ai_job` e fila em PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED`
-- [ ] Visibility timeout: job de worker que morreu volta para a fila
+- [x] **Decidido:** as respostas do modelo ficam numa tabela própria, `ai_job_answers`, no
+      máximo duas por job, e somem trinta dias depois de o job terminar
+      → [ADR-0036](adr/0036-a-job-s-answers-are-rows-of-their-own.md)
+- [x] Modelo `ai_job` e fila em PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED`
+- [x] Visibility timeout: job de worker que morreu volta para a fila
 - [ ] Worker como serviço separado no compose
 - [x] **Decidido:** o modelo vê, por dia, os minutos planejáveis e o maior trecho, calculados
       pelo agendador; saem o fuso, a janela, os minutos ocupados e a contagem de tarefas; o
