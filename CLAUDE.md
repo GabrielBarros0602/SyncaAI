@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 35 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 36 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -105,7 +105,7 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 74 today, and a run
+  them is not a green run. `pytest -m integration` counts them; there are 106 today, and a run
   that reports fewer found no database.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
@@ -201,7 +201,7 @@ base work that list began with is done (ADR-0027 to ADR-0029).
    in the backlog.
 2. S6 — the AI pipeline against a test double, no provider. It does not depend on the
    redesign, so it is the work that can move while the front is frozen. What ADRs 0002 to
-   0006 left open was answered on 2026-10-23 and is recorded in ADR-0030 to ADR-0035; the
+   0006 left open was answered on 2026-10-23 and is recorded in ADR-0030 to ADR-0036; the
    checklist in `docs/ROADMAP.md` is the order of work.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
