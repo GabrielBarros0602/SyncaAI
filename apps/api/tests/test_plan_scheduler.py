@@ -317,6 +317,15 @@ def test_a_booking_running_past_the_window_closes_it_early() -> None:
     assert monday.free == ((_local(MONDAY, 6), _local(MONDAY, 20)),)
 
 
+def test_a_task_completed_before_it_began_occupies_nothing() -> None:
+    """Completing a future task collapses its range onto its start. The exclusion constraint
+    lets anything be booked across an empty range, so the gap stays whole rather than
+    splitting into two pieces that would each hold less."""
+    [monday] = _slots(MONDAY, occupied=[(_local(MONDAY, 10), _local(MONDAY, 10))])
+
+    assert monday.free == ((_local(MONDAY, 6), _local(MONDAY, 22)),)
+
+
 def test_days_off_are_not_offered_and_the_rest_are() -> None:
     """Monday is 1 (ADR-0032)."""
     days = _slots(MONDAY, TUESDAY, days_off=frozenset({1}))
