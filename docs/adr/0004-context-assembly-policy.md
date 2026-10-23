@@ -1,6 +1,8 @@
 # ADR-0004: Calendar context assembly policy
 
-**Status:** Accepted
+**Status:** Accepted; the field list and the fingerprint amended by
+[ADR-0034](0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md) — each day's
+room as the scheduler sees it, and a fingerprint over everything the model is shown
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 

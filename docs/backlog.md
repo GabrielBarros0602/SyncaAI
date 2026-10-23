@@ -442,3 +442,14 @@ tela. O `end_at` que encurta ao concluir cedo já está guardando o dado que ela
 O ADR-0022 deixou dois itens para revisitar: `USABLE_MINUTES_PER_DAY` como preferência por
 usuário, e horas de trabalho como **janela** em vez de orçamento — o que substitui a decisão 3
 quando chegar.
+
+### Aberto pelo ADR-0034 — para o S7, onde o cache é construído
+
+- **Pedir de novo depois de descartar devolve o mesmo plano.** Com um plano por vez
+  (ADR-0033), o "mesmo pedido de novo" mais provável não é o duplo clique, que o índice já
+  barra: é a pessoa descartar um plano de que não gostou e pedir outra vez. A chave da
+  ADR-0006 acerta o cache nesse caso, se o calendário não mudou, e devolve exatamente o plano
+  descartado. Opções a pesar no S7: não consultar o cache quando o último rascunho da pessoa
+  com a mesma chave foi descartado; tirar do cache a entrada ao descartar; ou aceitar, porque a
+  chave costuma mudar assim que o relógio anda alguns minutos (ADR-0034) — mas não à noite,
+  depois do fim da janela, quando hoje já não tem minuto planejável que possa mudar.
