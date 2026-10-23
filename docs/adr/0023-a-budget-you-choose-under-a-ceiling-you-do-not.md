@@ -1,6 +1,8 @@
 # ADR-0023: A budget you choose, under a ceiling you do not
 
-**Status:** Accepted
+**Status:** Accepted; action items 7–9 redefined by
+[ADR-0029](0029-the-usable-day-is-a-window-each-person-sets.md), which stores a window instead
+of a column
 **Date:** 2026-08-26
 **Deciders:** Gabriel Barros
 

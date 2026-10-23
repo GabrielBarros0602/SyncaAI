@@ -1,6 +1,7 @@
 # ADR-0022: Capacity is real occupancy, measured against a usable day
 
-**Status:** Accepted
+**Status:** Accepted; decision 3 superseded by
+[ADR-0029](0029-the-usable-day-is-a-window-each-person-sets.md)
 **Date:** 2026-08-25
 **Deciders:** Gabriel Barros
 
