@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from syncaai.planning.slots import DaySlots, Interval
+from syncaai.time_windows import SECONDS_IN_A_MINUTE
 
 # Starts land on five-minute marks: 14:20, not 14:17:42. Up to four minutes of a gap are
 # given up per step for a plan a person reads as a plan.
@@ -39,6 +40,15 @@ class Placement:
     start: datetime | None
     #: Why there is no start. A person reads it in the review, so it says what to change.
     reason: str | None = None
+
+
+@dataclass(frozen=True)
+class Room:
+    """What a day can take before anything is placed in it (ADR-0034)."""
+
+    minutes: int
+    #: The longest step that fits: one this long is placed on the day, one minute more is not.
+    longest: int
 
 
 @dataclass
@@ -70,10 +80,9 @@ def schedule(steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime) 
             )
             continue
 
-        # Strictly after now, as a task's start has to be (ADR-0012): a now that sits exactly
-        # on a mark would otherwise round to itself. Right after a prerequisite is fine —
-        # ranges are half-open, so back to back is not an overlap.
-        earliest = max([_on_grid(now + _TICK), *(e for e in prerequisite_ends if e is not None)])
+        # Right after a prerequisite is fine: ranges are half-open, so back to back is not an
+        # overlap.
+        earliest = max([_earliest(now), *(e for e in prerequisite_ends if e is not None)])
         start = _place(step.minutes, earliest, remaining)
         if start is None:
             ends[step.key] = None
@@ -90,6 +99,31 @@ def schedule(steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime) 
         placements.append(Placement(step.key, start))
 
     return placements
+
+
+def room(day: DaySlots, *, now: datetime) -> Room:
+    """The room the model is told a day has, measured the way ``schedule`` measures it.
+
+    Each free piece counts from the first start a step could have in it, and both figures are
+    capped by the day's budget. Computed here rather than beside the prompt so that the two
+    cannot disagree about a day (ADR-0034).
+    """
+    earliest = _earliest(now)
+    pieces = [
+        int((closes - _on_grid(max(opens, earliest))).total_seconds()) // SECONDS_IN_A_MINUTE
+        for opens, closes in day.free
+    ]
+    usable = [piece for piece in pieces if piece > 0]
+    return Room(
+        minutes=min(sum(usable), day.budget_minutes),
+        longest=min(max(usable, default=0), day.budget_minutes),
+    )
+
+
+def _earliest(now: datetime) -> datetime:
+    """Strictly after now, as a task's start has to be (ADR-0012): a now that sits exactly on a
+    mark would otherwise round to itself."""
+    return _on_grid(now + _TICK)
 
 
 def _place(minutes: int, earliest: datetime, days: list[_Day]) -> datetime | None:

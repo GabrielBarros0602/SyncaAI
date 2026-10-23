@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from syncaai.planning.scheduler import Placement, Step, schedule
+from syncaai.planning.scheduler import Placement, Room, Step, room, schedule
 from syncaai.planning.slots import DaySlots, build_slots
 from syncaai.services.capacity import DayCapacity, UsableWindow
 
@@ -170,6 +170,63 @@ def test_no_placement_overlaps_another_or_leaves_the_gap_it_came_from() -> None:
             prerequisite = placements[key]
             if placement.start and prerequisite.start:
                 assert prerequisite.start + timedelta(minutes=lengths[key]) <= placement.start
+
+
+# --- The room a day has (ADR-0034) ---------------------------------------------------------
+
+
+def test_a_day_s_room_is_its_gaps_counted_from_the_first_start_each_allows() -> None:
+    """Thirty minutes at nine, and a gap opening at 14:03 that a step can only use from 14:05."""
+    day = _day(MONDAY, (9, 0, 9, 30), (14, 3, 16, 0))
+
+    assert room(day, now=NOW) == Room(minutes=30 + 115, longest=115)
+
+
+def test_today_s_room_starts_after_now_not_at_it() -> None:
+    """At 21:00 on a mark, the first start is 21:05: of the hour to 22:00, 55 minutes are left."""
+    day = _day(MONDAY, (21, 0, 22, 0))
+
+    assert room(day, now=_utc(MONDAY, 21)) == Room(minutes=55, longest=55)
+
+
+def test_a_gap_too_short_to_reach_a_mark_adds_nothing() -> None:
+    day = _day(MONDAY, (9, 1, 9, 4), (10, 0, 10, 30))
+
+    assert room(day, now=NOW) == Room(minutes=30, longest=30)
+
+
+def test_the_budget_caps_both_figures() -> None:
+    """Four free hours in the window, but the day has only 90 minutes left to spend."""
+    day = _day(MONDAY, (9, 0, 13, 0), budget=90)
+
+    assert room(day, now=NOW) == Room(minutes=90, longest=90)
+
+
+def test_a_day_with_no_gap_has_no_room() -> None:
+    assert room(_day(MONDAY), now=NOW) == Room(minutes=0, longest=0)
+
+
+@pytest.mark.parametrize(
+    "day",
+    [
+        _day(MONDAY, (9, 0, 9, 30), (14, 3, 16, 0)),
+        _day(MONDAY, (9, 2, 9, 47), (10, 0, 10, 20)),
+        _day(MONDAY, (9, 0, 13, 0), budget=90),
+        _day(MONDAY, (8, 0, 8, 40)),
+    ],
+)
+def test_the_longest_step_the_room_names_is_placed_and_one_minute_more_is_not(
+    day: DaySlots,
+) -> None:
+    """The figure the model is shown and the scheduler that acts on it agree, on every shape:
+    gaps off the grid, a gap that opens at now, and a budget smaller than the window."""
+    longest = room(day, now=NOW).longest
+
+    fits = schedule([Step(0, longest)], [day], now=NOW)
+    too_long = schedule([Step(0, longest + 1)], [day], now=NOW)
+
+    assert fits[0].start is not None
+    assert too_long[0].start is None
 
 
 # --- The slots -----------------------------------------------------------------------------
