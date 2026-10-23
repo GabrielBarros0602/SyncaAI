@@ -40,6 +40,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted |
 | [0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) | A plan is placed in real free time, reviewed item by item, and committed whole | Accepted |
 | [0031](0031-a-job-queue-in-postgresql-woken-by-notify.md) | A job queue in PostgreSQL, woken by NOTIFY and swept for what it misses | Accepted |
+| [0032](0032-days-off-and-a-preferred-block-length.md) | Days off and a preferred block length, for the planner | Accepted |
 
 ## Template
 
