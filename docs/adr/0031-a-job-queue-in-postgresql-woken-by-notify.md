@@ -1,6 +1,8 @@
 # ADR-0031: A job queue in PostgreSQL, woken by NOTIFY and swept for what it misses
 
-**Status:** Accepted
+**Status:** Accepted; decisions 1 and 5 amended by
+[ADR-0036](0036-a-job-s-answers-are-rows-of-their-own.md) — the raw answers are rows of their
+own table, up to two per job
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
