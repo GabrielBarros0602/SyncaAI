@@ -8,10 +8,17 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, status
 
 from syncaai.api.dependencies import CurrentUserId, SessionDep
-from syncaai.schemas.plans import JobRead, PlanItemRead, PlanItemUpdate, PlanRead, PlanRequest
+from syncaai.schemas.plans import (
+    JobRead,
+    PlanCommitRead,
+    PlanItemRead,
+    PlanItemUpdate,
+    PlanRead,
+    PlanRequest,
+)
 from syncaai.services.plans import PlanService
 
 router = APIRouter(tags=["plans"])
@@ -81,3 +88,17 @@ def discard_plan(plan_id: uuid.UUID, service: ServiceDep, session: SessionDep) -
     # A POST, not a DELETE: the plan stays thirty days before it goes (ADR-0037, ADR-0038).
     service.discard(plan_id)
     session.commit()
+
+
+@router.post("/plans/{plan_id}/commit", summary="Turn the plan into tasks, all or nothing")
+def commit_plan(
+    plan_id: uuid.UUID,
+    idempotency_key: Annotated[str, Header(min_length=1, max_length=255)],
+    service: ServiceDep,
+    session: SessionDep,
+) -> PlanCommitRead:
+    """``Idempotency-Key`` is required: a commit retried after a lost answer must find the
+    first one rather than make a second set of tasks (ADR-0030)."""
+    result = service.commit(plan_id, key=idempotency_key, now=datetime.now(timezone.utc))
+    session.commit()
+    return result

@@ -4,9 +4,13 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from syncaai.errors import (
+    PlanCommitRaceError,
+    PlanCommitRefusedError,
+    PlanEmptyError,
     PlanInProgressError,
     PlanItemNotFoundError,
     PlanJobNotFoundError,
@@ -16,13 +20,15 @@ from syncaai.errors import (
     StepOverlapsTaskError,
     StepStartsInThePastError,
 )
-from syncaai.models import AiJob, PlanDraft, PlanDraftItem
+from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task
+from syncaai.planning.notes import compose_note
 from syncaai.planning.scheduler import week_end
 from syncaai.repositories.plans import AiJobRepository, PlanDraftRepository
 from syncaai.repositories.tasks import TaskRepository
 from syncaai.schemas.plans import (
     ItemState,
     JobRead,
+    PlanCommitRead,
     PlanDiscardRead,
     PlanItemRead,
     PlanItemUpdate,
@@ -31,6 +37,7 @@ from syncaai.schemas.plans import (
 )
 from syncaai.services.ai_queue import enqueue_plan
 from syncaai.services.plan_jobs import PLACED
+from syncaai.services.tasks import OVERLAP_CONSTRAINT
 
 
 class PlanService:
@@ -125,6 +132,73 @@ class PlanService:
         draft.ended_at = func.now()
         self._session.flush()
 
+    def commit(self, plan_id: uuid.UUID, *, key: str, now: datetime) -> PlanCommitRead:
+        """Turn every step into a task, in one transaction, or write nothing (ADR-0030).
+
+        Refused while a step has no time, has a start that passed, or sits on time a task
+        took since the draft was made; the answer names each step and why. A repeat with the
+        same key answers what the first did, and any other commit of a plan that is no longer
+        pending is refused. The plan is locked first, so two commits of one plan are one
+        commit and one repeat.
+        """
+        draft = self._drafts.get_for_change(plan_id)
+        if draft is None:
+            raise PlanNotFoundError
+        if draft.status == "approved" and draft.idempotency_key == key:
+            return PlanCommitRead(plan_id=draft.id, task_ids=self._tasks().ids_from_plan(draft.id))
+        if draft.status != "pending":
+            raise PlanNotPendingError
+        if not draft.items:
+            raise PlanEmptyError
+        problems = self._commit_problems(draft, now)
+        if problems:
+            raise PlanCommitRefusedError(problems)
+
+        tasks = [
+            Task(
+                user_id=draft.user_id,
+                title=item.title,
+                start_at=item.start_at,
+                duration_minutes=item.minutes,
+                notes=compose_note(item.description, [(lk.label, lk.url) for lk in item.links]),
+                plan_id=draft.id,
+            )
+            for item in draft.items
+        ]
+        self._session.add_all(tasks)
+        try:
+            self._session.flush()
+        except IntegrityError as error:
+            # Booked between the check above and this insert: the exclusion constraint has
+            # the final word, as everywhere else, and the whole commit goes with it.
+            diagnostics = getattr(error.orig, "diag", None)
+            if getattr(diagnostics, "constraint_name", None) == OVERLAP_CONSTRAINT:
+                raise PlanCommitRaceError from error
+            raise
+        draft.status = "approved"
+        draft.ended_at = func.now()
+        draft.idempotency_key = key
+        self._session.flush()
+        return PlanCommitRead(plan_id=draft.id, task_ids=[task.id for task in tasks])
+
+    def _commit_problems(self, draft: PlanDraft, now: datetime) -> list[tuple[str, str, str]]:
+        problems: list[tuple[str, str, str]] = []
+        tasks = self._tasks()
+        for item in draft.items:
+            if item.start_at is None:
+                reason = "It has no time yet. Give it one, or remove it."
+            elif item.start_at <= now:
+                reason = "Its start has passed. Move it, or remove it."
+            elif _holds_time(tasks, item.start_at, item.minutes):
+                reason = "A task was booked on its time since. Move it, or remove it."
+            else:
+                continue
+            problems.append((str(item.id), item.title, reason))
+        return problems
+
+    def _tasks(self) -> TaskRepository:
+        return TaskRepository(self._session, self._jobs.owner_id)
+
     def _pending(self, plan_id: uuid.UUID) -> PlanDraft:
         draft = self._drafts.get_for_change(plan_id)
         if draft is None:
@@ -137,16 +211,21 @@ class PlanService:
         self, draft: PlanDraft, item: PlanDraftItem, start: datetime, minutes: int
     ) -> None:
         end = start + timedelta(minutes=minutes)
-        tasks = TaskRepository(self._session, self._jobs.owner_id)
-        # An empty range is a task completed before it began: it holds no time, and the
-        # exclusion constraint lets anything be booked across it.
-        if any(ends > starts for starts, ends in tasks.occupied_ranges(starts=start, ends=end)):
+        if _holds_time(self._tasks(), start, minutes):
             raise StepOverlapsTaskError
         for other in draft.items:
             if other.id == item.id or other.start_at is None:
                 continue
             if other.start_at < end and other.start_at + timedelta(minutes=other.minutes) > start:
                 raise StepOverlapsStepError
+
+
+def _holds_time(tasks: TaskRepository, start: datetime, minutes: int) -> bool:
+    """Whether any task holds time inside ``[start, start + minutes)``. An empty range is a
+    task completed before it began: it holds none, and the exclusion constraint lets
+    anything be booked across it."""
+    end = start + timedelta(minutes=minutes)
+    return any(ends > starts for starts, ends in tasks.occupied_ranges(starts=start, ends=end))
 
 
 def _step_of(draft: PlanDraft, item_id: uuid.UUID) -> PlanDraftItem:

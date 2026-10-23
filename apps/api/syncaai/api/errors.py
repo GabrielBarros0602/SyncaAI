@@ -20,6 +20,9 @@ from syncaai.errors import (
     InvertedWindowError,
     NoDayToPlanError,
     NotAuthenticatedError,
+    PlanCommitRaceError,
+    PlanCommitRefusedError,
+    PlanEmptyError,
     PlanInProgressError,
     PlanItemNotFoundError,
     PlanJobNotFoundError,
@@ -294,4 +297,36 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": "That time is taken by another step of this plan."},
+        )
+
+    @app.exception_handler(PlanCommitRefusedError)
+    async def _commit_refused(_: Request, error: PlanCommitRefusedError) -> JSONResponse:
+        # Every step in the way, with what to change, so the review can show them all at once
+        # rather than one per attempt (ADR-0030).
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "detail": "The plan cannot become tasks as it stands. Nothing was written.",
+                "items": [
+                    {"id": item_id, "title": title, "reason": reason}
+                    for item_id, title, reason in error.problems
+                ],
+            },
+        )
+
+    @app.exception_handler(PlanEmptyError)
+    async def _plan_empty(_: Request, __: PlanEmptyError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": "Nothing is left to commit. Discard the plan instead."},
+        )
+
+    @app.exception_handler(PlanCommitRaceError)
+    async def _commit_race(_: Request, __: PlanCommitRaceError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "detail": "A task was booked on one of these times just now. "
+                "Nothing was written; read the plan again."
+            },
         )

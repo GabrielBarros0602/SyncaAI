@@ -212,3 +212,24 @@ class StepOverlapsTaskError(DomainError):
 
 class StepOverlapsStepError(DomainError):
     """Raised when a step is moved onto time another step of the same plan holds (ADR-0030)."""
+
+
+class PlanCommitRefusedError(DomainError):
+    """Raised when a plan cannot become tasks as it stands. Nothing is written (ADR-0030).
+
+    Carries each step that stands in the way and why, so the review can show what to change.
+    """
+
+    def __init__(self, problems: list[tuple[str, str, str]]) -> None:
+        super().__init__()
+        #: (step id, step title, reason), in the plan's order.
+        self.problems = problems
+
+
+class PlanEmptyError(DomainError):
+    """Raised when a plan whose every step was removed is committed (ADR-0030)."""
+
+
+class PlanCommitRaceError(DomainError):
+    """Raised when a task is booked on a step's time between the commit's check and its
+    insert. The exclusion constraint has the final word, and nothing is written."""

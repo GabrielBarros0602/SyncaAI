@@ -9,12 +9,13 @@ import json
 import uuid
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import delete, event, func, select, text, update
 from sqlalchemy.exc import OperationalError
 
 from syncaai.api.dependencies import get_current_user_id
@@ -24,6 +25,7 @@ from syncaai.planning.generator import FakeGenerator
 from syncaai.repositories.plans import PlanDraftRepository
 from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
 from syncaai.services.plan_jobs import PLAN_IN_PROGRESS, run_plan_job
+from syncaai.services.plans import PlanService
 
 pytestmark = pytest.mark.integration
 
@@ -566,3 +568,239 @@ def test_two_changes_to_one_plan_wait_for_each_other(
             PlanDraftRepository(second, people[0]).get_for_change(plan_id)
         first.rollback()
         second.rollback()
+
+
+# --- Committing (ADR-0030 §6) --------------------------------------------------------------
+
+
+def _commit(client: TestClient, plan: dict[str, object], key: str | None = "key-1") -> Any:
+    headers = {} if key is None else {"Idempotency-Key": key}
+    return client.post(f"/api/v1/plans/{plan['id']}/commit", headers=headers)
+
+
+def _tasks_of(person: uuid.UUID) -> list[Task]:
+    with get_session_factory()() as session:
+        statement = select(Task).where(Task.user_id == person).order_by(Task.start_at)
+        return list(session.scalars(statement).all())
+
+
+def test_a_committed_plan_becomes_its_tasks_and_closes(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+
+    response = _commit(client, plan)
+
+    assert response.status_code == 200, response.text
+    tasks = _tasks_of(people[0])
+    assert response.json() == {"plan_id": plan["id"], "task_ids": [str(t.id) for t in tasks]}
+    assert [(t.title, t.duration_minutes, t.plan_id) for t in tasks] == [
+        ("Ler o capítulo de JOINs", 45, uuid.UUID(str(plan["id"]))),
+        ("Exercícios de JOINs", 45, uuid.UUID(str(plan["id"]))),
+    ]
+    assert [t.start_at for t in tasks] == [
+        datetime(2031, 6, 4, 15, 5, tzinfo=timezone.utc),
+        datetime(2031, 6, 4, 15, 50, tzinfo=timezone.utc),
+    ]
+    # The note is written by code from what the draft kept, never copied from the model.
+    assert tasks[0].notes == "O capítulo 6.\n\nLinks\n- SQLBolt — https://sqlbolt.com/lesson/6"
+    assert tasks[1].notes is None
+    assert client.get(f"/api/v1/plans/{plan['id']}").json()["status"] == "approved"
+    with get_session_factory()() as session:
+        draft = session.get_one(PlanDraft, uuid.UUID(str(plan["id"])))
+        assert (draft.idempotency_key, draft.ended_at is not None) == ("key-1", True)
+
+
+def test_a_repeat_with_the_same_key_answers_the_first_commit_and_adds_nothing(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+
+    first = _commit(client, plan)
+    repeat = _commit(client, plan)
+
+    assert repeat.status_code == 200
+    assert repeat.json() == first.json()
+    assert len(_tasks_of(people[0])) == 2
+
+
+def test_another_commit_of_a_committed_plan_is_refused(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+    _commit(client, plan)
+
+    other = _commit(client, plan, key="key-2")
+
+    assert other.status_code == 409
+    assert other.json() == {"detail": "This plan is no longer open for review."}
+    assert len(_tasks_of(people[0])) == 2
+
+
+def test_a_commit_without_an_idempotency_key_is_refused(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+
+    assert _commit(client, plan, key=None).status_code == 422
+    assert _tasks_of(people[0]) == []
+
+
+def test_steps_in_the_way_are_all_named_and_nothing_is_written(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """One step with no time, one whose start has passed: both reasons in one answer, so the
+    review can show everything to change at once."""
+    plan = _plan(app, client, people[0])
+    first, second = plan["items"]  # type: ignore[misc]
+    with get_session_factory()() as session:
+        session.execute(
+            update(PlanDraftItem)
+            .where(PlanDraftItem.id == uuid.UUID(first["id"]))
+            .values(placement="no_room", start_at=None)
+        )
+        session.execute(
+            update(PlanDraftItem)
+            .where(PlanDraftItem.id == uuid.UUID(second["id"]))
+            .values(start_at=datetime(2020, 1, 6, 12, 0, tzinfo=timezone.utc))
+        )
+        session.commit()
+
+    response = _commit(client, plan)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "The plan cannot become tasks as it stands. Nothing was written.",
+        "items": [
+            {
+                "id": first["id"],
+                "title": first["title"],
+                "reason": "It has no time yet. Give it one, or remove it.",
+            },
+            {
+                "id": second["id"],
+                "title": second["title"],
+                "reason": "Its start has passed. Move it, or remove it.",
+            },
+        ],
+    }
+    assert _tasks_of(people[0]) == []
+    assert client.get(f"/api/v1/plans/{plan['id']}").json()["status"] == "pending"
+
+
+def test_a_task_booked_since_on_a_step_s_time_stops_the_commit(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+    first = plan["items"][0]  # type: ignore[index]
+    _book(people[0], "2031-06-04T12:30:00-03:00", 15)
+
+    response = _commit(client, plan)
+
+    assert response.status_code == 409
+    assert response.json()["items"] == [
+        {
+            "id": first["id"],
+            "title": first["title"],
+            "reason": "A task was booked on its time since. Move it, or remove it.",
+        }
+    ]
+    assert len(_tasks_of(people[0])) == 1
+
+
+def test_a_task_completed_before_it_began_does_not_stop_the_commit(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+    _book(people[0], "2031-06-04T12:30:00-03:00", 15, completed_before=True)
+
+    assert _commit(client, plan).status_code == 200
+
+
+def test_a_plan_with_every_step_removed_has_nothing_to_commit(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+    client.delete(_step_url(plan, 0))
+    client.delete(_step_url(plan, 1))
+
+    response = _commit(client, plan)
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Nothing is left to commit. Discard the plan instead."}
+
+
+def test_a_discarded_plan_cannot_be_committed_and_someone_else_s_is_not_found(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    mine = _plan(app, client, people[0])
+    client.post(f"/api/v1/plans/{mine['id']}/discard")
+    assert _commit(client, mine).status_code == 409
+
+    theirs = _plan(app, client, people[1])
+    _as(app, people[0])
+    assert _commit(client, theirs).status_code == 404
+    assert _tasks_of(people[1]) == []
+
+
+def test_a_task_booked_between_the_check_and_the_insert_loses_to_the_constraint(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check is skipped to stand for the race it cannot see: the exclusion constraint has
+    the final word, and the whole commit goes with it."""
+    plan = _plan(app, client, people[0])
+    _book(people[0], "2031-06-04T12:30:00-03:00", 15)
+    monkeypatch.setattr(PlanService, "_commit_problems", lambda self, draft, now: [])
+
+    response = _commit(client, plan)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "A task was booked on one of these times just now. "
+        "Nothing was written; read the plan again."
+    }
+    assert [t.title for t in _tasks_of(people[0])] == ["Dentista"]
+    assert client.get(f"/api/v1/plans/{plan['id']}").json()["status"] == "pending"
+
+
+def test_a_committed_plan_makes_room_for_the_next(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+    _commit(client, plan)
+
+    _ask(client)
+
+
+def test_a_commit_waits_for_any_other_change_to_the_same_plan(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Two commits of one plan are one commit and one repeat only if the second waits for
+    the first before it writes anything. Without its own lock it would still stop, but later:
+    at the plan's UPDATE, with its tasks already inserted. So the statements it sent are
+    recorded, and none of them may be an insert of tasks. ``lock_timeout`` turns the wait
+    into an error here instead of a hang."""
+    plan = _plan(app, client, people[0])
+    plan_id = uuid.UUID(str(plan["id"]))
+    factory = get_session_factory()
+    sent: list[str] = []
+
+    with factory() as first, factory() as second:
+        assert PlanDraftRepository(first, people[0]).get_for_change(plan_id) is not None
+        second.execute(text("SET LOCAL lock_timeout = '500ms'"))
+        connection = second.connection()
+
+        def record(_conn: object, _cursor: object, statement: str, *_args: object) -> None:
+            sent.append(statement)
+
+        event.listen(connection, "before_cursor_execute", record)
+        with pytest.raises(OperationalError, match="lock timeout"):
+            PlanService(second, people[0]).commit(
+                plan_id, key="key-1", now=datetime.now(timezone.utc)
+            )
+        event.remove(connection, "before_cursor_execute", record)
+        first.rollback()
+        second.rollback()
+
+    assert sent, "the second commit sent nothing, so this test proved nothing"
+    assert not any(statement.lstrip().upper().startswith("INSERT INTO TASKS") for statement in sent)

@@ -99,3 +99,11 @@ class PlanItemUpdate(BaseModel):
     @classmethod
     def require_an_offset(cls, value: datetime) -> datetime:
         return require_an_offset(value)
+
+
+class PlanCommitRead(BaseModel):
+    """What a commit made: the tasks, in the plan's order. A repeat with the same key answers
+    the plan's tasks as they are now (ADR-0030)."""
+
+    plan_id: uuid.UUID
+    task_ids: list[uuid.UUID]
