@@ -321,8 +321,8 @@ errado.
 - [ ] **O teste que prova a privacidade:** fixture de calendário com títulos sensíveis,
       asserção de que essas strings não aparecem no prompt montado. Esse teste *é* a garantia
       de privacidade — sem ele a política do ADR-0004 é só texto
-- [ ] Modelo Pydantic da resposta; JSON schema gerado a partir dele, fonte única
-- [ ] Validação de invariantes de domínio separada da validação de schema (ADR-0005)
+- [x] Modelo Pydantic da resposta; JSON schema gerado a partir dele, fonte única
+- [x] Validação de invariantes de domínio separada da validação de schema (ADR-0005)
 - [ ] Uma tentativa de reparo, alimentada pelos erros de validação
 - [x] **Decidido:** capacidade é ocupação real medida contra um dia útil de 16h, com quatro
       níveis de carga e nada bloqueado → [ADR-0022](adr/0022-capacity-against-a-usable-day.md)
@@ -331,7 +331,7 @@ errado.
 - [x] **Horário útil por usuário, antes do agendador.** Sem isso o agendador distribui nos
       minutos livres que existirem, e às 3 da manhã existem 60. Feito como uma janela por
       pessoa → [ADR-0029](adr/0029-the-usable-day-is-a-window-each-person-sets.md)
-- [ ] Agendador como função pura: itens e capacidades entram, atribuições saem. Fronteiras
+- [x] Agendador como função pura: itens e capacidades entram, atribuições saem. Fronteiras
       primeiro — capacidade insuficiente, zero dias livres, item maior que qualquer bloco
 - [ ] `plan_draft` e `draft_item`
 - [ ] Endpoint de commit do draft: uma transação e idempotency key
@@ -341,6 +341,14 @@ errado.
       regras de criar tarefa ([ADR-0030](adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md))
 - [ ] Expurgo, de hora em hora no worker, das tabelas de token e de rate limit, e do conteúdo
       dos jobs com mais de 30 dias ([ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md))
+- [x] **Decidido:** o plano é escrito no idioma do pedido; o horizonte padrão é de 14 dias,
+      mas o plano só ocupa sozinho até o domingo da semana atual, e o resto vira "não cabe
+      nesta semana" com a opção de levar para a próxima; o rascunho velho é reposicionado sem
+      chamar o modelo e expira com o horizonte; um plano por vez
+      → [ADR-0033](adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md)
+- [ ] "Não cabe nesta semana" e "levar para a próxima semana"
+- [ ] Itens vencidos marcados, "reposicionar" sem chamar o modelo, e `expired` no fim do horizonte
+- [ ] Um plano em andamento por pessoa: dois índices únicos parciais e 409
 
 **Por que o dublê primeiro:** o agendador e o validador são as partes mais arriscadas e as
 mais testáveis do projeto — funções puras sobre fixture. Construídas contra `FakeGenerator`,
