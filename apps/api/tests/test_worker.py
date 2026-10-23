@@ -24,7 +24,8 @@ from syncaai.planning.context import PROMPT_VERSION, PlanPrompt
 from syncaai.planning.generator import Generation, PlanGenerator, Repair, SampleGenerator
 from syncaai.services.ai_queue import GAVE_UP, MAX_QUEUED, enqueue_plan
 from syncaai.services.plan_drafts import expire_drafts
-from syncaai.worker import SWEEP_INTERVAL_SECONDS, Worker, listen_url, main
+from syncaai.services.purge import PurgeReport
+from syncaai.worker import PURGE_INTERVAL_SECONDS, SWEEP_INTERVAL_SECONDS, Worker, listen_url, main
 
 pytestmark = pytest.mark.integration
 
@@ -170,6 +171,27 @@ def test_a_worker_told_to_stop_claims_nothing(people: list[uuid.UUID]) -> None:
     worker.run()
 
     assert _status(job) == ("queued", 0)
+
+
+def test_the_worker_purges_on_its_first_tick_and_then_once_an_hour(
+    people: list[uuid.UUID], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    purges: list[object] = []
+    monkeypatch.setattr(
+        "syncaai.worker.purge", lambda session: purges.append(session) or PurgeReport(0, 0, 0, 0, 0)
+    )
+    readings = iter([0.0, 10.0, PURGE_INTERVAL_SECONDS - 1, PURGE_INTERVAL_SECONDS + 1])
+    worker = Worker(
+        get_session_factory(),
+        SampleGenerator(),
+        listen_url=listen_url(get_settings().database_url),
+        monotonic=lambda: next(readings),
+    )
+
+    for _ in range(4):
+        worker.tick()
+
+    assert len(purges) == 2
 
 
 # --- Drafts nobody acted on (ADR-0033) -----------------------------------------------------

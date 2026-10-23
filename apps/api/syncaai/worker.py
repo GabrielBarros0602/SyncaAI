@@ -3,7 +3,8 @@
 It listens on the queue's channel and, woken by a knock or by the five-second sweep,
 whichever comes first, sweeps and then runs every ready job until the queue is empty. The
 sweep covers what a knock cannot: a notification sent while the worker was restarting, a job
-whose lock ran out, and a job queued too long.
+whose lock ran out, and a job queued too long. Once an hour it also purges what is past its
+margin (``services.purge``).
 
 On SIGTERM it finishes the job in hand and exits. A job it cannot finish in time is left to
 its lock, which the visibility timeout already handles. Several workers can run at once:
@@ -12,6 +13,7 @@ its lock, which the visibility timeout already handles. Several workers can run 
 
 import logging
 import signal
+import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -28,12 +30,15 @@ from syncaai.planning.generator import PlanGenerator, SampleGenerator
 from syncaai.services.ai_queue import CHANNEL, claim_next, sweep
 from syncaai.services.plan_drafts import expire_drafts
 from syncaai.services.plan_jobs import run_plan_job
+from syncaai.services.purge import purge
 
 # Named, not __name__: run as ``python -m`` the module is __main__, and the log would say so.
 logger = logging.getLogger("syncaai.worker")
 
 # How long the worker waits for a knock before sweeping anyway (ADR-0031).
 SWEEP_INTERVAL_SECONDS = 5.0
+# How often the same worker purges what is past its margin (ADR-0031).
+PURGE_INTERVAL_SECONDS = 3600.0
 
 
 def _utc_now() -> datetime:
@@ -48,12 +53,15 @@ class Worker:
         *,
         listen_url: str,
         clock: Callable[[], datetime] = _utc_now,
+        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self._factory = factory
         self._generator = generator
         self._listen_url = listen_url
         self._clock = clock
+        self._monotonic = monotonic
         self._stopping = False
+        self._purged_at: float | None = None
 
     def stop(self, _signal: int | None = None, _frame: FrameType | None = None) -> None:
         """Finish the job in hand, then leave. Shaped as a signal handler."""
@@ -71,6 +79,7 @@ class Worker:
     def tick(self) -> int:
         """Sweep, then run every ready job; return how many were run."""
         self._sweep()
+        self._purge_when_due()
         ran = 0
         while not self._stopping:
             claimed = self._claim()
@@ -97,6 +106,18 @@ class Worker:
             session.commit()
         if failed or expired:
             logger.info("sweep: %s jobs failed, %s drafts expired", len(failed), len(expired))
+
+    def _purge_when_due(self) -> None:
+        """On the first tick, then once an hour. Every worker purges; the deletes are
+        idempotent, so two doing it in the same hour cost a second pass over nothing."""
+        started = self._monotonic()
+        if self._purged_at is not None and started - self._purged_at < PURGE_INTERVAL_SECONDS:
+            return
+        with self._factory() as session:
+            report = purge(session)
+            session.commit()
+        self._purged_at = started
+        logger.info("purge: %s", report)
 
     def _claim(self) -> tuple[uuid.UUID, int] | None:
         # Committed at once, before any call to a model: a lock never spans a network call.
