@@ -37,7 +37,7 @@ redesign.
 | 9 | Celular | **Visão de um dia**, numa rodada de design. O prazo não pesa contra | redesign | — |
 | 10 | Design | **Terceira rodada completa.** O inventário de problemas está no brief local | — | — |
 | 11 | Dependabot nos lockfiles do Python | **Um check no CI** que regenera o lockfile com o `uv` e falha se diferir | job de CI | sim |
-| 12 | Horário útil | **Uma janela por pessoa** (início e fim). Simples para a maioria; nem todo mundo vai configurar dia a dia, e nem todo dia segue o mesmo plano | ADR que supere a decisão 3 do ADR-0022 e redefina os itens 7–9 do ADR-0023; migration; `PATCH /me` | sim |
+| 12 | Horário útil | **Uma janela por pessoa** (início e fim). Simples para a maioria; nem todo mundo vai configurar dia a dia, e nem todo dia segue o mesmo plano | ✅ ADR-0029, migration e `PATCH /me`; falta a tela de configurações | sim |
 | 14 | Arrumação | `.gitignore` dos arquivos pessoais commitado; branches antigas apagadas | feito | — |
 | 15 | O front-end até o redesign voltar | **Congelado.** As PRs 6, 7 e 8 do item 2 estão pausadas, e nenhum componente, teste de UI ou CSS novo é escrito sobre um design system que vai ser refeito. O trabalho segue no que é base | — | — |
 
@@ -78,10 +78,14 @@ O que o redesign não pode invalidar, e por isso segue enquanto o front está co
    mudar (renomear, marcar), remover fechando o buraco, e reordenar com a lista inteira de ids
    numa transação — uma lista que não seja exatamente os itens atuais recebe 409 (respondido
    em 2026-10-22).
-4. ADR, migration e `PATCH /me` da janela do dia útil (decisão 12). **Respondido em
-   2026-10-22:** a janela define só o tamanho do orçamento (`fim − início`), e a ocupação
-   continua contada no dia inteiro; os horários ficam guardados para a IA. Ela não cruza a
-   meia-noite, por enquanto.
+4. ~~ADR, migration e `PATCH /me` da janela do dia útil (decisão 12).~~ ✅ ADR-0029. Duas
+   colunas no usuário (`day_starts_at`, `day_ends_at`), com padrão 06:00–22:00, as mesmas 16h
+   de antes. O orçamento de cada dia é o tempo real entre os dois horários, com teto de 18h. A
+   ocupação continua contada no dia inteiro. A janela não cruza a meia-noite. `GET /me` mostra a
+   janela, e `PATCH /me` a altera, julgando o par.
+
+**O trabalho de base está completo.** O que segue é o redesign, quando a semana voltar do
+Claude Design com as correções pedidas.
 5. ~~Teste automático de contraste dos tokens (decisão 8).~~ ✅ Feito junto com a troca dos
    tokens pela direção Papel do design system (ADR-0026). O teste lê o `tokens.css` como ele é
    entregue; um par novo que as telas passem a usar tem que entrar no `contrast-pairs.json`,
@@ -364,9 +368,10 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
 ## Rodada 4 — telas que não existem
 
 - **Configurações.** Desenhada em `docs/design/settings.html`. O fuso aparece no cabeçalho e
-  não pode ser mudado, e não existe `PATCH /me`. Carrega junto os itens 7–9 do **ADR-0023**: a
-  coluna `users.usable_minutes` com `CHECK (usable_minutes BETWEEN 60 AND 1080)`, o `PATCH /me`
-  que a aceita com um 422 que nomeia o teto, e o `GET /me` que a reporta.
+  não pode ser mudado. ~~Carrega junto os itens 7–9 do ADR-0023: a coluna
+  `users.usable_minutes`…~~ O ADR-0029 trocou esses itens por uma janela: o `PATCH /me` e o
+  `GET /me` já existem para ela, e falta só a tela que a altera, desenhada no passo 4 da
+  terceira rodada.
 - **Confirmar endereço.** Desenhada em `docs/design/confirm-address.html`, em três estados.
   O comportamento já existe dentro do `AuthScreen`; falta a tela. **É a PR 7 do item 2.**
 

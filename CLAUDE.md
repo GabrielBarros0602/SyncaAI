@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 28 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 29 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -105,7 +105,7 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 48 today, and a run
+  them is not a green run. `pytest -m integration` counts them; there are 56 today, and a run
   that reports fewer found no database.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
@@ -191,15 +191,16 @@ The round's first step, the design system, is in: `tokens.css` is direction Pape
 holds every contrast pair it promises (ADR-0026). Its legacy block keeps the old names working;
 moving a module to the new ones is screen work, and waits with the screens.
 
-**Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate:
+**Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate. The
+base work that list began with is done (ADR-0027 to ADR-0029).
 
-1. **Base work, while the front is frozen** — the list under "O trabalho de base" in the
-   backlog: the usable day as a per-person window. It needs an ADR before the code; its open
-   questions were answered on 2026-10-22 and are recorded in the backlog.
-2. The rest of the three screens, after the redesign: the day's "move something" offer,
+1. The rest of the three screens, after the redesign: the day's "move something" offer,
    address confirmation and settings. `docs/design/README.md` records what the second round
-   decided; the third round's brief is local, in `docs/design-brief-3.md`.
-3. S6 — the AI pipeline against a test double, no provider.
+   decided. The third round's briefs are local, in `docs/design-brief-3.md` and
+   `docs/design-brief-3-passo-2.md`; the desktop week went back for two corrections, recorded
+   in the backlog.
+2. S6 — the AI pipeline against a test double, no provider. It does not depend on the
+   redesign, so it is the work that can move while the front is frozen.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when
