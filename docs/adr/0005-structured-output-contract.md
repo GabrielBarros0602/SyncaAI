@@ -1,6 +1,8 @@
 # ADR-0005: Structured output contract and failure handling
 
-**Status:** Accepted
+**Status:** Accepted; decision 1 amended by
+[ADR-0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) — the
+scheduler assigns a start time, not only a date
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 

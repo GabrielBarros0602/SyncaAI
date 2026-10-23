@@ -13,7 +13,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0002](0002-mvp-scope-ai-features.md) | MVP scope of the AI layer and its UI entry point | Accepted |
 | [0003](0003-ai-request-lifecycle.md) | AI request lifecycle and transport | Accepted |
 | [0004](0004-context-assembly-policy.md) | Calendar context assembly policy | Accepted |
-| [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted |
+| [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted; decision 1 amended by 0030 |
 | [0006](0006-cost-limits-cache-degradation.md) | Cost control, rate limiting, caching and degradation | Accepted |
 | [0007](0007-synchronous-persistence.md) | Synchronous SQLAlchemy for persistence | Accepted |
 | [0008](0008-task-time-block.md) | Task time block: start plus duration, generated end | Accepted |
@@ -38,6 +38,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
 | [0028](0028-the-checklist-is-its-own-resource.md) | The checklist is its own resource | Accepted |
 | [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted |
+| [0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) | A plan is placed in real free time, reviewed item by item, and committed whole | Accepted |
 
 ## Template
 
