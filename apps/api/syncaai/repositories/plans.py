@@ -48,6 +48,12 @@ class PlanDraftRepository(OwnedRepository[PlanDraft]):
         )
         return self._session.scalar(statement)
 
+    def get_for_change(self, plan_id: uuid.UUID) -> PlanDraft | None:
+        """The plan, locked until the transaction ends. Two edits of one plan wait for each
+        other, so neither can place a step on time the other has just taken."""
+        statement = self._scoped().where(PlanDraft.id == plan_id).with_for_update()
+        return self._session.scalar(statement)
+
     def prerequisites(self, plan_id: uuid.UUID) -> dict[uuid.UUID, list[uuid.UUID]]:
         """Each item's prerequisites. Reached through a plan already read through the owner
         filter, and held to that plan by the table's own composite keys (ADR-0037)."""

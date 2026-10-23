@@ -4,9 +4,16 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, field_validator
 
-from syncaai.planning.contract import MAX_HORIZON_DAYS, MAX_REQUEST_CHARS, MIN_HORIZON_DAYS
+from syncaai.models import MINUTES_IN_A_DAY
+from syncaai.planning.contract import (
+    MAX_HORIZON_DAYS,
+    MAX_REQUEST_CHARS,
+    MAX_TITLE_CHARS,
+    MIN_HORIZON_DAYS,
+)
+from syncaai.schemas.tasks import reject_an_explicit_null, require_an_offset
 
 ItemState = Literal["placed", "passed", "no_room", "not_this_week", "after_unplaced"]
 
@@ -64,3 +71,31 @@ class PlanRead(BaseModel):
     week_ends_on: date
     items: list[PlanItemRead]
     discarded: list[PlanDiscardRead]
+
+
+class PlanItemUpdate(BaseModel):
+    """A partial change to one step (ADR-0030).
+
+    None of the three can be cleared: a step always has a title and a length, and a step with
+    no time is given one by setting its start. Its minutes are a task's, not the model's: the
+    block bounds what the model proposes, never what the person edits (ADR-0032).
+    """
+
+    title: (
+        Annotated[
+            str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_TITLE_CHARS)
+        ]
+        | None
+    ) = None
+    minutes: int | None = Field(default=None, ge=1, le=MINUTES_IN_A_DAY)
+    start_at: datetime | None = None
+
+    @field_validator("title", "minutes", "start_at")
+    @classmethod
+    def refuse_a_null(cls, value: object) -> object:
+        return reject_an_explicit_null(value)
+
+    @field_validator("start_at")
+    @classmethod
+    def require_an_offset(cls, value: datetime) -> datetime:
+        return require_an_offset(value)
