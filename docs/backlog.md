@@ -422,8 +422,8 @@ PR 5, que levou a contagem a 25.
 
 ## Depois
 
-**S6 — a camada de IA**, contra um dublê de teste. É a tese do produto e ainda é invisível na
-tela. O `end_at` que encurta ao concluir cedo já está guardando o dado que ela vai usar.
+**S6 — a camada de IA**, contra um dublê de teste: concluído em 2026-10-23 (ADR-0030 a
+ADR-0038). É a tese do produto e ainda é invisível na tela, que espera a terceira rodada. O `end_at` que encurta ao concluir cedo já está guardando o dado que ela vai usar.
 
 > **A mesma armadilha da PR 3 espera aqui.** O ADR-0022 diz que a camada de IA ganha
 > plano-contra-real de graça. Ganha — mas **não** por `completed_at - start_at`. Essa derivada

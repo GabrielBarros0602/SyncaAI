@@ -105,7 +105,7 @@ Rules:
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
   are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 221 today, and a run
+  them is not a green run. `pytest -m integration` counts them; there are 230 today, and a run
   that reports fewer found no database.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
@@ -174,7 +174,8 @@ Rules:
 ## Where the project is
 
 **Done:** S0–S4 (repository, domain and schema, authentication and owner isolation, email
-verification, domain CRUD and the capacity query) and most of S5.
+verification, domain CRUD and the capacity query), most of S5, and S6 (the AI pipeline
+against a test double, closed on 2026-10-23).
 
 **The current shape.** The API is FastAPI + SQLAlchemy 2.0 + PostgreSQL 16, with the rules the
 database can hold held there: a GiST exclusion constraint refuses overlapping bookings, a
@@ -182,8 +183,8 @@ trigger derives `end_at`, and a CHECK caps a task at one day. The web app is Vit
 TypeScript in strict mode, CSS Modules, no component library. The AI layer runs end to end
 against a sample generator: the queue, the worker (`python -m syncaai.worker`, its own compose
 service), the prompt, the repair ladder, the scheduler and the draft are built (ADR-0030 to
-ADR-0038). A plan can be asked for, read, edited, discarded and committed over HTTP;
-re-placing it and sending steps to next week are still to come, and the real provider is S7.
+ADR-0038). Over HTTP a plan can be asked for, read, edited, placed again, sent to next week,
+discarded and committed. The real provider is S7.
 
 **The front end is frozen, since 2026-10-22.** A third design round is coming, with large
 changes likely. Build no screen, UI component, UI test or new CSS until it returns — PRs 6, 7
@@ -202,10 +203,11 @@ base work that list began with is done (ADR-0027 to ADR-0029).
    decided. The third round's briefs are local, in `docs/design-brief-3.md` and
    `docs/design-brief-3-passo-2.md`; the desktop week went back for two corrections, recorded
    in the backlog.
-2. S6 — the AI pipeline against a test double, no provider. It does not depend on the
-   redesign, so it is the work that can move while the front is frozen. What ADRs 0002 to
-   0006 left open was answered on 2026-10-23 and is recorded in ADR-0030 to ADR-0038; the
-   checklist in `docs/ROADMAP.md` is the order of work.
+2. S7 — the real provider, its guardrails and its degradation. Like S6 it does not depend
+   on the redesign. Two things come before any client code, and both are already
+   scheduled: choosing the provider against the criteria the ADRs impose (`docs/backlog.md`,
+   decision 13), and the threat-model review whose second trigger is a real provider being
+   wired in (`docs/threat-model.md`).
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when

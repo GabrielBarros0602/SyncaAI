@@ -296,7 +296,7 @@ quando o protótipo inteiro entra. Trate como vitrine funcional, não como base 
 
 ---
 
-## S6 — Pipeline de IA sem provedor
+## S6 — Pipeline de IA sem provedor · ✅ Concluído
 
 Sprint inteiro construído contra um dublê. Se qualquer coisa aqui custar dinheiro, algo está
 errado.
@@ -352,7 +352,8 @@ errado.
       → [ADR-0038](adr/0038-a-job-and-its-plan-are-two-resources-linked-by-id.md)
 - [x] Pedir um plano (`POST /ai/plans`, 409 de um por vez), ver o job e ler o plano
 - [x] Endpoint de commit do draft: uma transação e idempotency key
-- [ ] `prompt_version` no job e na chave de cache desde o primeiro commit deste sprint
+- [x] `prompt_version` no job desde o primeiro commit deste sprint. A chave de cache, que
+      também o leva, nasce com o cache no S7
 - [x] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
 - [x] Itens do rascunho editáveis — título, minutos, horário, remover — revalidados contra as
       regras de criar tarefa ([ADR-0030](adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md))
@@ -363,9 +364,9 @@ errado.
       nesta semana" com a opção de levar para a próxima; o rascunho velho é reposicionado sem
       chamar o modelo e expira com o horizonte; um plano por vez
       → [ADR-0033](adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md)
-- [ ] "Não cabe nesta semana" e "levar para a próxima semana"
-- [ ] Itens vencidos marcados, "reposicionar" sem chamar o modelo, e `expired` no fim do horizonte
-- [ ] Um plano em andamento por pessoa: dois índices únicos parciais e 409
+- [x] "Não cabe nesta semana" e "levar para a próxima semana"
+- [x] Itens vencidos marcados, "reposicionar" sem chamar o modelo, e `expired` no fim do horizonte
+- [x] Um plano em andamento por pessoa: dois índices únicos parciais e 409
 
 **Por que o dublê primeiro:** o agendador e o validador são as partes mais arriscadas e as
 mais testáveis do projeto — funções puras sobre fixture. Construídas contra `FakeGenerator`,
@@ -384,7 +385,7 @@ de "nenhum projeto com testes automatizados publicados".
 - [ ] Teto mensal por usuário
 - [ ] Kill switch global de gasto — é este que protege a conta bancária, porque a falha
       realista é um bug no próprio front-end em loop
-- [ ] Cache com chave incluindo `context_fingerprint`
+- [ ] Cache com chave incluindo `prompt_version` e `context_fingerprint` (ADR-0006, ADR-0034)
 - [ ] **Teste de integração que prova a ordem** `rate limit → cache → teto`: especificamente,
       um cache hit é servido mesmo com o usuário acima do teto
 - [ ] Circuit breaker no cliente; testar aberto e half-open
