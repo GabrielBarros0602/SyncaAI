@@ -343,7 +343,10 @@ errado.
       pessoa → [ADR-0029](adr/0029-the-usable-day-is-a-window-each-person-sets.md)
 - [x] Agendador como função pura: itens e capacidades entram, atribuições saem. Fronteiras
       primeiro — capacidade insuficiente, zero dias livres, item maior que qualquer bloco
-- [ ] `plan_draft` e `draft_item`
+- [x] **Decidido:** o rascunho são cinco tabelas, com dependências e links como linhas e os
+      descartados à parte; só o aprovado dura, e o resto some trinta dias depois de terminar
+      → [ADR-0037](adr/0037-a-draft-in-five-tables-and-only-an-approved-one-stays.md)
+- [x] `plan_draft` e `draft_item`
 - [ ] Endpoint de commit do draft: uma transação e idempotency key
 - [ ] `prompt_version` no job e na chave de cache desde o primeiro commit deste sprint
 - [ ] Salvamento parcial: draft com 9 de 12 itens válidos é utilizável e mostra o descarte
