@@ -312,7 +312,7 @@ errado.
       → [ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md)
 - [x] **Decidido:** dias de folga e duração de bloco preferida como preferências do planejador,
       sem mexer na capacidade → [ADR-0032](adr/0032-days-off-and-a-preferred-block-length.md)
-- [ ] Colunas `days_off` e `preferred_block_minutes`, no `GET` e no `PATCH /me`
+- [x] Colunas `days_off` e `preferred_block_minutes`, no `GET` e no `PATCH /me`
 - [ ] Interface `PlanGenerator` e `FakeGenerator` — antes do cliente real, não depois
 - [ ] Modelo `ai_job` e fila em PostgreSQL com `SELECT ... FOR UPDATE SKIP LOCKED`
 - [ ] Visibility timeout: job de worker que morreu volta para a fila
