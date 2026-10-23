@@ -9,9 +9,13 @@ scheduler places those items on the days that actually have room. The output is 
 data in the product's own vocabulary, never a block of text to copy by hand.
 
 > **Status:** in development. Accounts, sessions, the calendar domain and the day-capacity
-> query work. The AI layer does not exist yet — which is deliberate: ADR-0006 requires a
-> product that still functions when the provider is down, and that is easier to verify now
-> than after there is something to degrade from. See the roadmap below.
+> query work, and so does the AI layer, end to end, against a sample generator. A request
+> is queued; a worker builds a prompt from the week's free time and nothing else; a repair
+> ladder validates the answer; a deterministic scheduler places the steps, this week first;
+> and the plan waits as a draft that can be reviewed and edited. No real provider is wired in
+> yet. That is S7, and the order is deliberate: ADR-0006 requires a product that still works
+> when the provider is down, which is easier to prove before there is one. See the roadmap
+> below.
 
 ## Why this is not CRUD
 
@@ -45,12 +49,11 @@ Two design decisions carry most of the weight:
 | Sessions | short-lived JWT plus a revocable opaque refresh token ([ADR-0015](docs/adr/0015-session-model.md)) |
 | Mail | one interface, console and recording implementations ([ADR-0018](docs/adr/0018-email-delivery.md)) |
 | Dependencies | pip, with `uv` as the resolver ([why](CONTRIBUTING.md#dependencies)) |
+| AI queue | PostgreSQL itself: `SELECT ... FOR UPDATE SKIP LOCKED`, woken by `NOTIFY`, with a worker as its own service ([ADR-0031](docs/adr/0031-a-job-queue-in-postgresql-woken-by-notify.md)) |
+| AI provider | one `PlanGenerator` interface; a sample generator until S7, so nothing costs money ([ADR-0003](docs/adr/0003-ai-request-lifecycle.md)) |
 | Web | Vite, React 19, TypeScript strict ([ADR-0021](docs/adr/0021-browser-session-and-origin.md)) |
 | Quality | ruff, mypy (strict), pytest; eslint, tsc, vitest |
 | Runtime | Docker Compose |
-
-Planned but not built: the job queue on PostgreSQL with `SELECT ... FOR UPDATE SKIP LOCKED`
-([ADR-0003](docs/adr/0003-ai-request-lifecycle.md)), and the AI layer it carries.
 
 Stack rationale, including the estimated cost of the alternative, is in
 [ADR-0001](docs/adr/0001-backend-stack.md).
@@ -64,7 +67,9 @@ Stack rationale, including the estimated cost of the alternative, is in
 │   └── web/                  Vite + React + TypeScript client
 ├── docs/
 │   ├── adr/                  architecture decision records
+│   ├── design/               the screens as designed, and what was decided in them
 │   ├── prototype/            the original static mockup, kept as a visual reference
+│   ├── backlog.md            what is open, in order, and the rule that orders it
 │   ├── ROADMAP.md            sprint checklist and open questions
 │   └── threat-model.md       assets, attackers, what is and is not mitigated
 ├── .github/                  CI, dependency scanning, pull request template
@@ -84,11 +89,17 @@ Stack rationale, including the estimated cost of the alternative, is in
 | `POST /api/v1/auth/forgot-password` | Answers `202` identically whether or not there is an account. |
 | `POST /api/v1/auth/reset-password` | Sets a new password and signs every device out. |
 | `GET /api/v1/me` | The signed-in user, including the **time zone the server stores**. Every local date a client sends is read in that zone, not the browser's, and the two can differ. |
+| `PATCH /api/v1/me` | The usable day as a window of hours, days off and the length of a planned step ([ADR-0029](docs/adr/0029-the-usable-day-is-a-window-each-person-sets.md), [ADR-0032](docs/adr/0032-days-off-and-a-preferred-block-length.md)). All of a change is checked before any of it is written. |
 | `POST /api/v1/tasks` | Schedules a block of time with an optional checklist and tag. Overlapping an existing task answers `409` — the refusal comes from a database exclusion constraint, so it holds for any code path including a manual `INSERT`. |
 | `GET /api/v1/tasks` | Your tasks, soonest first, paginated. Takes an optional `first_day`/`last_day` window in the same local-date vocabulary as `/capacity`, so a week view asks both for the same seven days. |
 | `GET`, `PATCH`, `DELETE /api/v1/tasks/{id}` | An id that belongs to somebody else answers `404`, byte for byte identical to an id that never existed ([ADR-0016](docs/adr/0016-ownership-isolation.md)). |
+| `POST`, `PATCH`, `DELETE /api/v1/tasks/{id}/items…`, `PUT …/items/order` | The checklist as its own resource; a reorder sends the whole list and is refused if it is stale ([ADR-0028](docs/adr/0028-the-checklist-is-its-own-resource.md)). |
 | `GET /api/v1/tags` | Read-only. A tag exists because a task named it ([ADR-0020](docs/adr/0020-domain-surface-choices.md)). |
 | `GET /api/v1/capacity` | **Free and booked minutes per local day.** The foundation of the AI layer ([ADR-0004](docs/adr/0004-context-assembly-policy.md)) — it is what a generated plan is placed against, and it exists and is tested before any AI code does. |
+| `POST /api/v1/ai/plans` | **Asks for a plan** and answers `202` with a job; the worker makes it in the background. One plan at a time: `409` while another is queued, running or waiting for review ([ADR-0033](docs/adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md), [ADR-0038](docs/adr/0038-a-job-and-its-plan-are-two-resources-linked-by-id.md)). |
+| `GET /api/v1/ai/plans/{job_id}` | How the request is going, and the plan's id once there is one. |
+| `GET /api/v1/plans/{plan_id}` | The plan for review: each step with a real start in the week's free time or the reason it has none, its links and prerequisites, and what the validation discarded and why. |
+| `PATCH`, `DELETE /api/v1/plans/{plan_id}/items/{item_id}`, `POST …/discard` | Edit or remove a step before it becomes a task, checked as a task's change would be; or set the plan aside ([ADR-0030](docs/adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md)). |
 | `GET /health`, `GET /health/ready` | Liveness and readiness, separate on purpose. |
 
 Interactive documentation is at `/docs` outside production.
@@ -108,10 +119,13 @@ git clone https://github.com/GabrielBarros0602/SyncaAI.git
 cd SyncaAI
 cp .env.example .env      # then edit POSTGRES_PASSWORD
 docker compose up --build
+docker compose exec api alembic upgrade head
 ```
 
-The API is served at `http://localhost:8000`, with interactive docs at
-`http://localhost:8000/docs`.
+Three services start: the database, the API and the AI worker. Migrations are run by hand,
+once and after every pull that brings new ones (see below). The API is served at
+`http://localhost:8000`, with interactive docs at `http://localhost:8000/docs`. The worker
+answers every plan request with the same small sample plan until S7 brings a real provider.
 
 ### Working on the API without Docker
 
@@ -120,7 +134,14 @@ cd apps/api
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt -r requirements-dev.txt
+alembic upgrade head
 uvicorn syncaai.main:app --reload
+```
+
+Plan requests wait in the queue until a worker takes them. Run one in a second terminal:
+
+```powershell
+python -m syncaai.worker
 ```
 
 `DATABASE_URL` already points at `localhost:5433`, which is where compose publishes the
@@ -180,10 +201,18 @@ mutates a schema as a side effect of a restart.
 
 ### Checks
 
+The same checks CI runs, one per line so a failure says which one it was:
+
 ```bash
 cd apps/api
-ruff check . && ruff format --check . && mypy && pytest
+ruff format --check .
+ruff check .
+mypy
+alembic check
+pytest --cov=syncaai --cov-fail-under=85
 ```
+
+`alembic check` fails when a model changed without a migration, which no test can notice.
 
 Tests marked `integration` need a reachable PostgreSQL. Start one with
 `docker compose up -d db` and they run as-is. Without one, deselect them:
@@ -211,8 +240,8 @@ written.
 | S2 | Authentication and owner-scoped repository base | done |
 | S3 | Email verification and generic authentication responses | done |
 | S4 | Domain CRUD and the day-capacity query | done |
-| S5 | First visible slice — login and the week's free capacity | next |
-| S6 | AI pipeline against a test double, zero provider cost | |
+| S5 | First visible slice — login and the week's free capacity | mostly done; the remaining screens wait for the third design round |
+| S6 | AI pipeline against a test double, zero provider cost | in progress: pipeline and review built, commit next |
 | S7 | Real provider, guardrails, degradation | |
 | S8 | Front end wired to the API — plan generation complete | |
 | S9 | Task assistance, streamed | |
@@ -279,14 +308,25 @@ do horário de verão, e uma tarefa que começa às 23:30 lança todos os seus m
 que começa. Por isso um dia pode ficar acima da própria capacidade — reporta zero minutos
 livres e marca `over_capacity`, em vez de devolver número negativo.
 
+A camada de IA também roda de ponta a ponta, contra um gerador de exemplo:
+- o pedido entra numa fila no próprio PostgreSQL;
+- um worker monta o prompt só com o tempo livre da semana, nunca com títulos ou notas;
+- uma escada de reparo valida a resposta;
+- o agendador coloca os passos em horários livres reais, esta semana primeiro;
+- o plano fica como rascunho, para revisar, editar ou descartar.
+
+O provedor real entra no S7.
+
 ### Rodando localmente
 
 ```bash
 cp .env.example .env      # edite POSTGRES_PASSWORD
 docker compose up --build
+docker compose exec api alembic upgrade head
 ```
 
-API em `http://localhost:8000`, documentação interativa em `http://localhost:8000/docs`.
+Sobem três serviços: o banco, a API e o worker de IA. As migrations rodam à mão. API em
+`http://localhost:8000`, documentação interativa em `http://localhost:8000/docs`.
 
 Em desenvolvimento o email é escrito no log em vez de enviado, então o link de verificação
 aparece no terminal.
