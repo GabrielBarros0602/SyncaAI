@@ -322,7 +322,7 @@ errado.
       fingerprint cobre tudo o que o modelo vê
       → [ADR-0034](adr/0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md)
 - [x] Montador de contexto como função pura (ADR-0004)
-- [ ] **O teste que prova a privacidade:** fixture de calendário com títulos sensíveis,
+- [x] **O teste que prova a privacidade:** fixture de calendário com títulos sensíveis,
       asserção de que essas strings não aparecem no prompt montado. Esse teste *é* a garantia
       de privacidade — sem ele a política do ADR-0004 é só texto
 - [x] Modelo Pydantic da resposta; JSON schema gerado a partir dele, fonte única

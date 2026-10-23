@@ -16,10 +16,11 @@ single view, and a decision looks different next to the others than it does alon
    delete, move, settings and address confirmation are not there yet. Reviewing halfway means
    reviewing twice, and the second one is the only one that would have counted.
 2. **Before a real provider is wired in S7.** Sending a user's calendar to a paid third party
-   is a new class of exposure rather than more of this one. Four rows describe that day and
-   not one of them has running code behind it: 12 and 15 are *mitigated by design*, 13 is
-   *designed, not built*, and 14 — prompt injection — is *not yet considered* at all. They
-   stop being paper together, which is the moment to have read them together.
+   is a new class of exposure rather than more of this one. Four rows describe that day, and
+   none has yet met a provider: 12 and 15 are *mitigated by design*, 13 is *designed, not
+   built*, and 14 — prompt injection — is *not yet considered* at all. Only 15 has running code
+   behind it, since S6 built the context assembler and the test that holds it. They stop being
+   paper together, which is the moment to have read them together.
 
 The trigger this replaces was *end of S5*. S5 finished, the review did not happen, and rows 10
 and 13 were amended outside any review — found on 2026-09-02, written on 2026-09-03, with the
@@ -82,7 +83,7 @@ otherwise would make the rest of this document less trustworthy.
 | 12 | AI provider key reaching a client | mitigated by design | server-side only, [ADR-0001](adr/0001-backend-stack.md); not yet built |
 | 13 | AI spend abused | designed, not built | per-user cap and a global kill switch, [ADR-0006](adr/0006-cost-limits-cache-degradation.md). The one piece that exists in code is the 4000-character bound on `notes`: ADR-0004 sends the invoked task's note to the provider, and ADR-0006 estimates spend *before* the call, so without a bound that estimate has no defined worst case |
 | 14 | Prompt injection steering the AI layer | **not yet considered** | S6 and S7 |
-| 15 | Calendar content leaving to the AI provider | mitigated by design | allowlist, aggregates only, [ADR-0004](adr/0004-context-assembly-policy.md) |
+| 15 | Calendar content leaving to the AI provider | mitigated by design | allowlist, aggregates only, [ADR-0004](adr/0004-context-assembly-policy.md) as amended by [ADR-0034](adr/0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md). Built in S6 and held by `tests/test_plan_privacy.py`: private strings stay out of the prompt, and no statement the assembly sends selects a title, a note, a tag or a checklist item. Not yet exercised against a provider |
 | 16 | Request-volume denial of service | not mitigated | only the auth endpoints are limited; the rest belongs to a proxy — S11 |
 | 17 | Secrets committed to the repository | mitigated | `.env` ignored, `.env.example` carries no real value, verified in review |
 | 18 | Known-vulnerable dependency | **open** | nothing scans; lockfiles pin versions, which freezes vulnerabilities as reliably as it freezes behaviour |
