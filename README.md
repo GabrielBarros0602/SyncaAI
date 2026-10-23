@@ -9,13 +9,14 @@ scheduler places those items on the days that actually have room. The output is 
 data in the product's own vocabulary, never a block of text to copy by hand.
 
 > **Status:** in development. Accounts, sessions, the calendar domain and the day-capacity
-> query work, and so does the AI layer, end to end, against a sample generator. A request
-> is queued; a worker builds a prompt from the week's free time and nothing else; a repair
-> ladder validates the answer; a deterministic scheduler places the steps, this week first;
-> and the plan waits as a draft that can be reviewed and edited. No real provider is wired in
-> yet. That is S7, and the order is deliberate: ADR-0006 requires a product that still works
-> when the provider is down, which is easier to prove before there is one. See the roadmap
-> below.
+> query work, and the AI layer is complete against a sample generator (S6). A request is
+> queued; a worker builds a prompt from the week's free time and nothing else; a repair ladder
+> validates the answer; a deterministic scheduler places the steps, this week first; the plan
+> waits as a draft that can be edited, placed again or sent to next week; and a commit turns
+> it into tasks, all or nothing. No real provider is wired in yet. That is S7, and the order
+> is deliberate: ADR-0006 requires a product that still works when the provider is down,
+> which is easier to prove before there is one. The screens for all of this wait for the
+> third design round. See the roadmap below.
 
 ## Why this is not CRUD
 
@@ -100,6 +101,8 @@ Stack rationale, including the estimated cost of the alternative, is in
 | `GET /api/v1/ai/plans/{job_id}` | How the request is going, and the plan's id once there is one. |
 | `GET /api/v1/plans/{plan_id}` | The plan for review: each step with a real start in the week's free time or the reason it has none, its links and prerequisites, and what the validation discarded and why. |
 | `PATCH`, `DELETE /api/v1/plans/{plan_id}/items/{item_id}`, `POST …/discard` | Edit or remove a step before it becomes a task, checked as a task's change would be; or set the plan aside ([ADR-0030](docs/adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md)). |
+| `POST /api/v1/plans/{plan_id}/replace`, `POST …/next-week` | Place again every step that has no time ahead of it, this week first, or send what did not fit to the week after. The scheduler alone, with no call to a model: it costs nothing and keeps every edit ([ADR-0033](docs/adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md)). |
+| `POST /api/v1/plans/{plan_id}/commit` | **Turns the plan into tasks in one transaction, or writes nothing.** Requires an `Idempotency-Key`, so a retried commit finds the first instead of making a second set; a refusal names every step in the way and what to change ([ADR-0030](docs/adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md)). |
 | `GET /health`, `GET /health/ready` | Liveness and readiness, separate on purpose. |
 
 Interactive documentation is at `/docs` outside production.
@@ -241,8 +244,8 @@ written.
 | S3 | Email verification and generic authentication responses | done |
 | S4 | Domain CRUD and the day-capacity query | done |
 | S5 | First visible slice — login and the week's free capacity | mostly done; the remaining screens wait for the third design round |
-| S6 | AI pipeline against a test double, zero provider cost | in progress: pipeline and review built, commit next |
-| S7 | Real provider, guardrails, degradation | |
+| S6 | AI pipeline against a test double, zero provider cost | done |
+| S7 | Real provider, guardrails, degradation | next |
 | S8 | Front end wired to the API — plan generation complete | |
 | S9 | Task assistance, streamed | |
 | S10 | Remaining prototype surfaces | |
@@ -308,14 +311,15 @@ do horário de verão, e uma tarefa que começa às 23:30 lança todos os seus m
 que começa. Por isso um dia pode ficar acima da própria capacidade — reporta zero minutos
 livres e marca `over_capacity`, em vez de devolver número negativo.
 
-A camada de IA também roda de ponta a ponta, contra um gerador de exemplo:
+A camada de IA está completa contra um gerador de exemplo (S6):
 - o pedido entra numa fila no próprio PostgreSQL;
 - um worker monta o prompt só com o tempo livre da semana, nunca com títulos ou notas;
 - uma escada de reparo valida a resposta;
 - o agendador coloca os passos em horários livres reais, esta semana primeiro;
-- o plano fica como rascunho, para revisar, editar ou descartar.
+- o plano fica como rascunho, que se pode editar, reposicionar ou levar para a próxima semana;
+- o commit transforma o plano em tarefas numa transação só, ou não grava nada.
 
-O provedor real entra no S7.
+O provedor real entra no S7. As telas de tudo isso esperam a terceira rodada de design.
 
 ### Rodando localmente
 
