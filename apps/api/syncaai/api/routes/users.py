@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter
 
-from syncaai.api.dependencies import CurrentUser
-from syncaai.schemas.users import MeRead
+from syncaai.api.dependencies import CurrentUser, SessionDep
+from syncaai.schemas.users import MeRead, MeUpdate
+from syncaai.services.users import change_usable_window
 
 router = APIRouter(tags=["users"])
 
@@ -17,4 +18,13 @@ def read_me(user: CurrentUser) -> MeRead:
     ADR-0004 already names preferred block length, days off and working hours as things the
     planner needs. Those belong to a user, not to a session.
     """
+    return MeRead.model_validate(user)
+
+
+@router.patch("/me", summary="Change your own settings")
+def update_me(payload: MeUpdate, user: CurrentUser, session: SessionDep) -> MeRead:
+    """The usable window only, for now (ADR-0029). The working hours ADR-0004 named have
+    arrived here, as the first preference the account sets for itself."""
+    change_usable_window(user, payload)
+    session.commit()
     return MeRead.model_validate(user)

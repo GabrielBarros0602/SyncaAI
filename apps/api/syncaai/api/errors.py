@@ -24,11 +24,19 @@ from syncaai.errors import (
     TaskOverlapsError,
     TaskStartsAfterCompletionError,
     TaskStartsInThePastError,
+    UsableWindowInvertedError,
+    UsableWindowTooLongError,
+    UsableWindowTooShortError,
 )
 from syncaai.schemas.tasks import MAX_CHECKLIST_ITEMS
 from syncaai.security.passwords import PasswordTooLongError
-from syncaai.services.capacity import MAX_HORIZON_DAYS
+from syncaai.services.capacity import MAX_HORIZON_DAYS, MAX_USABLE_MINUTES, MIN_USABLE_MINUTES
 from syncaai.services.tasks import START_CORRECTION_HOURS
+
+
+def _hours(minutes: int) -> str:
+    hours = minutes // 60
+    return f"{hours} hour" if hours == 1 else f"{hours} hours"
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -77,6 +85,29 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={"detail": "Too many attempts. Try again later."},
             headers={"Retry-After": str(error.retry_after_seconds)},
+        )
+
+    @app.exception_handler(UsableWindowInvertedError)
+    async def _window_inverted(_: Request, __: UsableWindowInvertedError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "The usable day has to end after it starts, on the same day."},
+        )
+
+    @app.exception_handler(UsableWindowTooShortError)
+    async def _window_too_short(_: Request, __: UsableWindowTooShortError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "detail": f"The usable day has to be at least {_hours(MIN_USABLE_MINUTES)} long."
+            },
+        )
+
+    @app.exception_handler(UsableWindowTooLongError)
+    async def _window_too_long(_: Request, __: UsableWindowTooLongError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": f"The usable day can be at most {_hours(MAX_USABLE_MINUTES)} long."},
         )
 
     @app.exception_handler(InvertedWindowError)
