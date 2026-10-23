@@ -19,6 +19,7 @@ from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 from syncaai.services.capacity import DayCapacity, UsableWindow
+from syncaai.time_windows import SECONDS_IN_A_MINUTE, utc_window
 
 Interval = tuple[datetime, datetime]
 
@@ -41,15 +42,21 @@ def build_slots(
     zone_name: str,
     days_off: frozenset[int],
     now: datetime,
+    held: Iterable[Interval] = (),
 ) -> list[DaySlots]:
     """Every day of the horizon that is not a day off, with its two limits (ADR-0032).
 
     ``occupied`` is every booked range that touches the horizon, as ``[start_at, end_at)``.
     A range that began the evening before still occupies the morning it runs into; it is
     subtracted wherever it overlaps, whichever day it belongs to.
+
+    ``held`` is time the plan's own steps hold before they are tasks, when a plan is
+    placed again (ADR-0033). The capacity query cannot see it, so it is taken out of
+    the gaps here and out of each local day's budget, by the minutes it overlaps.
     """
     zone = ZoneInfo(zone_name)
-    taken = sorted(occupied)
+    kept = sorted(span for span in held if span[0] < span[1])
+    taken = sorted([*occupied, *kept])
     plannable: list[DaySlots] = []
     for capacity in days:
         if capacity.day.isoweekday() in days_off:
@@ -63,8 +70,21 @@ def build_slots(
             timezone.utc
         )
         free = _subtract((max(opens, now), closes), taken)
-        plannable.append(DaySlots(capacity.day, tuple(free), capacity.free_minutes))
+        budget = max(0, capacity.free_minutes - _overlap(capacity.day, kept, zone_name))
+        plannable.append(DaySlots(capacity.day, tuple(free), budget))
     return plannable
+
+
+def _overlap(day: date, spans: Sequence[Interval], zone_name: str) -> int:
+    """Minutes of ``spans`` inside the local ``day``: a step running past midnight
+    spends each day the part it holds of it, as a task does (ADR-0022)."""
+    day_start, day_end = utc_window(day, day, zone_name)
+    seconds = sum(
+        (min(end, day_end) - max(start, day_start)).total_seconds()
+        for start, end in spans
+        if start < day_end and end > day_start
+    )
+    return int(seconds) // SECONDS_IN_A_MINUTE
 
 
 def _subtract(span: Interval, taken: Sequence[Interval]) -> list[Interval]:
