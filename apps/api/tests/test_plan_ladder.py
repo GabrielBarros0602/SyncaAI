@@ -6,11 +6,12 @@ exactly what the model returned and asserts what the pipeline did with it.
 """
 
 import json
+from datetime import date, datetime, timezone
 
 import pytest
 
-from syncaai.planning.context import PlanPrompt, build_repair_message
-from syncaai.planning.generator import FakeGenerator
+from syncaai.planning.context import PlanPrompt, build_plan_context, build_repair_message
+from syncaai.planning.generator import FakeGenerator, SampleGenerator
 from syncaai.planning.ladder import NO_USABLE_PLAN, LadderResult, run_ladder
 
 PROMPT = PlanPrompt(
@@ -186,3 +187,25 @@ def test_the_fake_refuses_a_call_it_was_not_given_an_answer_for() -> None:
 
     with pytest.raises(RuntimeError, match="call 1 was not scripted"):
         generator.generate(PROMPT)
+
+
+@pytest.mark.parametrize("block", [15, 60, 240])
+def test_the_sample_answer_passes_whole_whatever_the_person_s_block(block: int) -> None:
+    """The development worker's answer is a plan the ladder keeps whole, with one call, for
+    any block a person can set: a draft made locally never starts with a repair."""
+    prompt = build_plan_context(
+        "Plano de estudos",
+        slots=[],
+        horizon_days=1,
+        days_off=frozenset({date(2031, 6, 2).isoweekday()}),
+        block_minutes=block,
+        zone_name="America/Sao_Paulo",
+        now=datetime(2031, 6, 2, 15, 0, tzinfo=timezone.utc),
+    )
+
+    result = run_ladder(SampleGenerator(), prompt, max_item_minutes=block)
+
+    assert len(result.attempts) == 1 and result.chosen == 0
+    assert result.report is not None
+    assert [item.minutes for item in result.report.kept] == [block] * 3
+    assert [item.depends_on for item in result.report.kept] == [(), (0,), (1,)]

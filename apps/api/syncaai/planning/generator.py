@@ -5,6 +5,7 @@ arrives in S7; until then ``FakeGenerator`` stands in, so the ladder, the schedu
 review are built and tested against answers that cost nothing and never change.
 """
 
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Protocol
@@ -60,6 +61,46 @@ class FakeGenerator:
             raise RuntimeError(f"call {len(self.calls)} was not scripted")
         return Generation(
             raw=self._answers[len(self.calls) - 1],
+            model=self.MODEL,
+            input_tokens=0,
+            output_tokens=0,
+        )
+
+
+class SampleGenerator:
+    """The same small plan for every request, for local development until S7 (ADR-0003).
+
+    Three steps in a chain, each as long as the prompt's block allows, so a draft made on a
+    developer's machine shows placement, a dependency and a link without a provider or a key.
+    No test that asserts what a model would do uses it: those script their answers.
+    """
+
+    MODEL = "sample"
+
+    # ``repair`` is the interface's; an answer that always passes is never asked to repair.
+    def generate(self, prompt: PlanPrompt, *, repair: Repair | None = None) -> Generation:  # noqa: ARG002
+        minutes = json.loads(prompt.message)["context"]["step_minutes"]["max"]
+        steps = [
+            ("Outline what the plan has to cover", [], []),
+            ("Work through the first part", [0], []),
+            (
+                "Review what was done and close the gaps",
+                [1],
+                [{"label": "Example", "url": "https://example.com/"}],
+            ),
+        ]
+        items = [
+            {
+                "title": title,
+                "description": "",
+                "estimated_minutes": minutes,
+                "depends_on": depends_on,
+                "links": links,
+            }
+            for title, depends_on, links in steps
+        ]
+        return Generation(
+            raw=json.dumps({"items": items}),
             model=self.MODEL,
             input_tokens=0,
             output_tokens=0,
