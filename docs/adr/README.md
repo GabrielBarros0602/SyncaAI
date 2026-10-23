@@ -39,11 +39,12 @@ the old one and update the status of the old one — never rewrite history.
 | [0028](0028-the-checklist-is-its-own-resource.md) | The checklist is its own resource | Accepted |
 | [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted |
 | [0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) | A plan is placed in real free time, reviewed item by item, and committed whole | Accepted; amended by 0033 |
-| [0031](0031-a-job-queue-in-postgresql-woken-by-notify.md) | A job queue in PostgreSQL, woken by NOTIFY and swept for what it misses | Accepted |
+| [0031](0031-a-job-queue-in-postgresql-woken-by-notify.md) | A job queue in PostgreSQL, woken by NOTIFY and swept for what it misses | Accepted; decisions 1 and 5 amended by 0036 |
 | [0032](0032-days-off-and-a-preferred-block-length.md) | Days off and a preferred block length, for the planner | Accepted |
 | [0033](0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md) | A plan fills this week first, in the request's language, one at a time | Accepted |
 | [0034](0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md) | The model sees the room each day has, and nothing it cannot use | Accepted |
 | [0035](0035-repair-whenever-a-step-fails-and-keep-the-better-answer.md) | Repair whenever a step fails, and keep the better of the two answers | Accepted |
+| [0036](0036-a-job-s-answers-are-rows-of-their-own.md) | A job's answers are rows of their own | Accepted |
 
 ## Template
 
