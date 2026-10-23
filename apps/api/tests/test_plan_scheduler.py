@@ -12,7 +12,17 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from syncaai.planning.scheduler import Placement, Room, Step, room, schedule
+from syncaai.planning.scheduler import (
+    Placement,
+    Room,
+    Step,
+    Unplaced,
+    room,
+    schedule,
+    schedule_next_week,
+    schedule_this_week,
+    week_end,
+)
 from syncaai.planning.slots import DaySlots, build_slots
 from syncaai.services.capacity import DayCapacity, UsableWindow
 
@@ -94,6 +104,7 @@ def test_a_step_larger_than_every_gap_stays_unplaced_and_the_rest_go_on() -> Non
     placements = schedule([Step(0, 60), Step(1, 30)], [day], now=NOW)
 
     assert placements[0].start is None
+    assert placements[0].unplaced is Unplaced.NO_ROOM
     assert placements[0].reason == "No free time in the plan's days holds 60 minutes in one piece."
     assert placements[1].start == _utc(MONDAY, 9)
 
@@ -104,6 +115,7 @@ def test_a_step_whose_prerequisite_has_no_time_stays_unplaced_too() -> None:
     placements = schedule([Step(0, 60), Step(1, 15, after=(0,))], [day], now=NOW)
 
     assert _starts(placements) == [None, None]
+    assert placements[1].unplaced is Unplaced.AFTER_UNPLACED
     assert placements[1].reason == "A step it depends on has no time yet. Place that first."
 
 
@@ -170,6 +182,119 @@ def test_no_placement_overlaps_another_or_leaves_the_gap_it_came_from() -> None:
             prerequisite = placements[key]
             if placement.start and prerequisite.start:
                 assert prerequisite.start + timedelta(minutes=lengths[key]) <= placement.start
+
+
+# --- This week first (ADR-0033) ------------------------------------------------------------
+#
+# ADR-0033's table, row by row. Thursday 22 October 2026: 4h30 free from Thursday to Sunday,
+# in three 45-minute pieces on Friday and three on Saturday, and the Monday after with room.
+
+THU = date(2026, 10, 22)
+FRI, SAT, SUN, MON = (THU + timedelta(days=n) for n in range(1, 5))
+EIGHT_STEPS = [Step(n, 45) for n in range(8)]
+
+
+def _this_week_and_monday() -> list[DaySlots]:
+    return [
+        _day(THU),
+        _day(FRI, (9, 0, 11, 15)),
+        _day(SAT, (9, 0, 11, 15)),
+        _day(SUN),
+        _day(MON, (9, 0, 15, 0)),
+    ]
+
+
+def _unplaced(placements: list[Placement]) -> list[Unplaced | None]:
+    return [placement.unplaced for placement in placements]
+
+
+@pytest.mark.parametrize(
+    ("today", "sunday"),
+    [(THU, SUN), (SUN, SUN), (MON, MON + timedelta(days=6))],
+)
+def test_the_week_ends_on_the_sunday_after_today_or_on_today(today: date, sunday: date) -> None:
+    assert week_end(today) == sunday
+
+
+def test_what_does_not_fit_by_sunday_waits_to_be_sent_on() -> None:
+    """Thursday: six placed by Saturday, two marked as not fitting this week, and Monday
+    left alone although it has room."""
+    placements = schedule_this_week(
+        EIGHT_STEPS, _this_week_and_monday(), now=_utc(THU, 20), week_ends=SUN
+    )
+
+    assert _starts(placements) == [
+        _utc(FRI, 9), _utc(FRI, 9, 45), _utc(FRI, 10, 30),
+        _utc(SAT, 9), _utc(SAT, 9, 45), _utc(SAT, 10, 30),
+        None, None,
+    ]  # fmt: skip
+    assert _unplaced(placements)[6:] == [Unplaced.NOT_THIS_WEEK] * 2
+    assert placements[6].reason == "It does not fit before Sunday. It can go next week."
+
+
+def test_sent_on_they_take_the_monday_after() -> None:
+    days = _this_week_and_monday()
+    first = schedule_this_week(EIGHT_STEPS, days, now=_utc(THU, 20), week_ends=SUN)
+    placed = {p.key: p.start + timedelta(minutes=45) for p in first if p.start is not None}
+    waiting = [step for step, p in zip(EIGHT_STEPS, first, strict=True) if p.start is None]
+
+    later = schedule_next_week(waiting, days, now=_utc(THU, 20), week_ends=SUN, placed=placed)
+
+    assert _starts(later) == [_utc(MON, 9), _utc(MON, 9, 45)]
+
+
+def test_on_sunday_evening_almost_everything_waits_for_next_week() -> None:
+    days = [_day(SUN, (19, 0, 19, 45)), _day(MON, (9, 0, 15, 0))]
+
+    placements = schedule_this_week(EIGHT_STEPS, days, now=_utc(SUN, 18), week_ends=SUN)
+
+    assert _starts(placements)[0] == _utc(SUN, 19)
+    assert _unplaced(placements)[1:] == [Unplaced.NOT_THIS_WEEK] * 7
+
+
+def test_a_horizon_that_ends_before_sunday_has_no_next_week_to_offer() -> None:
+    """Three days from Thursday: what does not fit is simply unplaced."""
+    days = _this_week_and_monday()[:3]
+
+    placements = schedule_this_week(EIGHT_STEPS, days, now=_utc(THU, 20), week_ends=SUN)
+
+    assert _unplaced(placements) == [None] * 6 + [Unplaced.NO_ROOM] * 2
+
+
+def test_a_step_waiting_for_one_sent_on_goes_with_it() -> None:
+    """Five hours of reading fits nowhere this week; the exercises after it follow it to
+    Monday rather than staying behind with no time."""
+    steps = [Step(0, 45), Step(1, 300), Step(2, 45, after=(1,))]
+    days = _this_week_and_monday()
+
+    first = schedule_this_week(steps, days, now=_utc(THU, 20), week_ends=SUN)
+
+    assert _unplaced(first) == [None, Unplaced.NOT_THIS_WEEK, Unplaced.NOT_THIS_WEEK]
+    assert first[2].reason == "A step it depends on goes next week, so this one does too."
+    later = schedule_next_week(
+        steps[1:],
+        days,
+        now=_utc(THU, 20),
+        week_ends=SUN,
+        placed={0: _utc(FRI, 9, 45)},
+    )
+    assert _starts(later) == [_utc(MON, 9), _utc(MON, 14)]
+
+
+def test_a_step_placed_earlier_is_still_waited_for() -> None:
+    """A prerequisite from an earlier placement ends at eleven: its dependant starts then,
+    with the morning free before it."""
+    day = _day(MONDAY, (9, 0, 12, 0))
+
+    placements = schedule([Step(1, 30, after=(0,))], [day], now=NOW, placed={0: _utc(MONDAY, 11)})
+
+    assert _starts(placements) == [_utc(MONDAY, 11)]
+
+
+def test_a_prerequisite_neither_placed_nor_being_placed_has_no_time() -> None:
+    placements = schedule([Step(1, 30, after=(0,))], [_day(MONDAY, (9, 0, 12, 0))], now=NOW)
+
+    assert _unplaced(placements) == [Unplaced.AFTER_UNPLACED]
 
 
 # --- The room a day has (ADR-0034) ---------------------------------------------------------

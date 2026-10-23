@@ -8,11 +8,15 @@ tested without a provider.
 Greedy first fit, in list order, which is ADR-0005's v1 and the order the dependencies
 already guarantee is valid. It packs the plan towards the first days rather than spreading
 it; ADR-0030 asks for a measured reason before anything smarter.
+
+A plan fills the current week first and on its own goes no further (ADR-0033): what does not
+fit by Sunday waits for the person to send it to the days after.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from enum import StrEnum
 
 from syncaai.planning.slots import DaySlots, Interval
 from syncaai.time_windows import SECONDS_IN_A_MINUTE
@@ -34,11 +38,21 @@ class Step:
     after: tuple[int, ...] = ()
 
 
+class Unplaced(StrEnum):
+    """Why a step has no start, in the words a draft item stores (ADR-0033, ADR-0037)."""
+
+    NO_ROOM = "no_room"
+    NOT_THIS_WEEK = "not_this_week"
+    AFTER_UNPLACED = "after_unplaced"
+
+
 @dataclass(frozen=True)
 class Placement:
     key: int
     start: datetime | None
-    #: Why there is no start. A person reads it in the review, so it says what to change.
+    #: Why there is no start, as the draft stores it.
+    unplaced: Unplaced | None = None
+    #: The same, for the person reading the review: it says what to change.
     reason: str | None = None
 
 
@@ -59,16 +73,26 @@ class _Day:
     budget: int
 
 
-def schedule(steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime) -> list[Placement]:
+def schedule(
+    steps: Sequence[Step],
+    days: Sequence[DaySlots],
+    *,
+    now: datetime,
+    placed: Mapping[int, datetime] | None = None,
+) -> list[Placement]:
     """One placement per step, in the steps' order.
 
     Each step goes at the earliest start that is on a five-minute mark, after ``now``, after
     every placed prerequisite ends, and where it fits whole inside both of the day's limits.
     A step that fits nowhere, or whose prerequisite has no start, is left unplaced with its
     reason; the review can place it by hand (ADR-0030).
+
+    ``placed`` gives the end of each step placed earlier and not being placed again, so a
+    step sent to next week still waits for a prerequisite that stayed in this one. The days
+    must already exclude the time those steps hold.
     """
     remaining = [_Day(list(day.free), day.budget_minutes) for day in days]
-    ends: dict[int, datetime | None] = {}
+    ends: dict[int, datetime | None] = dict(placed or {})
     placements: list[Placement] = []
 
     for step in steps:
@@ -76,7 +100,12 @@ def schedule(steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime) 
         if any(end is None for end in prerequisite_ends):
             ends[step.key] = None
             placements.append(
-                Placement(step.key, None, "A step it depends on has no time yet. Place that first.")
+                Placement(
+                    step.key,
+                    None,
+                    Unplaced.AFTER_UNPLACED,
+                    "A step it depends on has no time yet. Place that first.",
+                )
             )
             continue
 
@@ -90,6 +119,7 @@ def schedule(steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime) 
                 Placement(
                     step.key,
                     None,
+                    Unplaced.NO_ROOM,
                     f"No free time in the plan's days holds {step.minutes} minutes in one piece.",
                 )
             )
@@ -99,6 +129,52 @@ def schedule(steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime) 
         placements.append(Placement(step.key, start))
 
     return placements
+
+
+def week_end(today: date) -> date:
+    """The Sunday that ends the Monday-to-Sunday week holding ``today``: the week the screen
+    opens on (ADR-0033)."""
+    return today + timedelta(days=7 - today.isoweekday())
+
+
+def schedule_this_week(
+    steps: Sequence[Step], days: Sequence[DaySlots], *, now: datetime, week_ends: date
+) -> list[Placement]:
+    """Place on the days up to ``week_ends`` only, as a new plan is placed (ADR-0033).
+
+    When the plan's days go on past that Sunday, what did not fit is marked as not fitting
+    this week, so the draft can offer to send it on. A step waiting for one of those goes
+    with it. When they do not, there is nowhere to send it, and the reason stays as it was.
+    """
+    placements = schedule(steps, [day for day in days if day.day <= week_ends], now=now)
+    if not any(day.day > week_ends for day in days):
+        return placements
+    return [
+        placement if placement.start is not None else _not_this_week(placement)
+        for placement in placements
+    ]
+
+
+def schedule_next_week(
+    steps: Sequence[Step],
+    days: Sequence[DaySlots],
+    *,
+    now: datetime,
+    week_ends: date,
+    placed: Mapping[int, datetime],
+) -> list[Placement]:
+    """Place the steps a person sent on, over the days after ``week_ends`` (ADR-0033)."""
+    later = [day for day in days if day.day > week_ends]
+    return schedule(steps, later, now=now, placed=placed)
+
+
+def _not_this_week(placement: Placement) -> Placement:
+    reason = (
+        "It does not fit before Sunday. It can go next week."
+        if placement.unplaced is Unplaced.NO_ROOM
+        else "A step it depends on goes next week, so this one does too."
+    )
+    return Placement(placement.key, None, Unplaced.NOT_THIS_WEEK, reason)
 
 
 def room(day: DaySlots, *, now: datetime) -> Room:
