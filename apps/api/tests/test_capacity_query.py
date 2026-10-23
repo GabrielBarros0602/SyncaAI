@@ -37,7 +37,10 @@ A_MONDAY = date(2031, 6, 2)
 # Enough that the planner prefers a narrow index scan over reading the table. One owner's
 # seven days is well under one percent of this, which is the ratio that makes the choice
 # obvious rather than marginal.
-OTHER_OWNERS = 19
+# Nineteen was not enough: on a freshly vacuumed table 5,000 rows fit in about 140 pages,
+# reading them all is cheaper than the index, and the test passed only while dead rows from
+# earlier tests had bloated the table. A hundred owners keeps the choice clear after VACUUM.
+OTHER_OWNERS = 99
 TASKS_EACH = 250
 
 
