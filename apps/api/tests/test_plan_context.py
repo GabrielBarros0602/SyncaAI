@@ -17,10 +17,12 @@ import pytest
 from syncaai.planning.context import (
     CONTEXT_FIELDS,
     DAY_FIELDS,
+    MAX_REPAIR_ERRORS,
     MESSAGE_FIELDS,
     PROMPT_VERSION,
     PlanPrompt,
     build_plan_context,
+    build_repair_message,
 )
 from syncaai.planning.slots import build_slots
 from syncaai.services.capacity import DayCapacity, UsableWindow
@@ -242,23 +244,62 @@ def test_anything_else_the_model_sees_changes_the_fingerprint(
 
 # --- The version ---------------------------------------------------------------------------
 
-# The instructions and the scenario's message, hashed, for each version. Changing either
-# without a new PROMPT_VERSION fails below: give the prompt a new version, then add its hashes.
+# The instructions, the scenario's message and a repair, hashed, for each version. Changing
+# any of them without a new PROMPT_VERSION fails below: give the prompt a new version, then
+# add its hashes.
 PINNED = {
     "plan-1": (
         "b0a5e39134ed0ea4e29af678479f68773d53c5e79ec393bd85994e3ce78bbcac",
         "0ff2fecde75213108f6699b2423eaf129b3f73c8a2ceb8e016bd204963491dc4",
+        "a516a59f4282aaebf78a04997bcf0eb494b5713be4d28b71c91fe12546400ae5",
     ),
 }
+REPAIR_ERRORS = [
+    "items[6]: the title repeats an earlier step's",
+    "items[10]: it takes 300 minutes, and a step has to take between 15 and 60",
+]
+
+
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
 
 
 def test_the_prompt_cannot_change_without_a_new_version() -> None:
     prompt = _prompt()
 
     hashes = (
-        hashlib.sha256(prompt.instructions.encode()).hexdigest(),
-        hashlib.sha256(prompt.message.encode()).hexdigest(),
+        _sha(prompt.instructions),
+        _sha(prompt.message),
+        _sha(build_repair_message(REPAIR_ERRORS)),
     )
 
     assert prompt.version == PROMPT_VERSION
     assert hashes == PINNED[PROMPT_VERSION]
+
+
+# --- The repair ----------------------------------------------------------------------------
+
+
+def test_the_repair_lists_every_error_on_its_own_line() -> None:
+    message = build_repair_message(REPAIR_ERRORS)
+
+    assert [line for line in message.splitlines() if line.startswith("- ")] == [
+        f"- {error}" for error in REPAIR_ERRORS
+    ]
+
+
+@pytest.mark.parametrize(("count", "shown"), [(30, 30), (31, 30), (400, 30)])
+def test_the_repair_carries_at_most_thirty_errors_and_says_how_many_more(
+    count: int, shown: int
+) -> None:
+    """A garbled answer can fail the schema hundreds of times; the repair's input has a worst
+    case only if this holds (ADR-0035)."""
+    errors = [f"items[0].field{n}: Extra inputs are not permitted" for n in range(count)]
+
+    lines = [line for line in build_repair_message(errors).splitlines() if line.startswith("- ")]
+
+    assert lines[:shown] == [f"- {error}" for error in errors[:shown]]
+    if count > MAX_REPAIR_ERRORS:
+        assert lines[shown:] == [f"- and {count - MAX_REPAIR_ERRORS} more"]
+    else:
+        assert lines[shown:] == []
