@@ -1,7 +1,8 @@
 """Asking for a plan and reading what came of it (ADR-0033, ADR-0038)."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -20,9 +21,15 @@ from syncaai.errors import (
     StepOverlapsTaskError,
     StepStartsInThePastError,
 )
-from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task
+from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task, User
 from syncaai.planning.notes import compose_note
-from syncaai.planning.scheduler import week_end
+from syncaai.planning.scheduler import (
+    Step,
+    Unplaced,
+    schedule_next_week,
+    schedule_this_week,
+    week_end,
+)
 from syncaai.repositories.plans import AiJobRepository, PlanDraftRepository
 from syncaai.repositories.tasks import TaskRepository
 from syncaai.schemas.plans import (
@@ -36,8 +43,12 @@ from syncaai.schemas.plans import (
     PlanRead,
 )
 from syncaai.services.ai_queue import enqueue_plan
+from syncaai.services.plan_context import plannable_days
 from syncaai.services.plan_jobs import PLACED
 from syncaai.services.tasks import OVERLAP_CONSTRAINT
+
+# What a step sent on carries until it is placed again (ADR-0033).
+NOT_THIS_WEEK = Unplaced.NOT_THIS_WEEK.value
 
 
 class PlanService:
@@ -75,9 +86,12 @@ class PlanService:
         if draft is None:
             raise PlanNotFoundError
         prerequisites = self._drafts.prerequisites(draft.id)
+        # Expired once its last day has ended where its owner lives, whether or not the
+        # sweep has recorded it yet (ADR-0033).
+        status = "expired" if self._ended(draft, now) else draft.status
         return PlanRead(
             id=draft.id,
-            status=draft.status,
+            status=status,
             request=draft.request,
             first_day=draft.first_day,
             last_day=draft.last_day,
@@ -99,7 +113,7 @@ class PlanService:
         its end moves. The order the dependencies set is not imposed: a person reordering by
         hand is deciding, and ADR-0030 checks a step only against the rules of a task.
         """
-        draft = self._pending(plan_id)
+        draft = self._pending(plan_id, now)
         item = _step_of(draft, item_id)
         if changes.start_at is not None and changes.start_at <= now:
             raise StepStartsInThePastError
@@ -119,15 +133,15 @@ class PlanService:
         self._session.flush()
         return _item(item, self._drafts.prerequisites(draft.id).get(item.id, []), draft, now)
 
-    def remove_item(self, plan_id: uuid.UUID, item_id: uuid.UUID) -> None:
+    def remove_item(self, plan_id: uuid.UUID, item_id: uuid.UUID, *, now: datetime) -> None:
         """Remove a step. Its dependants stay, and lose the constraint (ADR-0030, ADR-0037)."""
-        draft = self._pending(plan_id)
+        draft = self._pending(plan_id, now)
         self._session.delete(_step_of(draft, item_id))
         self._session.flush()
 
-    def discard(self, plan_id: uuid.UUID) -> None:
+    def discard(self, plan_id: uuid.UUID, *, now: datetime) -> None:
         """Set the plan aside. It stays thirty days, and then goes whole (ADR-0037)."""
-        draft = self._pending(plan_id)
+        draft = self._pending(plan_id, now)
         draft.status = "discarded"
         draft.ended_at = func.now()
         self._session.flush()
@@ -146,7 +160,7 @@ class PlanService:
             raise PlanNotFoundError
         if draft.status == "approved" and draft.idempotency_key == key:
             return PlanCommitRead(plan_id=draft.id, task_ids=self._tasks().ids_from_plan(draft.id))
-        if draft.status != "pending":
+        if draft.status != "pending" or self._ended(draft, now):
             raise PlanNotPendingError
         if not draft.items:
             raise PlanEmptyError
@@ -199,13 +213,90 @@ class PlanService:
     def _tasks(self) -> TaskRepository:
         return TaskRepository(self._session, self._jobs.owner_id)
 
-    def _pending(self, plan_id: uuid.UUID) -> PlanDraft:
+    def replace(self, plan_id: uuid.UUID, *, now: datetime) -> PlanRead:
+        """Place again every step with no time ahead of it: passed, without a time, or waiting
+        for next week. This week first, as a new plan is (ADR-0033).
+
+        The scheduler alone, with no call to a model: it costs nothing, and every edit made in
+        review stays. The steps that keep their time hold it, as tasks would.
+        """
+        draft = self._pending(plan_id, now)
+        moving = [item for item in draft.items if not _ahead(item, now)]
+        self._place(draft, moving, now=now, next_week=False)
+        return self.plan(plan_id, now=now)
+
+    def next_week(self, plan_id: uuid.UUID, *, now: datetime) -> PlanRead:
+        """Send the steps that did not fit to the days after the plan's first week (ADR-0033).
+
+        The week is the one the plan was made in, not today's: pressed the Tuesday after,
+        "next week" is still the days after that first Sunday, not a week further on.
+        """
+        draft = self._pending(plan_id, now)
+        moving = [item for item in draft.items if item.placement == NOT_THIS_WEEK]
+        self._place(draft, moving, now=now, next_week=True)
+        return self.plan(plan_id, now=now)
+
+    def _place(
+        self, draft: PlanDraft, moving: list[PlanDraftItem], *, now: datetime, next_week: bool
+    ) -> None:
+        if not moving:
+            return
+        user = self._owner()
+        moving_ids = {item.id for item in moving}
+        staying = [i for i in draft.items if i.id not in moving_ids and i.start_at is not None]
+        held = [_span(item) for item in staying]
+        today = self._today(now)
+        days = plannable_days(
+            self._session,
+            user,
+            horizon_days=(draft.last_day - today).days + 1,
+            now=now,
+            held=held,
+        )
+        positions = {item.id: item.position for item in draft.items}
+        prerequisites = self._drafts.prerequisites(draft.id)
+        steps = [
+            Step(
+                item.position,
+                item.minutes,
+                tuple(positions[p] for p in prerequisites.get(item.id, [])),
+            )
+            for item in sorted(moving, key=lambda item: item.position)
+        ]
+        ends = {item.position: end for item, (_, end) in zip(staying, held, strict=True)}
+        if next_week:
+            placements = schedule_next_week(
+                steps, days, now=now, week_ends=week_end(draft.first_day), placed=ends
+            )
+        else:
+            placements = schedule_this_week(
+                steps, days, now=now, week_ends=week_end(today), placed=ends
+            )
+        by_position = {placement.key: placement for placement in placements}
+        for item in moving:
+            placement = by_position[item.position]
+            item.start_at = placement.start
+            item.placement = placement.unplaced.value if placement.unplaced else PLACED
+        self._session.flush()
+
+    def _pending(self, plan_id: uuid.UUID, now: datetime) -> PlanDraft:
         draft = self._drafts.get_for_change(plan_id)
         if draft is None:
             raise PlanNotFoundError
-        if draft.status != "pending":
+        if draft.status != "pending" or self._ended(draft, now):
             raise PlanNotPendingError
         return draft
+
+    def _ended(self, draft: PlanDraft, now: datetime) -> bool:
+        """A pending plan whose last day has ended in its owner's zone has nothing left to be
+        placed in (ADR-0033). The sweep records it; until then this is what notices."""
+        return draft.status == "pending" and draft.last_day < self._today(now)
+
+    def _today(self, now: datetime) -> date:
+        return now.astimezone(ZoneInfo(self._owner().timezone)).date()
+
+    def _owner(self) -> User:
+        return self._session.get_one(User, self._jobs.owner_id)
 
     def _refuse_overlap(
         self, draft: PlanDraft, item: PlanDraftItem, start: datetime, minutes: int
@@ -218,6 +309,16 @@ class PlanService:
                 continue
             if other.start_at < end and other.start_at + timedelta(minutes=other.minutes) > start:
                 raise StepOverlapsStepError
+
+
+def _span(item: PlanDraftItem) -> tuple[datetime, datetime]:
+    """The time a placed step holds."""
+    assert item.start_at is not None, "only a step with a start holds time"
+    return item.start_at, item.start_at + timedelta(minutes=item.minutes)
+
+
+def _ahead(item: PlanDraftItem, now: datetime) -> bool:
+    return item.placement == PLACED and item.start_at is not None and item.start_at > now
 
 
 def _holds_time(tasks: TaskRepository, start: datetime, minutes: int) -> bool:

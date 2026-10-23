@@ -20,6 +20,7 @@ from sqlalchemy.exc import OperationalError
 
 from syncaai.api.dependencies import get_current_user_id
 from syncaai.db import get_session_factory
+from syncaai.errors import PlanNotPendingError
 from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task, User
 from syncaai.planning.generator import FakeGenerator
 from syncaai.repositories.plans import PlanDraftRepository
@@ -804,3 +805,174 @@ def test_a_commit_waits_for_any_other_change_to_the_same_plan(
 
     assert sent, "the second commit sent nothing, so this test proved nothing"
     assert not any(statement.lstrip().upper().startswith("INSERT INTO TASKS") for statement in sent)
+
+
+# --- Placing again (ADR-0033) --------------------------------------------------------------
+#
+# The scheduler runs against the clock, so these call the service with a chosen instant; the
+# routes are checked for their wiring at the end. The plan is the one made above, on
+# Wednesday 4 June 2031 at noon: "Ler" at 12:05 and "Exercícios" at 12:50, the second after
+# the first, and a horizon to Tuesday 17 June.
+
+SAO_PAULO = ZoneInfo("America/Sao_Paulo")
+
+
+def _at(day: int, hour: int, minute: int = 0) -> datetime:
+    return datetime(2031, 6, day, hour, minute, tzinfo=SAO_PAULO).astimezone(timezone.utc)
+
+
+def _service_call(person: uuid.UUID, action: str, plan: dict[str, object], now: datetime) -> Any:
+    with get_session_factory()() as session:
+        result = getattr(PlanService(session, person), action)(uuid.UUID(str(plan["id"])), now=now)
+        session.commit()
+        return result
+
+
+def _move(item_id: str, **values: object) -> None:
+    with get_session_factory()() as session:
+        session.execute(
+            update(PlanDraftItem).where(PlanDraftItem.id == uuid.UUID(item_id)).values(**values)
+        )
+        session.commit()
+
+
+def _starts(plan: Any) -> list[tuple[datetime | None, str]]:
+    return [(item.start_at, item.state) for item in plan.items]
+
+
+def test_steps_whose_time_passed_are_placed_again_after_now_keeping_their_order(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """At 14:00 both steps have passed: they go to 14:05 and 14:50, the second still after
+    the first, and a title changed in review stays changed."""
+    plan = _plan(app, client, people[0])
+    client.patch(_step_url(plan, 0), json={"title": "Ler o capítulo 6"})
+
+    placed = _service_call(people[0], "replace", plan, _at(4, 14))
+
+    assert _starts(placed) == [(_at(4, 14, 5), "placed"), (_at(4, 14, 50), "placed")]
+    assert placed.items[0].title == "Ler o capítulo 6"
+
+
+def test_a_step_that_keeps_its_time_holds_it_when_another_is_placed_again(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """With the first step removed, the second is moved by hand to 14:05 and stays, and a
+    new step has no time. It must not land on the kept one, which is not a task yet and so
+    is invisible to the calendar."""
+    plan = _plan(app, client, people[0])
+    first, second = plan["items"]  # type: ignore[misc]
+    client.delete(f"/api/v1/plans/{plan['id']}/items/{first['id']}")
+    _move(second["id"], start_at=_at(4, 14, 5), placement="placed")
+    with get_session_factory()() as session:
+        draft = session.get_one(PlanDraft, uuid.UUID(str(plan["id"])))
+        session.add(
+            PlanDraftItem(
+                draft_id=draft.id,
+                position=5,
+                title="Revisar",
+                minutes=45,
+                placement="no_room",
+            )
+        )
+        session.commit()
+
+    placed = _service_call(people[0], "replace", plan, _at(4, 14))
+
+    assert _starts(placed) == [(_at(4, 14, 5), "placed"), (_at(4, 14, 50), "placed")]
+
+
+def test_placing_again_fills_this_week_first(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Sunday at 21:00: fifty-five minutes are left in the week. One step goes there, and the
+    one after it waits for next week rather than being placed on Monday unasked."""
+    plan = _plan(app, client, people[0])
+
+    placed = _service_call(people[0], "replace", plan, _at(8, 21))
+
+    assert _starts(placed) == [(_at(8, 21, 5), "placed"), (None, "not_this_week")]
+
+
+def test_sent_on_a_step_takes_the_week_after_and_still_waits_for_its_prerequisite(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+    _service_call(people[0], "replace", plan, _at(8, 21))
+
+    sent = _service_call(people[0], "next_week", plan, _at(8, 21))
+
+    assert _starts(sent) == [(_at(8, 21, 5), "placed"), (_at(9, 6), "placed")]
+
+
+def test_next_week_is_the_week_after_the_plan_s_first_not_after_today(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Pressed on the Tuesday after, the step goes that Tuesday, not a week further on."""
+    plan = _plan(app, client, people[0])
+    second = plan["items"][1]  # type: ignore[index]
+    _move(second["id"], start_at=None, placement="not_this_week")
+
+    sent = _service_call(people[0], "next_week", plan, _at(10, 8))
+
+    assert _starts(sent)[1] == (_at(10, 8, 5), "placed")
+
+
+def test_with_nothing_to_move_neither_action_changes_the_plan(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+
+    replaced = _service_call(people[0], "replace", plan, _at(4, 12))
+    sent = _service_call(people[0], "next_week", plan, _at(4, 12))
+
+    expected = [(_at(4, 12, 5), "placed"), (_at(4, 12, 50), "placed")]
+    assert _starts(replaced) == expected and _starts(sent) == expected
+
+
+def test_a_plan_whose_last_day_has_ended_reads_as_expired_and_takes_no_change(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """The sweep has not recorded it yet; reading notices anyway (ADR-0033)."""
+    plan = _plan(app, client, people[0])
+    after_the_horizon = _at(18, 9)
+
+    with get_session_factory()() as session:
+        service = PlanService(session, people[0])
+        # Its last day, Tuesday 17 June, is still a day to place in.
+        assert service.plan(uuid.UUID(str(plan["id"])), now=_at(17, 21)).status == "pending"
+        assert service.plan(uuid.UUID(str(plan["id"])), now=after_the_horizon).status == "expired"
+        for action in ("replace", "next_week", "discard"):
+            with pytest.raises(PlanNotPendingError):
+                getattr(service, action)(uuid.UUID(str(plan["id"])), now=after_the_horizon)
+        with pytest.raises(PlanNotPendingError):
+            service.commit(uuid.UUID(str(plan["id"])), key="k", now=after_the_horizon)
+        session.rollback()
+
+
+def test_the_routes_answer_with_the_plan(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    plan = _plan(app, client, people[0])
+
+    for action in ("replace", "next-week"):
+        response = client.post(f"/api/v1/plans/{plan['id']}/{action}")
+        assert response.status_code == 200, response.text
+        assert response.json()["id"] == plan["id"]
+    client.post(f"/api/v1/plans/{plan['id']}/discard")
+    assert client.post(f"/api/v1/plans/{plan['id']}/replace").status_code == 409
+    _as(app, people[1])
+    assert client.post(f"/api/v1/plans/{plan['id']}/next-week").status_code == 404
+
+
+def test_a_step_placed_again_still_waits_for_a_prerequisite_that_kept_its_time(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """The first step was moved to 15:00 and keeps it; the second, after it, has passed. At
+    14:00 the free 14:05 would hold it, but its prerequisite only ends at 15:45."""
+    plan = _plan(app, client, people[0])
+    _move(plan["items"][0]["id"], start_at=_at(4, 15))  # type: ignore[index]
+
+    placed = _service_call(people[0], "replace", plan, _at(4, 14))
+
+    assert _starts(placed) == [(_at(4, 15), "placed"), (_at(4, 15, 45), "placed")]

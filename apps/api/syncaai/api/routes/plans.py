@@ -75,7 +75,7 @@ def update_item(
 def remove_item(
     plan_id: uuid.UUID, item_id: uuid.UUID, service: ServiceDep, session: SessionDep
 ) -> None:
-    service.remove_item(plan_id, item_id)
+    service.remove_item(plan_id, item_id, now=datetime.now(timezone.utc))
     session.commit()
 
 
@@ -86,7 +86,7 @@ def remove_item(
 )
 def discard_plan(plan_id: uuid.UUID, service: ServiceDep, session: SessionDep) -> None:
     # A POST, not a DELETE: the plan stays thirty days before it goes (ADR-0037, ADR-0038).
-    service.discard(plan_id)
+    service.discard(plan_id, now=datetime.now(timezone.utc))
     session.commit()
 
 
@@ -102,3 +102,18 @@ def commit_plan(
     result = service.commit(plan_id, key=idempotency_key, now=datetime.now(timezone.utc))
     session.commit()
     return result
+
+
+@router.post("/plans/{plan_id}/replace", summary="Place again what has no time ahead of it")
+def replace_plan(plan_id: uuid.UUID, service: ServiceDep, session: SessionDep) -> PlanRead:
+    """The scheduler alone, no model: free, and every edit made in review stays (ADR-0033)."""
+    plan = service.replace(plan_id, now=datetime.now(timezone.utc))
+    session.commit()
+    return plan
+
+
+@router.post("/plans/{plan_id}/next-week", summary="Send what did not fit to next week")
+def send_to_next_week(plan_id: uuid.UUID, service: ServiceDep, session: SessionDep) -> PlanRead:
+    plan = service.next_week(plan_id, now=datetime.now(timezone.utc))
+    session.commit()
+    return plan
