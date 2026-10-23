@@ -184,3 +184,11 @@ class PlanInProgressError(DomainError):
     Recognised by the partial unique index's name, as an overlap is by the exclusion
     constraint's: a double submit loses the race at the index, and this is what it is told.
     """
+
+
+class PlanJobNotFoundError(DomainError):
+    """Raised for a plan request that does not exist, or belongs to somebody else (ADR-0016)."""
+
+
+class PlanNotFoundError(DomainError):
+    """Raised for a plan that does not exist, or belongs to somebody else (ADR-0016)."""
