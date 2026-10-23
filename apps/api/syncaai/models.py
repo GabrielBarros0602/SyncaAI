@@ -24,7 +24,7 @@ join, not a duplicated column.
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     CheckConstraint,
@@ -36,9 +36,11 @@ from sqlalchemy import (
     MetaData,
     String,
     Text,
+    Time,
     UniqueConstraint,
     column,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -47,6 +49,12 @@ from sqlalchemy.schema import FetchedValue
 from syncaai.security.opaque import TOKEN_HASH_LENGTH
 
 MINUTES_IN_A_DAY = 1440
+
+# The usable day an account starts with (ADR-0029). Sixteen hours, leaving eight for sleep:
+# the same budget every account had while it was a constant, so nobody's numbers moved when
+# it became a window.
+DEFAULT_DAY_STARTS_AT = time(6, 0)
+DEFAULT_DAY_ENDS_AT = time(22, 0)
 
 # Deterministic constraint names. Without them PostgreSQL invents names, which means a
 # downgrade cannot drop what an upgrade created and every future ALTER becomes guesswork.
@@ -94,6 +102,15 @@ class User(Base, TimestampMixin):
     """
 
     __tablename__ = "users"
+    __table_args__ = (
+        # ADR-0023's floor and ceiling, applied to the window. One expression covers the
+        # order as well: a window that ends before it starts gives a negative interval and
+        # fails the same check, so "ends after it starts" needs no constraint of its own.
+        CheckConstraint(
+            "day_ends_at - day_starts_at BETWEEN interval '1 hour' AND interval '18 hours'",
+            name="usable_window",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), nullable=False)
@@ -104,6 +121,16 @@ class User(Base, TimestampMixin):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     timezone: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default="America/Sao_Paulo"
+    )
+
+    # The part of each local day this person plans to spend, read in ``timezone``. The budget
+    # is derived from it per day and never stored, so it cannot disagree with the hours it
+    # comes from (ADR-0029).
+    day_starts_at: Mapped[time] = mapped_column(
+        Time, nullable=False, default=DEFAULT_DAY_STARTS_AT, server_default=text("'06:00'")
+    )
+    day_ends_at: Mapped[time] = mapped_column(
+        Time, nullable=False, default=DEFAULT_DAY_ENDS_AT, server_default=text("'22:00'")
     )
 
     days: Mapped[list[Day]] = relationship(
