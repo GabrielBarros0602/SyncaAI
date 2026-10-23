@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, time
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class MeRead(BaseModel):
@@ -29,17 +29,36 @@ class MeRead(BaseModel):
     # given day comes from ``/capacity``, which is the only place that knows the day.
     day_starts_at: time
     day_ends_at: time
+    # What the planner may not propose on (ISO weekdays, Monday is 1) and how long a step it
+    # may propose. Planner preferences only; capacity never reads them (ADR-0032).
+    days_off: list[int]
+    preferred_block_minutes: int
 
 
 class MeUpdate(BaseModel):
-    """A change to the account's own settings. The usable window only, for now.
+    """A change to the account's own settings: the usable window and the planner's two
+    preferences.
 
-    Either end may come alone. The service judges the window the request leaves behind,
-    so moving one end is checked against the stored other (ADR-0029).
+    Any field may come alone. The service judges the window the request leaves behind, so
+    moving one end is checked against the stored other (ADR-0029), and it checks everything
+    before writing anything, so a request with one bad field changes nothing.
     """
 
     day_starts_at: time | None = None
     day_ends_at: time | None = None
+    # At most seven entries: a longer list cannot be a set of weekdays, only a mistake.
+    days_off: list[int] | None = Field(default=None, max_length=7)
+    preferred_block_minutes: int | None = None
+
+    @field_validator("days_off", "preferred_block_minutes")
+    @classmethod
+    def refuse_a_null(cls, value: object) -> object:
+        """Absent already means "leave it". Null would mean no preference, which no account
+        has: an empty list is how a person says they plan every day."""
+        if value is None:
+            message = "cannot be null; omit the field to leave it unchanged"
+            raise ValueError(message)
+        return value
 
     @field_validator("day_starts_at", "day_ends_at")
     @classmethod

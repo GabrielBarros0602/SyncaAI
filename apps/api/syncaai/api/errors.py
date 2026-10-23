@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from syncaai.errors import (
     AccountNotVerifiedError,
+    BlockLengthOutOfRangeError,
     CannotReopenTaskError,
     ChecklistFullError,
     ChecklistItemNotFoundError,
@@ -17,6 +18,7 @@ from syncaai.errors import (
     InvalidCredentialsError,
     InvalidLinkTokenError,
     InvertedWindowError,
+    NoDayToPlanError,
     NotAuthenticatedError,
     RateLimitExceededError,
     StartCorrectionTooFarBackError,
@@ -27,7 +29,9 @@ from syncaai.errors import (
     UsableWindowInvertedError,
     UsableWindowTooLongError,
     UsableWindowTooShortError,
+    WeekdayOutOfRangeError,
 )
+from syncaai.planning.contract import MAX_ITEM_MINUTES, MIN_ITEM_MINUTES
 from syncaai.schemas.tasks import MAX_CHECKLIST_ITEMS
 from syncaai.security.passwords import PasswordTooLongError
 from syncaai.services.capacity import MAX_HORIZON_DAYS, MAX_USABLE_MINUTES, MIN_USABLE_MINUTES
@@ -108,6 +112,30 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={"detail": f"The usable day can be at most {_hours(MAX_USABLE_MINUTES)} long."},
+        )
+
+    @app.exception_handler(WeekdayOutOfRangeError)
+    async def _weekday_out_of_range(_: Request, __: WeekdayOutOfRangeError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "A weekday is a number from 1 (Monday) to 7 (Sunday)."},
+        )
+
+    @app.exception_handler(NoDayToPlanError)
+    async def _no_day_to_plan(_: Request, __: NoDayToPlanError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "There has to be at least one day to plan in."},
+        )
+
+    @app.exception_handler(BlockLengthOutOfRangeError)
+    async def _block_out_of_range(_: Request, __: BlockLengthOutOfRangeError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "detail": f"A block lasts from {MIN_ITEM_MINUTES} minutes "
+                f"to {_hours(MAX_ITEM_MINUTES)}."
+            },
         )
 
     @app.exception_handler(InvertedWindowError)

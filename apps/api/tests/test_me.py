@@ -11,6 +11,7 @@ The window's CHECK, the last of the three guards, is asserted against PostgreSQL
 import uuid
 from datetime import datetime, time, timezone
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -35,6 +36,8 @@ def _a_user(**overrides: object) -> User:
         "verified_at": datetime(2026, 8, 1, 12, tzinfo=timezone.utc),
         "day_starts_at": time(6),
         "day_ends_at": time(22),
+        "days_off": [],
+        "preferred_block_minutes": 60,
     }
     fields.update(overrides)
     return User(**fields)
@@ -62,7 +65,16 @@ def test_it_carries_only_what_the_client_needs(app: FastAPI, client: TestClient)
 
     body = client.get(ME).json()
 
-    assert set(body) == {"id", "email", "timezone", "verified_at", "day_starts_at", "day_ends_at"}
+    assert set(body) == {
+        "id",
+        "email",
+        "timezone",
+        "verified_at",
+        "day_starts_at",
+        "day_ends_at",
+        "days_off",
+        "preferred_block_minutes",
+    }
 
 
 def test_the_password_hash_is_not_in_the_response(app: FastAPI, client: TestClient) -> None:
@@ -192,3 +204,108 @@ def test_changing_the_window_needs_a_token(app: FastAPI, client: TestClient) -> 
     app.dependency_overrides[get_session] = lambda: _NoOpSession()
 
     assert client.patch(ME, json={"day_starts_at": "08:00"}).status_code == 401
+
+
+# --- The planner's preferences (ADR-0032) ---------------------------------------------------
+
+
+def test_it_reports_the_planner_s_preferences(app: FastAPI, client: TestClient) -> None:
+    _wire(app, _a_user(days_off=[6, 7], preferred_block_minutes=45))
+
+    body = client.get(ME).json()
+
+    assert (body["days_off"], body["preferred_block_minutes"]) == ([6, 7], 45)
+
+
+def test_days_off_are_stored_sorted_and_once(app: FastAPI, client: TestClient) -> None:
+    """One set, one spelling: Sunday, Saturday, Saturday is stored as Saturday and Sunday."""
+    user = _a_user()
+    _wire(app, user)
+
+    response = client.patch(ME, json={"days_off": [7, 6, 6]})
+
+    assert response.status_code == 200, response.text
+    assert user.days_off == [6, 7]
+    assert response.json()["days_off"] == [6, 7]
+
+
+def test_an_empty_list_means_every_day_is_plannable(app: FastAPI, client: TestClient) -> None:
+    """The way to clear days off. Null is refused; an empty set is a set."""
+    user = _a_user(days_off=[6, 7])
+    _wire(app, user)
+
+    assert client.patch(ME, json={"days_off": []}).status_code == 200
+    assert user.days_off == []
+
+
+def test_a_week_with_no_day_to_plan_in_is_refused(app: FastAPI, client: TestClient) -> None:
+    """A planner with no day to place anything in can never answer (ADR-0032)."""
+    user = _a_user()
+    _wire(app, user)
+
+    response = client.patch(ME, json={"days_off": [1, 2, 3, 4, 5, 6, 7]})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "There has to be at least one day to plan in."
+    assert user.days_off == []
+
+
+def test_six_days_off_leave_one_and_are_accepted(app: FastAPI, client: TestClient) -> None:
+    _wire(app, _a_user())
+
+    assert client.patch(ME, json={"days_off": [1, 2, 3, 4, 5, 6]}).status_code == 200
+
+
+@pytest.mark.parametrize("day", [0, 8, -1])
+def test_a_day_off_has_to_be_an_iso_weekday(app: FastAPI, client: TestClient, day: int) -> None:
+    _wire(app, _a_user())
+
+    response = client.patch(ME, json={"days_off": [1, day]})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "A weekday is a number from 1 (Monday) to 7 (Sunday)."
+
+
+def test_a_list_longer_than_a_week_is_refused(app: FastAPI, client: TestClient) -> None:
+    _wire(app, _a_user())
+
+    assert client.patch(ME, json={"days_off": [1, 1, 1, 1, 1, 1, 1, 1]}).status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("minutes", "accepted"), [(14, False), (15, True), (240, True), (241, False)]
+)
+def test_a_block_lasts_from_fifteen_minutes_to_four_hours(
+    app: FastAPI, client: TestClient, minutes: int, accepted: bool
+) -> None:
+    """The bounds a planned step has, because the block is what bounds a step."""
+    _wire(app, _a_user())
+
+    response = client.patch(ME, json={"preferred_block_minutes": minutes})
+
+    assert (response.status_code == 200) is accepted
+    if not accepted:
+        assert response.json()["detail"] == "A block lasts from 15 minutes to 4 hours."
+
+
+@pytest.mark.parametrize("field", ["days_off", "preferred_block_minutes"])
+def test_an_explicit_null_preference_is_refused(
+    app: FastAPI, client: TestClient, field: str
+) -> None:
+    _wire(app, _a_user())
+
+    assert client.patch(ME, json={field: None}).status_code == 422
+
+
+def test_one_bad_field_changes_nothing_else(app: FastAPI, client: TestClient) -> None:
+    """Everything is checked before anything is written: a valid window beside an invalid
+    block leaves the window as it was."""
+    user = _a_user()
+    _wire(app, user)
+
+    response = client.patch(
+        ME, json={"day_starts_at": "08:00", "days_off": [6], "preferred_block_minutes": 300}
+    )
+
+    assert response.status_code == 422
+    assert (user.day_starts_at, user.days_off) == (time(6), [])

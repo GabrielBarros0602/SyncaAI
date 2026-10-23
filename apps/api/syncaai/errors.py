@@ -132,6 +132,22 @@ class UsableWindowTooLongError(DomainError):
     """
 
 
+class WeekdayOutOfRangeError(DomainError):
+    """Raised for a day off that is not an ISO weekday, 1 (Monday) to 7 (Sunday)."""
+
+
+class NoDayToPlanError(DomainError):
+    """Raised when days off would cover the whole week.
+
+    A planner with no day to place anything in can never answer, so this is refused as a
+    setting rather than discovered later as a plan that is all unplaced (ADR-0032).
+    """
+
+
+class BlockLengthOutOfRangeError(DomainError):
+    """Raised for a preferred block outside the bounds a planned step has (ADR-0030)."""
+
+
 class InvertedWindowError(DomainError):
     """Raised when a capacity window ends before it starts."""
 
