@@ -409,7 +409,10 @@ de "nenhum projeto com testes automatizados publicados".
 - [ ] ~~Cache com chave incluindo `prompt_version` e `context_fingerprint`~~ e o **teste da
       ordem** `rate limit → cache → teto`: esperam a medição (ADR-0045). A ordem que existe,
       `rate limit → tetos`, já é testada (ADR-0044)
-- [ ] Circuit breaker no cliente; testar aberto e half-open
+- [x] Circuit breaker lido das próprias chamadas no `ai_usage`: três falhas seguidas abrem
+      por 60 s, depois uma chamada passa como teste; aberto, o pedido recebe `503` e o worker
+      não pega job; testado aberto, half-open e fechado
+      → [ADR-0046](adr/0046-the-circuit-breaker-is-read-from-the-calls-themselves.md)
 - [ ] Fallback manual: criar checklist à mão, no mesmo editor do draft gerado
 - [ ] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
       local por ora, cada uma marcada com o modelo que a produziu (ADR-0039)
