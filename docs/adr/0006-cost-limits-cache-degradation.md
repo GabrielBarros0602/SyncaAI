@@ -1,6 +1,7 @@
 # ADR-0006: Cost control, rate limiting, caching and graceful degradation
 
-**Status:** Accepted
+**Status:** Accepted; the spend cap's `ai_usage` amended by
+[ADR-0041](0041-every-call-is-metered-when-it-ends.md)
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 
