@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 41 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 42 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
