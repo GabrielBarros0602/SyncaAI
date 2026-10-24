@@ -9,14 +9,16 @@ scheduler places those items on the days that actually have room. The output is 
 data in the product's own vocabulary, never a block of text to copy by hand.
 
 > **Status:** in development. Accounts, sessions, the calendar domain and the day-capacity
-> query work, and the AI layer is complete against a sample generator (S6). A request is
-> queued; a worker builds a prompt from the week's free time and nothing else; a repair ladder
+> query work, and the AI layer is complete and guarded (S6, S7). A request is queued; a
+> worker builds a prompt from the week's free time and nothing else; an open model running
+> locally answers it, or a sample generator where none is installed; a repair ladder
 > validates the answer; a deterministic scheduler places the steps, this week first; the plan
 > waits as a draft that can be edited, placed again or sent to next week; and a commit turns
-> it into tasks, all or nothing. No real provider is wired in yet. That is S7, and the order
-> is deliberate: ADR-0006 requires a product that still works when the provider is down,
-> which is easier to prove before there is one. The screens for all of this wait for the
-> third design round. See the roadmap below.
+> it into tasks, all or nothing. Every call is metered, and every request is held to a rate
+> limit, monthly spend ceilings and a circuit breaker. When the model is down, a plan can be
+> written by hand in the same draft. No provider is paid for, so nothing costs money; the
+> paid client waits for a decision to pay. The screens for all of this wait for the third
+> design round. See the roadmap below.
 
 ## Why this is not CRUD
 
@@ -29,8 +31,8 @@ six problems inside it that are addressed explicitly in the architecture:
 | Context assembly — what enters the prompt, token budget, privacy | [ADR-0004](docs/adr/0004-context-assembly-policy.md) |
 | Structured output that becomes database records, with validation | [ADR-0005](docs/adr/0005-structured-output-contract.md) |
 | Latency — block, stream, or enqueue | [ADR-0003](docs/adr/0003-ai-request-lifecycle.md) |
-| Cost and abuse — rate limits, spend cap, cache | [ADR-0006](docs/adr/0006-cost-limits-cache-degradation.md) |
-| Degradation — the provider will go down | [ADR-0006](docs/adr/0006-cost-limits-cache-degradation.md) |
+| Cost and abuse — metering, rate limit, spend ceilings | [ADR-0006](docs/adr/0006-cost-limits-cache-degradation.md), made concrete in [0041](docs/adr/0041-every-call-is-metered-when-it-ends.md), [0042](docs/adr/0042-plan-requests-are-limited-over-moving-windows-of-jobs.md) and [0044](docs/adr/0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md) |
+| Degradation — the provider will go down | a circuit breaker read from the calls ([ADR-0046](docs/adr/0046-the-circuit-breaker-is-read-from-the-calls-themselves.md)), and a plan written by hand ([ADR-0047](docs/adr/0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)) |
 
 Two design decisions carry most of the weight:
 
@@ -51,7 +53,8 @@ Two design decisions carry most of the weight:
 | Mail | one interface, console and recording implementations ([ADR-0018](docs/adr/0018-email-delivery.md)) |
 | Dependencies | pip, with `uv` as the resolver ([why](CONTRIBUTING.md#dependencies)) |
 | AI queue | PostgreSQL itself: `SELECT ... FOR UPDATE SKIP LOCKED`, woken by `NOTIFY`, with a worker as its own service ([ADR-0031](docs/adr/0031-a-job-queue-in-postgresql-woken-by-notify.md)) |
-| AI provider | one `PlanGenerator` interface: a sample generator by default, or an open model run locally through Ollama; no paid provider, so nothing costs money ([ADR-0003](docs/adr/0003-ai-request-lifecycle.md), [ADR-0039](docs/adr/0039-a-local-open-model-until-a-provider-is-paid-for.md)) |
+| AI provider | one `PlanGenerator` interface: a sample generator by default, or `qwen3.5:4b` run locally through Ollama; no paid provider, so nothing costs money ([ADR-0039](docs/adr/0039-a-local-open-model-until-a-provider-is-paid-for.md), [ADR-0043](docs/adr/0043-the-local-model-is-qwen3-5-4b.md)) |
+| AI guardrails | all read from PostgreSQL: a moving rate limit counted from the jobs, monthly spend ceilings summed from `ai_usage`, a circuit breaker from the latest calls ([ADR-0042](docs/adr/0042-plan-requests-are-limited-over-moving-windows-of-jobs.md), [ADR-0044](docs/adr/0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md), [ADR-0046](docs/adr/0046-the-circuit-breaker-is-read-from-the-calls-themselves.md)) |
 | Web | Vite, React 19, TypeScript strict ([ADR-0021](docs/adr/0021-browser-session-and-origin.md)) |
 | Quality | ruff, mypy (strict), pytest; eslint, tsc, vitest |
 | Runtime | Docker Compose |
@@ -97,8 +100,9 @@ Stack rationale, including the estimated cost of the alternative, is in
 | `POST`, `PATCH`, `DELETE /api/v1/tasks/{id}/items…`, `PUT …/items/order` | The checklist as its own resource; a reorder sends the whole list and is refused if it is stale ([ADR-0028](docs/adr/0028-the-checklist-is-its-own-resource.md)). |
 | `GET /api/v1/tags` | Read-only. A tag exists because a task named it ([ADR-0020](docs/adr/0020-domain-surface-choices.md)). |
 | `GET /api/v1/capacity` | **Free and booked minutes per local day.** The foundation of the AI layer ([ADR-0004](docs/adr/0004-context-assembly-policy.md)) — it is what a generated plan is placed against, and it exists and is tested before any AI code does. |
-| `POST /api/v1/ai/plans` | **Asks for a plan** and answers `202` with a job; the worker makes it in the background. One plan at a time: `409` while another is queued, running or waiting for review ([ADR-0033](docs/adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md), [ADR-0038](docs/adr/0038-a-job-and-its-plan-are-two-resources-linked-by-id.md)). |
+| `POST /api/v1/ai/plans` | **Asks for a plan** and answers `202` with a job; the worker makes it in the background. One plan at a time: `409` while another is queued, running or waiting for review ([ADR-0033](docs/adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md), [ADR-0038](docs/adr/0038-a-job-and-its-plan-are-two-resources-linked-by-id.md)). Ten an hour and thirty a day, `429` with `Retry-After` ([ADR-0042](docs/adr/0042-plan-requests-are-limited-over-moving-windows-of-jobs.md)); a month's spend reached, `429`, or `503` once everyone's has ([ADR-0044](docs/adr/0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md)); the model down, `503` ([ADR-0046](docs/adr/0046-the-circuit-breaker-is-read-from-the-calls-themselves.md)). |
 | `GET /api/v1/ai/plans/{job_id}` | How the request is going, and the plan's id once there is one. |
+| `POST /api/v1/plans`, `POST …/{plan_id}/items` | **A plan written by hand**, in the same draft a model's plan lands in, and a step added to any pending plan, placed at the earliest free time. Always available, so planning degrades to a form when the model is down ([ADR-0047](docs/adr/0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)). |
 | `GET /api/v1/plans/{plan_id}` | The plan for review: each step with a real start in the week's free time or the reason it has none, its links and prerequisites, and what the validation discarded and why. |
 | `PATCH`, `DELETE /api/v1/plans/{plan_id}/items/{item_id}`, `POST …/discard` | Edit or remove a step before it becomes a task, checked as a task's change would be; or set the plan aside ([ADR-0030](docs/adr/0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md)). |
 | `POST /api/v1/plans/{plan_id}/replace`, `POST …/next-week` | Place again every step that has no time ahead of it, this week first, or send what did not fit to the week after. The scheduler alone, with no call to a model: it costs nothing and keeps every edit ([ADR-0033](docs/adr/0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md)). |
@@ -128,7 +132,25 @@ docker compose exec api alembic upgrade head
 Three services start: the database, the API and the AI worker. Migrations are run by hand,
 once and after every pull that brings new ones (see below). The API is served at
 `http://localhost:8000`, with interactive docs at `http://localhost:8000/docs`. The worker
-answers every plan request with the same small sample plan until S7 brings a real provider.
+answers every plan request with the same small sample plan, unless a local model is set up
+as below.
+
+### A real model, locally and free
+
+The worker can ask an open model running on your own machine instead
+([ADR-0039](docs/adr/0039-a-local-open-model-until-a-provider-is-paid-for.md),
+[ADR-0043](docs/adr/0043-the-local-model-is-qwen3-5-4b.md)). Install
+[Ollama](https://ollama.com), then:
+
+```bash
+ollama pull qwen3.5:4b
+```
+
+and set `AI_PROVIDER=ollama` and `OLLAMA_MODEL=qwen3.5:4b` in `.env`. Nothing is sent
+anywhere and nothing is billed. The model takes about 3.7 GB of GPU memory, and on an 8 GB
+card most plans come back in 10 to 30 seconds, up to about 50 with a repair. A model Ollama
+runs in its own cloud is refused at boot
+([ADR-0040](docs/adr/0040-what-the-local-model-is-held-to-measured.md)).
 
 ### Working on the API without Docker
 
@@ -217,6 +239,11 @@ pytest --cov=syncaai --cov-fail-under=85
 
 `alembic check` fails when a model changed without a migration, which no test can notice.
 
+The golden fixtures in `tests/golden` are real answers from the local model. A change to the
+prompt fails them until they are captured again with `python scripts/capture_golden.py <dir>`
+and the ones kept are labelled by hand
+([ADR-0048](docs/adr/0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md)).
+
 Tests marked `integration` need a reachable PostgreSQL. Start one with
 `docker compose up -d db` and they run as-is. Without one, deselect them:
 
@@ -245,8 +272,8 @@ written.
 | S4 | Domain CRUD and the day-capacity query | done |
 | S5 | First visible slice — login and the week's free capacity | mostly done; the remaining screens wait for the third design round |
 | S6 | AI pipeline against a test double, zero provider cost | done |
-| S7 | Real provider, guardrails, degradation | next |
-| S8 | Front end wired to the API — plan generation complete | |
+| S7 | Real provider, guardrails, degradation | done, against a local model; the paid client waits for a decision to pay |
+| S8 | Front end wired to the API — plan generation complete | waits for the third design round |
 | S9 | Task assistance, streamed | |
 | S10 | Remaining prototype surfaces | |
 | S11 | Tests, polish, publication | |
@@ -311,15 +338,20 @@ do horário de verão, e uma tarefa que começa às 23:30 lança todos os seus m
 que começa. Por isso um dia pode ficar acima da própria capacidade — reporta zero minutos
 livres e marca `over_capacity`, em vez de devolver número negativo.
 
-A camada de IA está completa contra um gerador de exemplo (S6):
+A camada de IA está completa e protegida (S6, S7):
 - o pedido entra numa fila no próprio PostgreSQL;
 - um worker monta o prompt só com o tempo livre da semana, nunca com títulos ou notas;
+- um modelo aberto rodando na própria máquina responde, o `qwen3.5:4b` via Ollama, ou um
+  gerador de exemplo onde ele não está instalado — de graça nos dois casos;
 - uma escada de reparo valida a resposta;
 - o agendador coloca os passos em horários livres reais, esta semana primeiro;
 - o plano fica como rascunho, que se pode editar, reposicionar ou levar para a próxima semana;
 - o commit transforma o plano em tarefas numa transação só, ou não grava nada.
 
-O provedor real entra no S7. As telas de tudo isso esperam a terceira rodada de design.
+Toda chamada é medida, e todo pedido passa por rate limit, tetos de gasto mensais e um
+circuit breaker, todos lidos do PostgreSQL. Com o modelo fora do ar, o plano pode ser escrito
+à mão no mesmo rascunho. Nenhum provedor é pago; o cliente pago espera a decisão de pagar.
+As telas de tudo isso esperam a terceira rodada de design.
 
 ### Rodando localmente
 
