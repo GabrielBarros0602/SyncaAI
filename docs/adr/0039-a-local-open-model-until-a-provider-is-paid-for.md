@@ -1,6 +1,7 @@
 # ADR-0039: A local open model until a provider is paid for
 
-**Status:** Accepted
+**Status:** Accepted; decision 2 amended by
+[ADR-0040](0040-what-the-local-model-is-held-to-measured.md)
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
