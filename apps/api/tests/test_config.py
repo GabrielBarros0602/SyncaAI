@@ -5,12 +5,14 @@ startup: the image flattens ``apps/api`` into ``/app``, so the module sits at a
 different depth than on a developer machine. These tests pin both layouts.
 """
 
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from syncaai.config import MIN_JWT_SECRET_LENGTH, Settings, discover_env_file
+from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, ceilings_from
 
 
 def test_finds_the_env_file_beside_a_repository_marker(tmp_path: Path) -> None:
@@ -89,3 +91,23 @@ def test_local_development_may_record_instead_of_sending(
     assert Settings(app_env="local", mail_backend="recording", _env_file=None).mail_backend == (
         "recording"
     )
+
+
+def test_the_spend_ceilings_default_to_what_adr_0044_decided(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/d")
+    monkeypatch.setenv("JWT_SECRET", "x" * MIN_JWT_SECRET_LENGTH)
+
+    assert ceilings_from(Settings(_env_file=None)) == Ceilings(
+        per_person=Decimal("0.50"), everyone=Decimal("5.00")
+    )
+    assert ceilings_from(Settings(_env_file=None)) == DEFAULT_CEILINGS
+
+
+def test_a_negative_ceiling_is_refused_at_boot(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/d")
+    monkeypatch.setenv("JWT_SECRET", "x" * MIN_JWT_SECRET_LENGTH)
+
+    with pytest.raises(ValidationError, match="ai_ceiling_everyone_usd"):
+        Settings(ai_ceiling_everyone_usd=Decimal("-1"), _env_file=None)

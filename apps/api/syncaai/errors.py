@@ -47,6 +47,32 @@ class RateLimitExceededError(DomainError):
         self.retry_after_seconds = retry_after_seconds
 
 
+class CeilingReachedError(DomainError):
+    """Raised when a month's spend has reached a ceiling (ADR-0006, ADR-0044).
+
+    Carries the sentence a person reads, because the same refusal reaches them two ways: as
+    the answer to a request, and as the reason a queued job failed.
+    """
+
+    sentence: str
+
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__(retry_after_seconds)
+        self.retry_after_seconds = retry_after_seconds
+
+
+class AllowanceSpentError(CeilingReachedError):
+    """A person's month has reached their ceiling."""
+
+    sentence = "This month's plans are used up. They renew on the first of next month."
+
+
+class PlanningPausedError(CeilingReachedError):
+    """Everyone's month has reached the global ceiling: the kill switch."""
+
+    sentence = "Planning is paused until next month."
+
+
 class PlanRateLimitedError(RateLimitExceededError):
     """Raised when a person has had as many plans as a window allows (ADR-0042).
 
