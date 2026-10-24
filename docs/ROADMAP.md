@@ -375,7 +375,10 @@ de "nenhum projeto com testes automatizados publicados".
 
 ---
 
-## S7 — Provedor real, guardrails e degradação
+## S7 — Provedor real, guardrails e degradação · ✅ Concluído
+
+Fechado em 2026-10-24 sem gastar nada. O que só existe pagando um provedor foi para o
+backlog, em "Quando um provedor for pago".
 
 - [x] **Decidido:** nenhum provedor pago por ora. Na teoria, a Anthropic, começando no
       Claude Haiku 5.5 e medindo; agora, um modelo aberto local via Ollama, e o gerador de
@@ -387,7 +390,8 @@ de "nenhum projeto com testes automatizados publicados".
       nuvem recusado → [ADR-0040](adr/0040-what-the-local-model-is-held-to-measured.md)
 - [x] **Decidido:** o modelo local é o `qwen3.5:4b`; o 9b não cabe na GPU de 8 GB e não é
       significativamente melhor → [ADR-0043](adr/0043-the-local-model-is-qwen3-5-4b.md)
-- [ ] Cliente do provedor pago (Anthropic, Haiku 5.5): **aguarda a decisão de pagar**
+- ~~Cliente do provedor pago (Anthropic, Haiku 5.5)~~ → `docs/backlog.md`, "Quando um provedor
+  for pago"
 - [x] Tabela `ai_usage` escrita em toda chamada, concluída ou não, quando ela termina: tokens
       de entrada e saída, custo calculado de `prices.toml`, latência, modelo,
       `prompt_version`, id do job → [ADR-0041](adr/0041-every-call-is-metered-when-it-ends.md)
@@ -406,9 +410,9 @@ de "nenhum projeto com testes automatizados publicados".
       dentro da janela do dia, e o duplo clique e as rajadas já são barrados; cada job guarda a
       impressão digital do contexto e `would_be_cache_hits` conta os acertos que teria havido
       → [ADR-0045](adr/0045-no-response-cache-until-one-is-measured-to-pay.md)
-- [ ] ~~Cache com chave incluindo `prompt_version` e `context_fingerprint`~~ e o **teste da
-      ordem** `rate limit → cache → teto`: esperam a medição (ADR-0045). A ordem que existe,
-      `rate limit → tetos`, já é testada (ADR-0044)
+- ~~Cache com chave incluindo `prompt_version` e `context_fingerprint`, e o teste da ordem
+  `rate limit → cache → teto`~~ — esperam a medição (ADR-0045). A ordem que existe,
+  `rate limit → tetos → breaker`, é testada (ADR-0044, ADR-0046)
 - [x] Circuit breaker lido das próprias chamadas no `ai_usage`: três falhas seguidas abrem
       por 60 s, depois uma chamada passa como teste; aberto, o pedido recebe `503` e o worker
       não pega job; testado aberto, half-open e fechado
@@ -418,11 +422,11 @@ de "nenhum projeto com testes automatizados publicados".
       mesmo agendador; até 12 passos; sempre disponível
       → [ADR-0047](adr/0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)
 - [x] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
-      local por ora, cada uma marcada com o modelo que a produziu (ADR-0039): oito, três
-      inválidas, capturadas por `scripts/capture_golden.py` e rotuladas à mão; o primeiro
-      lote mediu 15% de reparo → [ADR-0048](adr/0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md)
-- [ ] Alerta de orçamento do lado do provedor, abaixo do teto global: **aguarda a decisão
-      de pagar**
+      local por ora, cada uma marcada com o modelo que a produziu (ADR-0039): oito, duas
+      inválidas, capturadas por `scripts/capture_golden.py` e rotuladas à mão; o lote mediu
+      15% de reparo, e 5% depois da [ADR-0049](adr/0049-a-step-that-waits-for-itself-loses-only-that.md) → [ADR-0048](adr/0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md)
+- ~~Alerta de orçamento do lado do provedor, abaixo do teto global~~ → `docs/backlog.md`,
+  "Quando um provedor for pago"
 
 ---
 

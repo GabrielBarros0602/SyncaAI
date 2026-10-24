@@ -548,3 +548,21 @@ a ADR-0035 e a ADR-0039 esperavam.
   validador e pede uma ADR.
 - **Os limiares da ADR-0039** (reparo acima de 30%, descarte acima de 20%) eram para decidir
   subir de modelo pago; o modelo local fica abaixo dos dois.
+
+## Quando um provedor for pago
+
+O S7 fechou em 2026-10-24 sem gastar nada (ADR-0039). Tudo abaixo existe só no dia em que se
+decidir pagar, e já tem onde se encaixar: o gerador é uma interface (ADR-0003), o custo tem
+tabela (ADR-0041), os tetos e o breaker já leem o `ai_usage` (ADR-0044, ADR-0046).
+
+- **O cliente da Anthropic,** começando no Claude Haiku 5.5 (ADR-0039), com a subida de modelo
+  decidida por uma ADR nova sobre as taxas de reparo e descarte medidas.
+- **Recusar no boot um modelo pago que falte no `prices.toml`** (ADR-0041): hoje nenhuma
+  configuração nomeia um.
+- **O `count_tokens` do provedor no lugar do limite por caracteres** na estimativa (ADR-0044).
+- **O cache de prompt do provedor** sobre as instruções e o schema, que abrem toda chamada
+  iguais (ADR-0045).
+- **O alerta de orçamento do lado do provedor,** abaixo do teto global de US$ 5 (ADR-0006).
+- **Golden fixtures do modelo pago,** marcadas com o nome dele, ao lado das do local (ADR-0048).
+- **O modelo de ameaças:** as linhas 12 (a chave) e 22 (o que o provedor guarda) voltam a
+  valer, com os termos do provedor relidos nas páginas do dia.
