@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 38 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 39 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the three screens as designed, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -184,7 +184,9 @@ TypeScript in strict mode, CSS Modules, no component library. The AI layer runs 
 against a sample generator: the queue, the worker (`python -m syncaai.worker`, its own compose
 service), the prompt, the repair ladder, the scheduler and the draft are built (ADR-0030 to
 ADR-0038). Over HTTP a plan can be asked for, read, edited, placed again, sent to next week,
-discarded and committed. The real provider is S7.
+discarded and committed. No provider is paid for, so a second generator runs an open model on
+the developer's machine through Ollama, chosen by `AI_PROVIDER` (ADR-0039); any deployment
+keeps the sample.
 
 **The front end is frozen, since 2026-10-22.** A third design round is coming, with large
 changes likely. Build no screen, UI component, UI test or new CSS until it returns — PRs 6, 7
@@ -203,12 +205,13 @@ base work that list began with is done (ADR-0027 to ADR-0029).
    decided. The third round's briefs are local, in `docs/design-brief-3.md` and
    `docs/design-brief-3-passo-2.md`; the desktop week went back for two corrections, recorded
    in the backlog.
-2. S7 — the real provider, its guardrails and its degradation. Like S6 it does not depend
-   on the redesign. The threat-model review its second trigger asked for is done
-   (2026-10-23). What comes before any client code is choosing the provider against the
-   criteria the ADRs impose (`docs/backlog.md`, decision 13), which also closes threat 22:
-   what the provider keeps of what it is sent. The rate limit, the monthly cap and the kill
-   switch (threat 13) come before the first real call.
+2. S7 — the guardrails and the degradation, against the local model. Like S6 it does not
+   depend on the redesign. The provider is chosen (ADR-0039): Anthropic in theory, starting
+   at its cheapest model and measured, but nothing is paid for now. What needs no money is
+   built anyway — the rate limit, the monthly cap and the kill switch (threat 13), the
+   estimate, the cache, the circuit breaker and the fallback; the paid client and its cost
+   in money wait for a decision to pay. The checklist in `docs/ROADMAP.md` is the order of
+   work.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when
