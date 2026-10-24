@@ -73,6 +73,16 @@ class PlanningPausedError(CeilingReachedError):
     sentence = "Planning is paused until next month."
 
 
+class ProviderUnavailableError(DomainError):
+    """Raised while the circuit breaker is open: the model's latest calls failed (ADR-0046)."""
+
+    sentence = "Planning is unavailable right now. Try again in a minute."
+
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__(retry_after_seconds)
+        self.retry_after_seconds = retry_after_seconds
+
+
 class PlanRateLimitedError(RateLimitExceededError):
     """Raised when a person has had as many plans as a window allows (ADR-0042).
 

@@ -28,7 +28,9 @@ router = APIRouter(tags=["plans"])
 def get_plan_service(
     session: SessionDep, user_id: CurrentUserId, settings: SettingsDep
 ) -> PlanService:
-    return PlanService(session, user_id, ceilings=ceilings_from(settings))
+    return PlanService(
+        session, user_id, ceilings=ceilings_from(settings), provider=settings.ai_provider
+    )
 
 
 ServiceDep = Annotated[PlanService, Depends(get_plan_service)]

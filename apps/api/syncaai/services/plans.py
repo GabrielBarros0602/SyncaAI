@@ -44,6 +44,7 @@ from syncaai.schemas.plans import (
     PlanLinkRead,
     PlanRead,
 )
+from syncaai.services.ai_breaker import refuse_while_open
 from syncaai.services.ai_queue import enqueue_plan
 from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, refuse_past_the_ceilings
 from syncaai.services.plan_context import plannable_days
@@ -63,17 +64,24 @@ PLAN_LIMITS = (
 
 class PlanService:
     def __init__(
-        self, session: Session, user_id: uuid.UUID, *, ceilings: Ceilings = DEFAULT_CEILINGS
+        self,
+        session: Session,
+        user_id: uuid.UUID,
+        *,
+        ceilings: Ceilings = DEFAULT_CEILINGS,
+        provider: str = "sample",
     ) -> None:
         self._session = session
         self._jobs = AiJobRepository(session, user_id)
         self._drafts = PlanDraftRepository(session, user_id)
         self._ceilings = ceilings
+        self._provider = provider
 
     def request(self, request: str, *, horizon_days: int) -> AiJob:
         """Queue a plan, or refuse it: past the rate limit first, the cheapest refusal
         (ADR-0006); then while another plan is still being made or reviewed; then once the
-        month's spend has reached a ceiling, the last check before the queue (ADR-0044).
+        month's spend has reached a ceiling (ADR-0044); then while the model is down, the
+        last check before the queue (ADR-0046).
 
         No refusal leaves a job, so none spends the allowance (ADR-0042). The second is
         checked here so the answer is a sentence, and held by the partial unique index on jobs
@@ -85,6 +93,7 @@ class PlanService:
         if self._jobs.any_in_progress() or self._drafts.any_pending():
             raise PlanInProgressError
         refuse_past_the_ceilings(self._session, self._jobs.owner_id, self._ceilings)
+        refuse_while_open(self._session, self._provider)
         return enqueue_plan(self._session, self._jobs.owner_id, request, horizon_days=horizon_days)
 
     def _refuse_past_the_rate_limit(self) -> None:
