@@ -23,10 +23,11 @@ import psycopg
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
-from syncaai.config import get_settings
+from syncaai.config import Settings, get_settings
 from syncaai.db import get_session_factory
 from syncaai.main import configure_logging
 from syncaai.planning.generator import PlanGenerator, SampleGenerator
+from syncaai.planning.ollama import OllamaGenerator
 from syncaai.services.ai_queue import CHANNEL, claim_next, sweep
 from syncaai.services.plan_drafts import expire_drafts
 from syncaai.services.plan_jobs import run_plan_job
@@ -135,16 +136,25 @@ def listen_url(database_url: str) -> str:
     return make_url(database_url).set(drivername="postgresql").render_as_string(hide_password=False)
 
 
+def generator_from(settings: Settings) -> PlanGenerator:
+    """The model the settings name (ADR-0039). Neither costs money."""
+    if settings.ai_provider == "ollama":
+        assert settings.ollama_model is not None, "the settings refuse ollama without a model"
+        return OllamaGenerator(base_url=settings.ollama_url, model=settings.ollama_model)
+    return SampleGenerator()
+
+
 def main() -> None:
     settings = get_settings()
     configure_logging(settings.log_level)
-    # The sample answer until S7 brings a real client; nothing here costs money (ADR-0003).
     worker = Worker(
-        get_session_factory(), SampleGenerator(), listen_url=listen_url(settings.database_url)
+        get_session_factory(),
+        generator_from(settings),
+        listen_url=listen_url(settings.database_url),
     )
     signal.signal(signal.SIGTERM, worker.stop)
     signal.signal(signal.SIGINT, worker.stop)
-    logger.info("worker listening on %s", CHANNEL)
+    logger.info("worker listening on %s, answering with %s", CHANNEL, settings.ai_provider)
     worker.run()
     logger.info("worker stopped")
 

@@ -98,8 +98,27 @@ class Settings(BaseSettings):
     # address is read, a reset takes over the account.
     password_reset_token_hours: int = 1
 
+    # Which model answers plan requests (ADR-0039). "sample" is the fixed plan any
+    # deployment uses and needs nothing installed; "ollama" is an open model on the
+    # developer's own machine, for real answers at no cost.
+    ai_provider: Literal["sample", "ollama"] = "sample"
+    ollama_url: str = "http://localhost:11434"
+    # No default: which open model is a choice for the machine it runs on.
+    ollama_model: str | None = None
+
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+
+    @model_validator(mode="after")
+    def _refuse_ollama_without_a_model(self) -> "Settings":
+        """Refused at boot, not discovered as the first job's obscure failure."""
+        if self.ai_provider == "ollama" and not self.ollama_model:
+            message = (
+                "AI_PROVIDER=ollama needs OLLAMA_MODEL: the model to run, "
+                "as `ollama list` names it."
+            )
+            raise ValueError(message)
+        return self
 
     @model_validator(mode="after")
     def _refuse_a_mailer_that_discards_in_production(self) -> "Settings":
