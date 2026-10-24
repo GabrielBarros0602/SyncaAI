@@ -28,6 +28,7 @@ from syncaai.db import get_session_factory
 from syncaai.main import configure_logging
 from syncaai.planning.generator import PlanGenerator, SampleGenerator
 from syncaai.planning.ollama import OllamaGenerator
+from syncaai.services.ai_breaker import seconds_until_probe
 from syncaai.services.ai_queue import CHANNEL, claim_next, sweep
 from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, ceilings_from
 from syncaai.services.plan_drafts import expire_drafts
@@ -85,7 +86,7 @@ class Worker:
         self._sweep()
         self._purge_when_due()
         ran = 0
-        while not self._stopping:
+        while not self._stopping and not self._model_down():
             claimed = self._claim()
             if claimed is None:
                 break
@@ -107,6 +108,17 @@ class Worker:
                 continue
             logger.info("job %s, attempt %s: %s", job_id, attempt, outcome)
         return ran
+
+    def _model_down(self) -> bool:
+        """Whether the circuit breaker is open (ADR-0046). Asked before every claim, since
+        the jobs of this very tick can be what opens it. Queued jobs wait meanwhile, and the
+        sweep fails any that wait too long (ADR-0031)."""
+        with self._factory() as session:
+            wait = seconds_until_probe(session, self._generator.provider)
+        if wait is None:
+            return False
+        logger.warning("model unavailable: claiming nothing for %.0f s", wait)
+        return True
 
     def _sweep(self) -> None:
         with self._factory() as session:

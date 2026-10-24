@@ -31,6 +31,7 @@ from syncaai.errors import (
     PlanNotFoundError,
     PlanNotPendingError,
     PlanRateLimitedError,
+    ProviderUnavailableError,
     RateLimitExceededError,
     StartCorrectionTooFarBackError,
     StepOverlapsStepError,
@@ -121,6 +122,15 @@ def register_error_handlers(app: FastAPI) -> None:
         # A limit on this person, like the rate limit, so the same status (ADR-0044).
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": error.sentence},
+            headers={"Retry-After": str(error.retry_after_seconds)},
+        )
+
+    @app.exception_handler(ProviderUnavailableError)
+    async def _model_unavailable(_: Request, error: ProviderUnavailableError) -> JSONResponse:
+        # The circuit breaker is open: nothing the person did, and over within a minute.
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={"detail": error.sentence},
             headers={"Retry-After": str(error.retry_after_seconds)},
         )
