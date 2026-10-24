@@ -2,6 +2,7 @@
 
 import math
 import uuid
+from collections.abc import Collection
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -52,7 +53,7 @@ from syncaai.services.ai_queue import enqueue_plan
 from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, refuse_past_the_ceilings
 from syncaai.services.plan_context import plannable_days
 from syncaai.services.plan_jobs import ONE_PENDING_DRAFT, PLACED
-from syncaai.services.tasks import OVERLAP_CONSTRAINT
+from syncaai.services.tasks import MAX_PAGE_SIZE, OVERLAP_CONSTRAINT
 
 # What a step sent on carries until it is placed again (ADR-0033).
 NOT_THIS_WEEK = Unplaced.NOT_THIS_WEEK.value
@@ -167,12 +168,16 @@ class PlanService:
         if job is None:
             raise PlanJobNotFoundError
         draft = self._drafts.for_job(job.id)
-        return JobRead(
-            job_id=job.id,
-            status=job.status,
-            failure_reason=job.failure_reason,
-            plan_id=draft.id if draft else None,
+        return _job(job, draft.id if draft else None)
+
+    def jobs(self, *, statuses: Collection[str], limit: int, offset: int) -> list[JobRead]:
+        """The person's plan requests, newest first (ADR-0050): the one to follow after a
+        reload, and the last that failed."""
+        jobs = self._jobs.newest_first(
+            statuses=statuses, limit=min(limit, MAX_PAGE_SIZE), offset=offset
         )
+        plans = self._drafts.ids_for_jobs([job.id for job in jobs])
+        return [_job(job, plans.get(job.id)) for job in jobs]
 
     def plan(self, plan_id: uuid.UUID, *, now: datetime) -> PlanRead:
         draft = self._drafts.get_for_review(plan_id)
@@ -402,6 +407,15 @@ class PlanService:
                 continue
             if other.start_at < end and other.start_at + timedelta(minutes=other.minutes) > start:
                 raise StepOverlapsStepError
+
+
+def _job(job: AiJob, plan_id: uuid.UUID | None) -> JobRead:
+    return JobRead(
+        job_id=job.id,
+        status=job.status,
+        failure_reason=job.failure_reason,
+        plan_id=plan_id,
+    )
 
 
 def _span(item: PlanDraftItem) -> tuple[datetime, datetime]:
