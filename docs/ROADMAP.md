@@ -386,8 +386,9 @@ de "nenhum projeto com testes automatizados publicados".
       sem raciocínio, contexto e resposta limitados, o schema visível ao modelo, nome de
       nuvem recusado → [ADR-0040](adr/0040-what-the-local-model-is-held-to-measured.md)
 - [ ] Cliente do provedor pago (Anthropic, Haiku 5.5): **aguarda a decisão de pagar**
-- [ ] Tabela `ai_usage` escrita em toda chamada concluída: tokens de entrada e saída, custo
-      calculado, latência, modelo, `prompt_version`, id do job
+- [x] Tabela `ai_usage` escrita em toda chamada, concluída ou não, quando ela termina: tokens
+      de entrada e saída, custo calculado de `prices.toml`, latência, modelo,
+      `prompt_version`, id do job → [ADR-0041](adr/0041-every-call-is-metered-when-it-ends.md)
 - [ ] Estimativa de custo **antes** da chamada; recusa se a estimativa estoura o teto
 - [ ] Rate limit por usuário, duas janelas: 10/hora e 30/dia, `429` com `Retry-After`
 - [ ] Teto mensal por usuário
