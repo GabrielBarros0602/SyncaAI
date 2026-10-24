@@ -58,6 +58,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md) | A plan can be written by hand, in the same draft | Accepted |
 | [0048](0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md) | Golden fixtures are captured by a script and labelled by a person | Accepted |
 | [0049](0049-a-step-that-waits-for-itself-loses-only-that.md) | A step that waits for itself loses only that | Accepted |
+| [0050](0050-plans-and-their-requests-are-listed-and-an-approved-plan-counts-its-tasks.md) | Plans and their requests are listed, and an approved plan counts its tasks | Accepted |
 
 ## Template
 
