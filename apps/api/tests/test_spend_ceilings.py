@@ -6,6 +6,7 @@ The global ceiling is set relative to whatever the table already holds, so the t
 depend on it being empty. Everything committed is deleted afterwards.
 """
 
+import json
 import uuid
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
@@ -15,16 +16,23 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, func, insert, select, text
+from sqlalchemy import delete, func, insert, or_, select, text, update
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from syncaai.api.dependencies import get_current_user_id
-from syncaai.config import Settings
+from syncaai.config import Settings, get_settings
 from syncaai.db import get_session_factory
+from syncaai.errors import AllowanceSpentError, PlanningPausedError
 from syncaai.models import AiJob, AiUsage, User
-from syncaai.planning.context import PROMPT_VERSION
-from syncaai.services.ai_spend import spend_statement
+from syncaai.planning.context import PROMPT_VERSION, PlanPrompt
+from syncaai.planning.contract import MAX_ANSWER_TOKENS
+from syncaai.planning.generator import FakeGenerator, Generation, Repair
+from syncaai.planning.prices import cost_of
+from syncaai.services.ai_queue import VISIBILITY_TIMEOUT, enqueue_plan
+from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, spend_statement
+from syncaai.services.plan_jobs import Outcome, run_plan_job
+from syncaai.worker import Worker, listen_url
 
 pytestmark = pytest.mark.integration
 
@@ -47,7 +55,11 @@ def people() -> Iterator[list[uuid.UUID]]:
         yield ids
     finally:
         with get_session_factory()() as session:
-            session.execute(delete(AiUsage).where(AiUsage.model == "spend-ceiling-test"))
+            session.execute(
+                delete(AiUsage).where(
+                    or_(AiUsage.model == "spend-ceiling-test", AiUsage.user_id.in_(ids))
+                )
+            )
             session.execute(delete(User).where(User.id.in_(ids)))
             session.commit()
 
@@ -211,6 +223,173 @@ def test_the_rate_limit_is_answered_before_a_ceiling(
 
     assert response.status_code == 429
     assert "plans an hour" in response.json()["detail"]
+
+
+# --- Before each call ---------------------------------------------------------------------
+
+PLAN = json.dumps(
+    {
+        "items": [
+            {
+                "title": "Ler o capítulo de JOINs",
+                "description": "",
+                "estimated_minutes": 45,
+                "depends_on": [],
+                "links": [],
+            }
+        ]
+    }
+)
+# Too long for any block: the first answer needs a repair.
+NEEDS_A_REPAIR = PLAN.replace('"estimated_minutes": 45', '"estimated_minutes": 999')
+
+
+class _Paid(FakeGenerator):
+    """A paid model as the price table names one, answering from a script."""
+
+    provider = "anthropic"
+    model = "claude-haiku-5-5"
+
+    def __init__(self, answers: list[str], *, output_tokens: int = 500) -> None:
+        super().__init__(answers)
+        self._output_tokens = output_tokens
+
+    def generate(self, prompt: PlanPrompt, *, repair: Repair | None = None) -> Generation:
+        answer = super().generate(prompt, repair=repair)
+        return Generation(
+            raw=answer.raw,
+            model=answer.model,
+            input_tokens=1000,
+            output_tokens=self._output_tokens,
+        )
+
+
+def _claimed(person: uuid.UUID) -> uuid.UUID:
+    with get_session_factory()() as session:
+        job = enqueue_plan(session, person, REQUEST, horizon_days=7)
+        session.commit()
+        session.execute(
+            update(AiJob)
+            .where(AiJob.id == job.id)
+            .values(status="running", attempts=1, locked_until=func.now() + VISIBILITY_TIMEOUT)
+        )
+        session.commit()
+        return job.id
+
+
+def _run(
+    job_id: uuid.UUID, generator: FakeGenerator, ceilings: Ceilings = DEFAULT_CEILINGS
+) -> Outcome:
+    return run_plan_job(get_session_factory(), generator, job_id, attempt=1, ceilings=ceilings)
+
+
+def _job(job_id: uuid.UUID) -> AiJob:
+    with get_session_factory()() as session:
+        return session.get_one(AiJob, job_id)
+
+
+def _usage(job_id: uuid.UUID) -> list[AiUsage]:
+    with get_session_factory()() as session:
+        statement = select(AiUsage).where(AiUsage.job_id == job_id).order_by(AiUsage.position)
+        return list(session.scalars(statement).all())
+
+
+def test_a_job_whose_person_has_spent_the_month_fails_without_a_call(
+    people: list[uuid.UUID],
+) -> None:
+    """Spent while the job waited: failed with the sentence, not left to be tried again."""
+    job_id = _claimed(people[0])
+    _spent(people[0], "0.50")
+    model = _Paid([PLAN])
+
+    assert _run(job_id, model) is Outcome.FAILED
+
+    assert _job(job_id).failure_reason == AllowanceSpentError.sentence
+    assert (model.calls, _usage(job_id)) == ([], [])
+
+
+def test_a_paid_call_is_not_made_when_its_estimate_would_cross_the_ceiling(
+    people: list[uuid.UUID],
+) -> None:
+    """US$ 0.499 spent leaves less than any paid call's estimate: the answer's cap alone,
+    4,096 tokens at Haiku's price, is US$ 0.002."""
+    job_id = _claimed(people[0])
+    _spent(people[0], "0.499")
+    model = _Paid([PLAN])
+
+    assert _run(job_id, model) is Outcome.FAILED
+    assert model.calls == []
+
+
+def test_a_free_call_with_the_same_month_left_is_made(people: list[uuid.UUID]) -> None:
+    job_id = _claimed(people[0])
+    _spent(people[0], "0.499")
+
+    assert _run(job_id, FakeGenerator([PLAN])) is Outcome.DONE
+
+
+def test_a_repair_the_ceiling_refuses_fails_the_job_and_keeps_the_first_call_counted(
+    people: list[uuid.UUID],
+) -> None:
+    """The first call is admitted and costs US$ 0.0251; with it the month passes the ceiling,
+    so the repair is refused before it is made (ADR-0044)."""
+    job_id = _claimed(people[0])
+    _spent(people[0], "0.49")
+    model = _Paid([NEEDS_A_REPAIR, PLAN], output_tokens=50_000)
+
+    assert _run(job_id, model) is Outcome.FAILED
+
+    assert len(model.calls) == 1
+    assert _job(job_id).failure_reason == AllowanceSpentError.sentence
+    [first] = _usage(job_id)
+    assert (first.position, first.outcome, first.cost_usd) == (0, "completed", Decimal("0.0251"))
+
+
+def test_a_paid_call_that_raises_is_charged_at_its_estimate(people: list[uuid.UUID]) -> None:
+    job_id = _claimed(people[0])
+
+    with pytest.raises(RuntimeError, match="not scripted"):
+        _run(job_id, _Paid([]))
+
+    [call] = _usage(job_id)
+    assert call.outcome == "failed"
+    assert call.cost_usd is not None
+    assert call.cost_usd >= cost_of(
+        "anthropic", "claude-haiku-5-5", input_tokens=0, output_tokens=MAX_ANSWER_TOKENS
+    )
+
+
+def test_the_kill_switch_stops_a_job_queued_before_it_tripped(
+    people: list[uuid.UUID],
+) -> None:
+    job_id = _claimed(people[0])
+    ceilings = Ceilings(per_person=Decimal("0.50"), everyone=_everyone_spent() + Decimal("0.01"))
+    _spent(people[1], "0.01")
+    model = _Paid([PLAN])
+
+    assert _run(job_id, model, ceilings) is Outcome.FAILED
+
+    assert _job(job_id).failure_reason == PlanningPausedError.sentence
+    assert model.calls == []
+
+
+def test_the_worker_holds_its_jobs_to_the_ceilings_it_was_given(
+    people: list[uuid.UUID],
+) -> None:
+    with get_session_factory()() as session:
+        job_id = enqueue_plan(session, people[0], REQUEST, horizon_days=7).id
+        session.commit()
+    _spent(people[0], "0.01")
+    worker = Worker(
+        get_session_factory(),
+        FakeGenerator([PLAN]),
+        listen_url=listen_url(get_settings().database_url),
+        ceilings=Ceilings(per_person=Decimal("0.01"), everyone=Decimal(1000)),
+    )
+
+    worker.tick()
+
+    assert _job(job_id).failure_reason == AllowanceSpentError.sentence
 
 
 # --- The indexes ---------------------------------------------------------------------------

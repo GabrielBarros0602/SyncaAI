@@ -226,7 +226,8 @@ def test_a_call_that_raises_is_counted_and_the_job_left_to_its_lock(person: uuid
         assert session.get_one(AiJob, job_id).status == "running"
         [call] = _usage(session, job_id)
     assert (call.outcome, call.error, call.model) == ("failed", "RuntimeError", "fake")
-    assert (call.input_tokens, call.output_tokens, call.cost_usd) == (None, None, None)
+    # Charged at its estimate, which for a free model is nothing (ADR-0044).
+    assert (call.input_tokens, call.output_tokens, call.cost_usd) == (None, None, 0)
 
 
 def test_a_worse_repair_leaves_the_first_answer_and_its_discards(person: uuid.UUID) -> None:
