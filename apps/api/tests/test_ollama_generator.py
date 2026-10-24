@@ -1,4 +1,4 @@
-"""The local model generator (ADR-0039), with no model running.
+"""The local model generator (ADR-0039, ADR-0040), with no model running.
 
 The transport is injected, so the request is read exactly as Ollama would receive it, and one
 test sends it over real HTTP to a server on this machine, so the standard-library client is
@@ -69,6 +69,7 @@ def test_the_request_holds_the_answer_to_the_contract_s_schema() -> None:
     assert body["model"] == "local-model:8b"
     assert body["format"] == response_schema()
     assert body["stream"] is False
+    assert body["think"] is False
     assert body["options"] == {"temperature": 0}
     assert body["messages"] == [
         {"role": "system", "content": PROMPT.instructions},

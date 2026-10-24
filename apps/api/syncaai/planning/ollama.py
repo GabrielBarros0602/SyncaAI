@@ -2,7 +2,8 @@
 
 Ollama runs the model locally and holds its answer to a JSON schema passed as ``format``. That
 is structured output here: the schema is the contract's own (ADR-0005), so the answer arrives
-in the shape the ladder parses, and nothing leaves the machine.
+in the shape the ladder parses, and nothing leaves the machine. What else a call sets was
+measured against a real model before it was set (ADR-0040).
 
 Spoken to with the standard library. One JSON request per call is all there is, and the
 transport is injected, so a client dependency would buy nothing a test cannot already see.
@@ -72,6 +73,9 @@ class OllamaGenerator:
             "messages": messages,
             "format": response_schema(),
             "stream": False,
+            # A model that reasons first spent each call's fifty seconds doing it and answered
+            # nothing; without it, every request measured became a plan (ADR-0040).
+            "think": False,
             # Reproducible answers make a captured fixture worth comparing against.
             "options": {"temperature": 0},
         }
