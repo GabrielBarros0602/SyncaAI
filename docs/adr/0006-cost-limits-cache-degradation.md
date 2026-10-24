@@ -4,7 +4,9 @@
 [ADR-0041](0041-every-call-is-metered-when-it-ends.md), the rate limiting by
 [ADR-0042](0042-plan-requests-are-limited-over-moving-windows-of-jobs.md), the spend cap's
 values, checks and estimate by
-[ADR-0044](0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md)
+[ADR-0044](0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md), the
+cache deferred until measured by
+[ADR-0045](0045-no-response-cache-until-one-is-measured-to-pay.md)
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 
