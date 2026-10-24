@@ -516,7 +516,14 @@ quais 5,6 GB na GPU e o resto na CPU) contra o `qwen3.5:4b`:
 O salto de 4b para 9b não muda a natureza dos planos. Quanto um modelo hospedado muda continua
 sem medida.
 
-### Aberto pelas golden fixtures — 2026-10-24
+### Aberto pelas golden fixtures — 2026-10-24 — ✅ decidido no mesmo dia (ADR-0049)
+
+**Decidido:** dependência de um passo em si mesmo é descartada, e o passo fica. Recapturado
+com a regra nova, o lote foi a **1 reparo em 20 (5%)** e **nenhum passo descartado** em 151.
+Ficou também à vista que o modelo não se repete byte a byte entre execuções, mesmo com
+temperatura 0: cinco das vinte primeiras respostas mudaram. Por isso um rótulo descreve a
+resposta guardada, nunca uma execução que se espera repetir. O que segue é o registro da
+primeira medição.
 
 O primeiro lote do `scripts/capture_golden.py` (ADR-0048): vinte pedidos sintéticos, pelo
 `qwen3.5:4b` e pelo gerador da ADR-0040, contra uma semana sintética. É a primeira medição que
