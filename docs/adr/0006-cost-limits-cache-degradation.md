@@ -6,7 +6,8 @@
 values, checks and estimate by
 [ADR-0044](0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md), the
 cache deferred until measured by
-[ADR-0045](0045-no-response-cache-until-one-is-measured-to-pay.md)
+[ADR-0045](0045-no-response-cache-until-one-is-measured-to-pay.md), the circuit breaker by
+[ADR-0046](0046-the-circuit-breaker-is-read-from-the-calls-themselves.md)
 **Date:** 2026-08-06
 **Deciders:** Gabriel Barros
 
