@@ -391,13 +391,17 @@ de "nenhum projeto com testes automatizados publicados".
 - [x] Tabela `ai_usage` escrita em toda chamada, concluída ou não, quando ela termina: tokens
       de entrada e saída, custo calculado de `prices.toml`, latência, modelo,
       `prompt_version`, id do job → [ADR-0041](adr/0041-every-call-is-metered-when-it-ends.md)
-- [ ] Estimativa de custo **antes** da chamada; recusa se a estimativa estoura o teto
+- [x] Estimativa de custo **antes** da chamada, por limite (texto do código a 2 caracteres
+      por token, texto de pessoa ou modelo pelos bytes, resposta no teto); o worker não chama
+      se a estimativa estoura um teto, e a chamada que falha é cobrada por ela
+      → [ADR-0044](adr/0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md)
 - [x] Rate limit por usuário, duas janelas móveis: 10 em qualquer hora e 30 em quaisquer 24
       horas, contadas nos próprios jobs; só pedido que vira job gasta; `429` com `Retry-After`
       → [ADR-0042](adr/0042-plan-requests-are-limited-over-moving-windows-of-jobs.md)
-- [ ] Teto mensal por usuário
-- [ ] Kill switch global de gasto — é este que protege a conta bancária, porque a falha
-      realista é um bug no próprio front-end em loop
+- [x] Teto mensal por usuário: US$ 0,50 por mês UTC, `429` com `Retry-After` até virar o mês
+      (ADR-0044)
+- [x] Kill switch global de gasto — é este que protege a conta bancária, porque a falha
+      realista é um bug no próprio front-end em loop: US$ 5 por mês UTC, `503` (ADR-0044)
 - [ ] Cache com chave incluindo `prompt_version` e `context_fingerprint` (ADR-0006, ADR-0034)
 - [ ] **Teste de integração que prova a ordem** `rate limit → cache → teto`: especificamente,
       um cache hit é servido mesmo com o usuário acima do teto
