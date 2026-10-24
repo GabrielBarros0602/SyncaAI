@@ -103,6 +103,70 @@ afastar do agora). A decisão 1 é a versão que resolve o exemplo.
 
 ---
 
+## Auditoria de 2026-10-24 — antes do S8
+
+Uma varredura do código e dos ADRs ao fim do S7, procurando só o que ameaça a integridade
+dos dados, a segurança ou as premissas do S8. A autenticação, as restrições do banco, os
+travamentos dos caminhos concorrentes e os testes de integração passaram. Saíram dois achados
+de gravidade alta, decididos no mesmo dia, e os de gravidade média abaixo, abertos e em ordem.
+Nada aqui depende do redesign.
+
+### Alta 1 — um plano só era encontrado por quem já tinha o id — ✅ decidido no mesmo dia (ADR-0050)
+
+O `job_id` só aparecia na resposta do `POST /ai/plans`, e o `plan_id` só no job. Um reload,
+outra aba ou outro aparelho perdiam os dois, e com eles o acompanhamento, a revisão e o
+descarte. O 409 de um plano por vez não diz qual é o plano, então a pessoa ficava sem poder
+pedir outro até o rascunho expirar, em até 14 dias. O "3 of 5" do S8 também não tinha de onde
+ler.
+
+**Decidido:** `GET /ai/plans` e `GET /plans`, paginados e filtráveis por status, com o status
+lido, não o gravado; `progress` no plano aprovado, contado no servidor; `plan_id` na tarefa.
+
+### Alta 2 — a semana lê uma página só — ✅ decidido no mesmo dia: a semana pagina
+
+`useWeek.ts` pede `/tasks` com `limit=100` e nunca pede a página seguinte. A paginação é por
+offset (ADR-0020), e uma página cheia já diz que pode haver mais: quem não perguntava era o
+cliente. Numa janela de 8 dias com mais de 100 tarefas, as que passam somem sem aviso, enquanto
+a capacidade, lida do servidor, conta todas. Cada commit de plano cria até 12 tarefas de uma
+vez, o que aproxima o corte justamente no S8.
+
+**Decidido:** a semana pede o offset seguinte até uma página vir incompleta, sem repetir id.
+O ADR-0020 fica como está. A ordem é total, `(start_at, id)`, então nenhuma tarefa cai entre
+duas páginas por empate. As páginas são lidas em instantes diferentes, e uma tarefa apagada em
+outro aparelho entre duas delas pode esconder outra até o próximo refetch; isso foi aceito.
+Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
+
+### Média, abertos
+
+1. **Um plano cujo último dia terminou segura a vaga até a varredura.** A leitura já diz
+   `expired`, mas `any_pending` e `ux_plan_drafts_one_pending` leem o status gravado: pedir
+   outro plano recusa, e descartar também (`_pending`). Com o worker de pé, dura um tick; sem
+   ele, um plano escrito à mão (ADR-0047), que não precisa de worker, nunca libera.
+2. **Duas tarefas criadas ao mesmo tempo com a mesma etiqueta nova dão 500.**
+   `get_or_create` lê e depois insere, sem tratar a violação de `(user_id, name)`. O índice
+   mantém a integridade; quem perde a corrida recebe erro de servidor em vez da etiqueta.
+3. **Dois itens de checklist adicionados ao mesmo tempo disputam a mesma posição.** A posição
+   é `len(task.items)`, lida sem trava; a unique adiada barra o segundo só no commit, como
+   erro de servidor.
+4. **`alembic check` não enxerga trigger, a expressão de uma exclusion constraint nem o
+   predicado de um índice parcial.** Mudar um deles no modelo sem migration passa no check, e
+   os testes de DDL leem o modelo, não o banco. Os testes de integração rodam sobre o banco
+   migrado, mas só pegam o que exercitam.
+5. **Os testes rodam no banco de desenvolvimento.** `get_session` e os testes leem o
+   `DATABASE_URL` do ambiente; o `syncaai_test` do `conftest.py` não chega à sessão. Um teste
+   que roda o worker pode pegar um job deixado ali para validação manual.
+6. **Um teste de sobreposição aceita qualquer `IntegrityError`**
+   (`test_task_persistence.py`), e passaria também se a falha viesse de outra restrição. Os
+   testes de endpoint já distinguem `ex_tasks_no_overlap_per_user` de qualquer outra.
+7. **A semana começa na segunda-feira do navegador** (`mondayOf(new Date())`), não na do fuso
+   da pessoa. Em viagem, a tela e `/capacity` podem discordar sobre que semana é esta. É
+   front, e espera o descongelamento.
+8. **O CLAUDE.md diz que os testes de integração pulam sem banco.** Eles falham com erro de
+   conexão. O risco que o texto descreve, um verde sem integração, não acontece; o texto é
+   que está errado.
+
+---
+
 ## Rodada 1 — o que estava errado
 
 ### 1.1 O link de verificação não abria nada — ✅ concluído
