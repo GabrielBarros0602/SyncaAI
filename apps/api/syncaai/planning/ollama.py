@@ -32,6 +32,10 @@ TIMEOUT_SECONDS = 50.0
 CONTEXT_TOKENS = 16384
 ANSWER_TOKENS = 4096
 
+# ``format`` holds the answer to the schema's shape without showing the model its
+# descriptions, which are where a link's URL is said to be absolute (ADR-0040).
+SCHEMA_NOTE = "\nAnswer with JSON matching this schema:\n"
+
 
 def post_json(url: str, body: Mapping[str, Any], timeout: float) -> Mapping[str, Any]:
     """POST ``body`` as JSON and read the JSON answer."""
@@ -61,12 +65,14 @@ class OllamaGenerator:
         self._model = model
         self._post = post
         self._timeout = timeout
+        self._schema = response_schema()
+        self._schema_note = SCHEMA_NOTE + json.dumps(self._schema)
 
     def generate(self, prompt: PlanPrompt, *, repair: Repair | None = None) -> Generation:
         """One call. A repair continues the conversation: the first answer as the model's own
         turn, then the correction asked for (ADR-0035)."""
         messages = [
-            {"role": "system", "content": prompt.instructions},
+            {"role": "system", "content": prompt.instructions + self._schema_note},
             {"role": "user", "content": prompt.message},
         ]
         if repair is not None:
@@ -77,7 +83,7 @@ class OllamaGenerator:
         body = {
             "model": self._model,
             "messages": messages,
-            "format": response_schema(),
+            "format": self._schema,
             "stream": False,
             # A model that reasons first spent each call's fifty seconds doing it and answered
             # nothing; without it, every request measured became a plan (ADR-0040).

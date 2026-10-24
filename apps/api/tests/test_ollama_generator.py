@@ -34,6 +34,7 @@ from syncaai.planning.ladder import run_ladder
 from syncaai.planning.ollama import (
     ANSWER_TOKENS,
     CONTEXT_TOKENS,
+    SCHEMA_NOTE,
     TIMEOUT_SECONDS,
     OllamaGenerator,
     post_json,
@@ -79,7 +80,9 @@ def _generator(post: _Recorder) -> OllamaGenerator:
     return OllamaGenerator(base_url="http://localhost:11434/", model="local-model:8b", post=post)
 
 
-def test_the_request_holds_the_answer_to_the_contract_s_schema() -> None:
+def test_the_request_holds_the_answer_to_the_schema_and_shows_the_schema_to_the_model() -> None:
+    """``format`` holds the shape; the descriptions reach the model only through its
+    instructions. Each setting here was measured against a real model first (ADR-0040)."""
     post = _Recorder()
 
     _generator(post).generate(PROMPT)
@@ -97,7 +100,10 @@ def test_the_request_holds_the_answer_to_the_contract_s_schema() -> None:
         "num_predict": ANSWER_TOKENS,
     }
     assert body["messages"] == [
-        {"role": "system", "content": PROMPT.instructions},
+        {
+            "role": "system",
+            "content": PROMPT.instructions + SCHEMA_NOTE + json.dumps(response_schema()),
+        },
         {"role": "user", "content": PROMPT.message},
     ]
 
