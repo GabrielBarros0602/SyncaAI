@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, time
+from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
@@ -35,6 +36,7 @@ from sqlalchemy import (
     Index,
     Integer,
     MetaData,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -564,6 +566,72 @@ class AiJobAnswer(Base):
     )
 
     job: Mapped[AiJob] = relationship(back_populates="answers")
+
+
+class AiUsage(Base):
+    """One call to a model, written when it ends, whether it answered or not (ADR-0041).
+
+    Numbers only, no request and no answer, so it is not content the thirty-day purge is
+    for, and it outlives the account: the person and the job are nulled, and the month's
+    spend stays counted for the ceilings of ADR-0006.
+    """
+
+    __tablename__ = "ai_usage"
+    __table_args__ = (
+        CheckConstraint("outcome IN ('completed', 'failed')", name="outcome"),
+        CheckConstraint(f"attempt BETWEEN 1 AND {MAX_JOB_ATTEMPTS}", name="attempt"),
+        CheckConstraint("position IN (0, 1)", name="position"),
+        CheckConstraint(
+            "outcome <> 'completed' OR (input_tokens IS NOT NULL AND output_tokens IS NOT NULL"
+            " AND cost_usd IS NOT NULL)",
+            name="measured_when_completed",
+        ),
+        # The cost of a failed call stays open: it is charged at its estimate once one
+        # exists (ADR-0041).
+        CheckConstraint(
+            "outcome <> 'failed' OR (input_tokens IS NULL AND output_tokens IS NULL)",
+            name="no_tokens_when_failed",
+        ),
+        CheckConstraint("(outcome = 'failed') = (error IS NOT NULL)", name="error_when_failed"),
+        CheckConstraint(
+            "input_tokens >= 0 AND output_tokens >= 0 AND cost_usd >= 0 AND latency_ms >= 0",
+            name="not_negative",
+        ),
+        # A person's month, for their ceiling, and the null set when their account goes.
+        Index("ix_ai_usage_user_id_created_at", "user_id", "created_at"),
+        # Every person's month, for the kill switch.
+        Index("ix_ai_usage_created_at", "created_at"),
+        # A plan's calls, and the null set when its job goes.
+        Index("ix_ai_usage_job_id", "job_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("ai_jobs.id", ondelete="SET NULL"), nullable=True
+    )
+    #: The claim the call was made under, as ``ai_jobs.attempts`` counted it.
+    attempt: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    #: 0 for the answer, 1 for its repair, as in ``ai_job_answers``.
+    position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: The model that answered; for a failed call, the one that was asked.
+    model: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: The error's type, never its message: a message can carry whatever the call was sent.
+    error: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: US dollars, from ``prices.toml`` when the row was written.
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 8), nullable=True)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: When the call ended: the month a ceiling counts it in.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class PlanDraft(Base, TimestampMixin):
