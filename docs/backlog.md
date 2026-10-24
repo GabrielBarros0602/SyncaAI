@@ -515,3 +515,29 @@ quais 5,6 GB na GPU e o resto na CPU) contra o `qwen3.5:4b`:
 
 O salto de 4b para 9b não muda a natureza dos planos. Quanto um modelo hospedado muda continua
 sem medida.
+
+### Aberto pelas golden fixtures — 2026-10-24
+
+O primeiro lote do `scripts/capture_golden.py` (ADR-0048): vinte pedidos sintéticos, pelo
+`qwen3.5:4b` e pelo gerador da ADR-0040, contra uma semana sintética. É a primeira medição que
+a ADR-0035 e a ADR-0039 esperavam.
+
+| | Medido |
+|---|---|
+| Pedidos que precisaram de reparo | 3 de 20 (15%) |
+| Passos descartados nos planos mantidos | 3 de 167 (1,8%) |
+| Reparos que ajudaram | 1 de 3 |
+
+- **O reparo só ajudou quando o erro era de tamanho.** O livro inteiro como um passo de 480
+  min num bloco de 60 virou doze capítulos de 60. Nos outros dois, um passo dependia de si
+  mesmo (`items[6]` depende de `items[6]`), e o reparo devolveu o mesmo erro — num deles,
+  palavra por palavra.
+- **A mensagem pode ser o motivo.** O reparo diz "it depends on items[6], which does not come
+  before it", correto, mas sem dizer que o passo aponta para si próprio. Opções a pesar:
+  uma razão própria para a autodependência ("it depends on itself"); descartar só a
+  dependência inválida e manter o passo, como já se faz com dependência de passo descartado
+  (ADR-0030); ou aceitar, já que o passo perdido é um entre seis ou onze. A primeira muda o
+  texto do reparo e pede recaptura das fixtures (ADR-0048); a segunda muda uma regra do
+  validador e pede uma ADR.
+- **Os limiares da ADR-0039** (reparo acima de 30%, descarte acima de 20%) eram para decidir
+  subir de modelo pago; o modelo local fica abaixo dos dois.

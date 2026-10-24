@@ -417,8 +417,10 @@ de "nenhum projeto com testes automatizados publicados".
       `POST /plans/{id}/items` acrescenta passo a qualquer plano pendente, posicionado pelo
       mesmo agendador; até 12 passos; sempre disponível
       → [ADR-0047](adr/0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)
-- [ ] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
-      local por ora, cada uma marcada com o modelo que a produziu (ADR-0039)
+- [x] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
+      local por ora, cada uma marcada com o modelo que a produziu (ADR-0039): oito, três
+      inválidas, capturadas por `scripts/capture_golden.py` e rotuladas à mão; o primeiro
+      lote mediu 15% de reparo → [ADR-0048](adr/0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md)
 - [ ] Alerta de orçamento do lado do provedor, abaixo do teto global: **aguarda a decisão
       de pagar**
 

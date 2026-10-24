@@ -1,0 +1,178 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "f9e5a68c81ca1597d7572a8cfe3fa6caa0fedc79752c0994c3e8eb0ff96261b5"
+  },
+  "request": "Learn enough SQL to pass a junior back-end interview",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 14,
+    "block_minutes": 60,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-11",
+        "free": [
+          [
+            "2031-06-11T22:00:00+00:00",
+            "2031-06-12T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-12",
+        "free": [
+          [
+            "2031-06-12T22:00:00+00:00",
+            "2031-06-13T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-13",
+        "free": [
+          [
+            "2031-06-13T22:00:00+00:00",
+            "2031-06-14T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-14",
+        "free": [
+          [
+            "2031-06-14T12:00:00+00:00",
+            "2031-06-14T15:00:00+00:00"
+          ],
+          [
+            "2031-06-14T17:00:00+00:00",
+            "2031-06-14T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-16",
+        "free": [
+          [
+            "2031-06-16T22:00:00+00:00",
+            "2031-06-17T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-17",
+        "free": [
+          [
+            "2031-06-17T22:00:00+00:00",
+            "2031-06-18T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Understand SQL Fundamentals\",\n      \"description\": \"Review basic concepts: data types, primary keys, foreign keys, and the difference between relational and non-relational databases.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"SQL Basics Tutorial\",\n          \"url\": \"https://www.w3schools.com/sql/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Master SELECT Queries\",\n      \"description\": \"Learn to filter, sort, and aggregate data using WHERE, ORDER BY, GROUP BY, and HAVING clauses.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"W3Schools SELECT Tutorial\",\n          \"url\": \"https://www.w3schools.com/sql/select.asp\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Learn JOIN Operations\",\n      \"description\": \"Practice INNER, LEFT, RIGHT, and FULL OUTER joins to combine data from multiple tables.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQL JOIN Guide\",\n          \"url\": \"https://www.w3schools.com/sql/sql_join.asp\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Master UPDATE and DELETE\",\n      \"description\": \"Learn safe data modification techniques, including the importance of WHERE clauses.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        2\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQL Update and Delete\",\n          \"url\": \"https://www.w3schools.com/sql/sql_update.asp\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Create and Manage Tables\",\n      \"description\": \"Understand CREATE TABLE syntax, constraints (NOT NULL, UNIQUE), and ALTER TABLE operations.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        3\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQL Create Table\",\n          \"url\": \"https://www.w3schools.com/sql/sql_create_table.asp\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Indexing and Performance\",\n      \"description\": \"Learn how indexes work, when to use them, and basic query optimization strategies.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        4\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQL Indexes Explained\",\n          \"url\": \"https://www.w3schools.com/sql/sql_indexes.asp\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Introduction to Stored Procedures\",\n      \"description\": \"Understand the basics of creating and executing stored procedures for complex logic.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        5\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQL Stored Procedures\",\n          \"url\": \"https://www.w3schools.com/sql/sql_stored_procedures.asp\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Practice with a Real Database\",\n      \"description\": \"Set up a local environment (e.g., SQLite or MySQL) and practice writing queries on sample datasets.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n        6\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQLite Documentation\",\n          \"url\": \"https://www.sqlite.org/docs.html\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Review Common Interview Questions\",\n      \"description\": \"Study top 20 SQL interview questions focusing on complex joins, subqueries, and window functions.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n        7\n      ],\n      \"links\": [\n        {\n          \"label\": \"Top SQL Interview Questions\",\n          \"url\": \"https://www.geeksforgeeks.org/top-20-sql-interview-questions/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Simulate a Junior Backend Interview\",\n      \"description\": \"Mock an interview focusing on SQL problem-solving, explaining your approach, and writing clean code.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n        8\n      ],\n      \"links\": [\n        {\n          \"label\": \"SQL Interview Prep\",\n          \"url\": \"https://www.interviewbit.com/sql-interview-questions/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Final Review and Gap Analysis\",\n      \"description\": \"Review weak areas identified during the mock interview and fill any remaining knowledge gaps.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        9\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1503,
+      "output_tokens": 1172
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {}
+      }
+    ],
+    "chosen": 0,
+    "note": "Valid, in English, nearly every step linked. The links are the model's; nothing fetches them."
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "a87a68f9c5f69b05c0f9787044f36b535ad1c89935c40c609824e5f6307fe498"
+  },
+  "request": "Planejar uma viagem de três dias para Ouro Preto",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 7,
+    "block_minutes": 60,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Definir datas e roteiro da viagem\",\n      \"description\": \"Escolher as três noites em que ficará em Ouro Preto e traçar o caminho entre cidades.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Guia de viagens do Brasil\",\n          \"url\": \"https://www.brasilviagens.com/guia\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Reservar hotéis em Ouro Preto\",\n      \"description\": \"Comparar preços e reservar acomodações para as três noites escolhidas.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"Booking.com - Ouro Preto\",\n          \"url\": \"https://www.booking.com/destinations/location/ouro-preto\"\n        },\n        {\n          \"label\": \"Agoda - Minas Gerais\",\n          \"url\": \"https://www.agoda.com/minas-gerais\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Comprar passagens aéreas ou de ônibus\",\n      \"description\": \"Verificar rotas para chegar a Ouro Preto e reservar o transporte.\",\n      \"estimated_minutes\": 40,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"Google Flights\",\n          \"url\": \"https://www.google.com/flights\"\n        },\n        {\n          \"label\": \"BusPass - Minas Gerais\",\n          \"url\": \"https://www.buspass.com.br\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Planejar roteiro de visitas diárias\",\n      \"description\": \"Selecionar os principais pontos turísticos para cada dia da viagem.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1,\n        2\n      ],\n      \"links\": [\n        {\n          \"label\": \"Turismo de Minas Gerais\",\n          \"url\": \"https://www.turismominas.gov.br\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Reservar entradas para atrações principais\",\n      \"description\": \"Comprar ingressos antecipados para igrejas, museus e cachoeiras.\",\n      \"estimated_minutes\": 35,\n      \"depends_on\": [\n        3\n      ],\n      \"links\": [\n        {\n          \"label\": \"Entradas Ouro Preto\",\n          \"url\": \"https://www.ouropreto.com.br/entradas\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Organizar malas e documentação\",\n      \"description\": \"Pacotar roupas, documentos de identidade e itens essenciais.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        4\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Confirmar reservas finais\",\n      \"description\": \"Revisar todas as confirmações de hotel, transporte e entradas.\",\n      \"estimated_minutes\": 25,\n      \"depends_on\": [\n        5,\n        6\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1164,
+      "output_tokens": 767
+    },
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Definir datas e roteiro da viagem\",\n      \"description\": \"Escolher as três noites em que ficará em Ouro Preto e traçar o caminho entre cidades.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Guia de viagens do Brasil\",\n          \"url\": \"https://www.brasilviagens.com/guia\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Reservar hotéis em Ouro Preto\",\n      \"description\": \"Comparar preços e reservar acomodações para as três noites escolhidas.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"Booking.com - Ouro Preto\",\n          \"url\": \"https://www.booking.com/destinations/location/ouro-preto\"\n        },\n        {\n          \"label\": \"Agoda - Minas Gerais\",\n          \"url\": \"https://www.agoda.com/minas-gerais\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Comprar passagens aéreas ou de ônibus\",\n      \"description\": \"Verificar rotas para chegar a Ouro Preto e reservar o transporte.\",\n      \"estimated_minutes\": 40,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"Google Flights\",\n          \"url\": \"https://www.google.com/flights\"\n        },\n        {\n          \"label\": \"BusPass - Minas Gerais\",\n          \"url\": \"https://www.buspass.com.br\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Planejar roteiro de visitas diárias\",\n      \"description\": \"Selecionar os principais pontos turísticos para cada dia da viagem.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1,\n        2\n      ],\n      \"links\": [\n        {\n          \"label\": \"Turismo de Minas Gerais\",\n          \"url\": \"https://www.turismominas.gov.br\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Reservar entradas para atrações principais\",\n      \"description\": \"Comprar ingressos antecipados para igrejas, museus e cachoeiras.\",\n      \"estimated_minutes\": 35,\n      \"depends_on\": [\n        3\n      ],\n      \"links\": [\n        {\n          \"label\": \"Entradas Ouro Preto\",\n          \"url\": \"https://www.ouropreto.com.br/entradas\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Organizar malas e documentação\",\n      \"description\": \"Pacotar roupas, documentos de identidade e itens essenciais.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        4\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Confirmar reservas finais\",\n      \"description\": \"Revisar todas as confirmações de hotel, transporte e entradas.\",\n      \"estimated_minutes\": 25,\n      \"depends_on\": [\n        5,\n        6\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 2007,
+      "output_tokens": 766
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {
+          "6": "it depends on items[6]"
+        }
+      },
+      {
+        "parses": true,
+        "discarded": {
+          "6": "it depends on items[6]"
+        }
+      }
+    ],
+    "chosen": 1,
+    "note": "Step 6 lists itself among its prerequisites. The repair sent the same answer back, word for word; the tie goes to the repair (ADR-0035)."
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "881516f884c5569ffc231b87a396e7a8e94dc727c76337dc78221e4d3b88f35d"
+  },
+  "request": "Aprender os acordes básicos de violão",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 7,
+    "block_minutes": 30,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Entender a escala cromática e o padrão de afinação\",\n      \"description\": \"Aprenda como as notas se organizam na escala cromática e verifique sua afinação inicial (E-A-D-G-B-E).\",\n      \"estimated_minutes\": 15,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Guia de Afinação Padrão\",\n          \"url\": \"https://www.stratfordmusic.com/lessons/how-to-tune-your-guitar\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Aprender os acordes básicos: Maior e Menor\",\n      \"description\": \"Estude as formas de dedos para os acordes mais fundamentais: C, D, E, G, A, Fm, Bm.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n      ],\n      \"links\": [\n        {\n          \"label\": \"Acordes Básicos para Iniciantes\",\n          \"url\": \"https://www.guitaristuniversity.com/lessons/guitar-basics/chords/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Praticar transições suaves entre acordes\",\n      \"description\": \"Exercite a troca rápida e fluida entre pares de acordes, como C para G ou D para A.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        1\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Introduzir a escala menor natural\",\n      \"description\": \"Compreenda a diferença entre a escala maior e menor e aprenda como formar acordes na escala menor.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        2\n      ],\n      \"links\": [\n        {\n          \"label\": \"Escala Menor Natural\",\n          \"url\": \"https://www.musictheory.net/scales/minor_scale.html\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Estudar acordes de sétima e suspensores básicos\",\n      \"description\": \"Explore variações como acordes com sétima (C7, G13) e suspensores (Csus4) para expandir seu vocabulário.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        3\n      ],\n      \"links\": [\n        {\n          \"label\": \"Acordes de Sétima\",\n          \"url\": \"https://www.guitaristuniversity.com/lessons/guitar-basics/chords/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Criar uma progressão simples e tocá-la\",\n      \"description\": \"Escolha uma progressão comum (ex: I-V-vi-IV) e toque-a repetidamente para ganhar confiança.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        4\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Aprender a mudar de corda e o uso do mímulo\",\n      \"description\": \"Entenda como alternar entre cordas e use o mímulo para criar vozes mais ricas.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        5\n      ],\n      \"links\": [\n        {\n          \"label\": \"Guia de Mímulo\",\n          \"url\": \"https://www.guitaristuniversity.com/lessons/guitar-basics/muting/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Praticar uma canção simples com os acordes aprendidos\",\n      \"description\": \"Tente tocar uma música conhecida usando apenas os acordes básicos estudados.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        6\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Revisar e consolidar o conhecimento\",\n      \"description\": \"Faça um teste mental dos acordes e suas transições para garantir que tudo esteja memorizado.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        7\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1164,
+      "output_tokens": 992
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {}
+      }
+    ],
+    "chosen": 0,
+    "note": "Valid at a 30-minute block. The content is shaky, which the contract cannot see: scales before chords, and 'mímulo', which is not a word."
+  }
+}

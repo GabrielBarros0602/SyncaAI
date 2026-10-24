@@ -1,0 +1,178 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "a573570b3703fed06724a48333b055d2e2713042a8d4a86afd82c7852ac7b82d"
+  },
+  "request": "Organizar a mudança de apartamento no fim do mês",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 14,
+    "block_minutes": 60,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-11",
+        "free": [
+          [
+            "2031-06-11T22:00:00+00:00",
+            "2031-06-12T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-12",
+        "free": [
+          [
+            "2031-06-12T22:00:00+00:00",
+            "2031-06-13T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-13",
+        "free": [
+          [
+            "2031-06-13T22:00:00+00:00",
+            "2031-06-14T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-14",
+        "free": [
+          [
+            "2031-06-14T12:00:00+00:00",
+            "2031-06-14T15:00:00+00:00"
+          ],
+          [
+            "2031-06-14T17:00:00+00:00",
+            "2031-06-14T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-16",
+        "free": [
+          [
+            "2031-06-16T22:00:00+00:00",
+            "2031-06-17T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-17",
+        "free": [
+          [
+            "2031-06-17T22:00:00+00:00",
+            "2031-06-18T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Criar lista de itens para mover\",\n      \"description\": \"Categorizar e listar todos os objetos, roupas e documentos que precisam ser transportados.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": []\n    },\n    {\n      \"title\": \"Medir dimensões do novo apartamento\",\n      \"description\": \"Verificar se a carga cabe nas novas salas e corredores para evitar problemas de transporte.\",\n      \"estimated_minutes\": 25,\n      \"depends_on\": [0],\n      \"links\": []\n    },\n    {\n      \"title\": \"Contratar empresa de mudança\",\n      \"description\": \"Solicitar orçamentos e selecionar uma empresa com boa reputação para o fim do mês.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [1],\n      \"links\": []\n    },\n    {\n      \"title\": \"Pacotar itens essenciais\",\n      \"description\": \"Empacotar roupas, eletrônicos e documentos em caixas adequadas para o transporte.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [2],\n      \"links\": []\n    },\n    {\n      \"title\": \"Agendar a mudança\",\n      \"description\": \"Confirmar a data exata e horário com a empresa de mudança selecionada.\",\n      \"estimated_minutes\": 20,\n      \"depends_on\": [3],\n      \"links\": []\n    },\n    {\n      \"title\": \"Notificar familiares e amigos\",\n      \"description\": \"Enviar avisos sobre o endereço novo e o período em que a casa estará vazia.\",\n      \"estimated_minutes\": 15,\n      \"depends_on\": [4],\n      \"links\": []\n    },\n    {\n      \"title\": \"Organizar documentos importantes\",\n      \"description\": \"Guardar cópias digitais de contratos e certificações em um local seguro antes da mudança.\",\n      \"estimated_minutes\": 20,\n      \"depends_on\": [5],\n      \"links\": []\n    },\n    {\n      \"title\": \"Preparar o novo apartamento\",\n      \"description\": \"Limpar e organizar as novas salas para receber a carga no dia da mudança.\",\n      \"estimated_minutes\": 40,\n      \"depends_on\": [6],\n      \"links\": []\n    },\n    {\n      \"title\": \"Executar a mudança\",\n      \"description\": \"Supervisionar o transporte dos itens e verificar a entrega no novo local.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [7],\n      \"links\": []\n    },\n    {\n      \"title\": \"Desmontar móveis antigos\",\n      \"description\": \"Separar e descartar ou doar móveis que não serão levados para o novo lugar.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [8],\n      \"links\": []\n    },\n    {\n      \"title\": \"Avaliar a experiência\",\n      \"description\": \"Registrar pontos positivos e negativos da mudança para melhorar o próximo planejamento.\",\n      \"estimated_minutes\": 15,\n      \"depends_on\": [9],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1503,
+      "output_tokens": 744
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {}
+      }
+    ],
+    "chosen": 0,
+    "note": "Valid by the contract. By meaning it is out of order: the old furniture is dismantled after the move. Only the review can catch that."
+  }
+}

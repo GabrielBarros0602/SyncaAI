@@ -1,0 +1,114 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "1a51fbda8c6b79c7164ad80b8c8304709a250306ba997ff5750ad1cd2992a7ca"
+  },
+  "request": "Cozinhar as marmitas da semana",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 7,
+    "block_minutes": 120,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Planejar o menu semanal\",\n      \"description\": \"Escolher 5 receitas de marmita variadas para a semana, considerando ingredientes disponíveis.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": []\n    },\n    {\n      \"title\": \"Fazer a lista de compras\",\n      \"description\": \"Listar todos os ingredientes necessários baseados no menu escolhido.\",\n      \"estimated_minutes\": 20,\n      \"depends_on\": [0],\n      \"links\": []\n    },\n    {\n      \"title\": \"Comprar ingredientes\",\n      \"description\": \"Visitar o supermercado e adquirir os itens da lista.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [1],\n      \"links\": []\n    },\n    {\n      \"title\": \"Preparar as marmitas (Dia 1)\",\n      \"description\": \"Cozinhar e empacotar a primeira porção de marmita para o dia seguinte.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [2],\n      \"links\": []\n    },\n    {\n      \"title\": \"Preparar as marmitas (Dia 2)\",\n      \"description\": \"Cozinhar e empacotar a segunda porção de marmita.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [3],\n      \"links\": []\n    },\n    {\n      \"title\": \"Preparar as marmitas (Dia 3)\",\n      \"description\": \"Cozinhar e empacotar a terceira porção de marmita.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [4],\n      \"links\": []\n    },\n    {\n      \"title\": \"Preparar as marmitas (Dia 4)\",\n      \"description\": \"Cozinhar e empacotar a quarta porção de marmita.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [5],\n      \"links\": []\n    },\n    {\n      \"title\": \"Preparar as marmitas (Dia 5)\",\n      \"description\": \"Cozinhar e empacotar a quinta porção de marmita.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [6],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1164,
+      "output_tokens": 559
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {}
+      }
+    ],
+    "chosen": 0,
+    "note": "Valid at a 120-minute block: five near-identical steps, one per day."
+  }
+}
