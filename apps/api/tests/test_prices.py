@@ -6,7 +6,6 @@ from decimal import Decimal
 import pytest
 
 from syncaai.planning.prices import (
-    FREE_PROVIDERS,
     Price,
     UnpricedModelError,
     cost_of,
@@ -46,12 +45,14 @@ def test_a_call_costs_its_tokens_at_the_model_s_price() -> None:
 def test_a_fraction_past_the_column_s_scale_is_rounded_up() -> None:
     """A ceiling that counts a little more refuses a little early; one that counts less
     does not refuse at all (ADR-0041)."""
-    table = {("p", "m"): Price(Decimal("0.075"), Decimal(0), date(2026, 1, 1))}
+    # 0.000000071: rounding to nearest would drop the fraction, and only up keeps it.
+    table = {("p", "m"): Price(Decimal("0.071"), Decimal(0), date(2026, 1, 1))}
 
     assert cost_of("p", "m", input_tokens=1, output_tokens=0, table=table) == Decimal("0.00000008")
 
 
-@pytest.mark.parametrize("provider", sorted(FREE_PROVIDERS))
+# Named here rather than read from FREE_PROVIDERS, which a test would then only agree with.
+@pytest.mark.parametrize("provider", ["sample", "ollama", "fake"])
 def test_what_runs_locally_costs_nothing_whatever_the_model(provider: str) -> None:
     assert cost_of(provider, "any-model", input_tokens=10**6, output_tokens=10**6) == 0
 
