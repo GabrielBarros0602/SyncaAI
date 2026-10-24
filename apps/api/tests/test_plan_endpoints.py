@@ -21,7 +21,7 @@ from sqlalchemy.exc import OperationalError
 from syncaai.api.dependencies import get_current_user_id
 from syncaai.db import get_session_factory
 from syncaai.errors import PlanNotPendingError
-from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task, User
+from syncaai.models import AiJob, AiUsage, PlanDraft, PlanDraftItem, Task, User
 from syncaai.planning.generator import FakeGenerator
 from syncaai.repositories.plans import PlanDraftRepository
 from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
@@ -76,6 +76,8 @@ def people() -> Iterator[list[uuid.UUID]]:
         yield ids
     finally:
         with get_session_factory()() as session:
+            # Usage outlives an account on purpose (ADR-0041), so it is deleted by hand.
+            session.execute(delete(AiUsage).where(AiUsage.user_id.in_(ids)))
             session.execute(delete(User).where(User.id.in_(ids)))
             session.commit()
 

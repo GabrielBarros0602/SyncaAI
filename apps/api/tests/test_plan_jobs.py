@@ -22,6 +22,7 @@ from syncaai.db import get_session_factory
 from syncaai.models import (
     AiJob,
     AiJobAnswer,
+    AiUsage,
     PlanDraft,
     PlanDraftDiscard,
     PlanDraftItem,
@@ -91,6 +92,8 @@ def person() -> Iterator[uuid.UUID]:
         yield user_id
     finally:
         with get_session_factory()() as session:
+            # Usage outlives an account on purpose (ADR-0041), so it is deleted by hand.
+            session.execute(delete(AiUsage).where(AiUsage.user_id == user_id))
             session.execute(delete(User).where(User.id == user_id))
             session.commit()
 
@@ -120,6 +123,11 @@ def _answers(session: Session, job_id: uuid.UUID) -> list[AiJobAnswer]:
     statement = (
         select(AiJobAnswer).where(AiJobAnswer.job_id == job_id).order_by(AiJobAnswer.position)
     )
+    return list(session.scalars(statement).all())
+
+
+def _usage(session: Session, job_id: uuid.UUID) -> list[AiUsage]:
+    statement = select(AiUsage).where(AiUsage.job_id == job_id).order_by(AiUsage.position)
     return list(session.scalars(statement).all())
 
 
@@ -181,6 +189,44 @@ def test_after_a_repair_both_answers_are_kept_and_the_better_one_used(
         assert repair.errors == []
         draft = _draft(session, job_id)
         assert draft is not None and len(draft.items) == 3 and draft.discards == []
+
+
+def test_every_call_a_job_makes_is_recorded_with_whose_it_was(person: uuid.UUID) -> None:
+    job_id = _claimed(person)
+
+    _run(job_id, FakeGenerator([TWO_OF_THREE, THREE_STEPS]))
+
+    with get_session_factory()() as session:
+        calls = _usage(session, job_id)
+    assert [(call.position, call.outcome) for call in calls] == [
+        (0, "completed"),
+        (1, "completed"),
+    ]
+    for call in calls:
+        assert (call.user_id, call.attempt, call.provider, call.model) == (
+            person,
+            1,
+            "fake",
+            "fake",
+        )
+        assert call.prompt_version == PROMPT_VERSION
+        assert (call.input_tokens, call.output_tokens, call.cost_usd) == (0, 0, 0)
+        assert call.latency_ms >= 0
+
+
+def test_a_call_that_raises_is_counted_and_the_job_left_to_its_lock(person: uuid.UUID) -> None:
+    """A provider can bill a call that failed here, so it is counted before the error goes on
+    to leave the job running for its lock to run out (ADR-0031, ADR-0041)."""
+    job_id = _claimed(person)
+
+    with pytest.raises(RuntimeError, match="not scripted"):
+        _run(job_id, FakeGenerator([]))
+
+    with get_session_factory()() as session:
+        assert session.get_one(AiJob, job_id).status == "running"
+        [call] = _usage(session, job_id)
+    assert (call.outcome, call.error, call.model) == ("failed", "RuntimeError", "fake")
+    assert (call.input_tokens, call.output_tokens, call.cost_usd) == (None, None, None)
 
 
 def test_a_worse_repair_leaves_the_first_answer_and_its_discards(person: uuid.UUID) -> None:
@@ -288,7 +334,11 @@ class _ReclaimedWhileAnswering(FakeGenerator):
         return super().generate(prompt, repair=repair)
 
 
-def test_a_worker_that_lost_its_job_writes_nothing(person: uuid.UUID) -> None:
+def test_a_worker_that_lost_its_job_keeps_nothing_but_the_call_it_made(
+    person: uuid.UUID,
+) -> None:
+    """The answer belongs to whoever holds the job now; the call was spent either way, and a
+    ceiling has to see it (ADR-0041)."""
     job_id = _claimed(person)
 
     outcome = _run(job_id, _ReclaimedWhileAnswering([THREE_STEPS], job_id))
@@ -299,6 +349,8 @@ def test_a_worker_that_lost_its_job_writes_nothing(person: uuid.UUID) -> None:
         assert (job.status, job.attempts) == ("running", 2)
         assert _answers(session, job_id) == []
         assert _draft(session, job_id) is None
+        [call] = _usage(session, job_id)
+        assert (call.attempt, call.outcome) == (1, "completed")
 
 
 def test_a_job_no_longer_running_is_not_started(person: uuid.UUID) -> None:

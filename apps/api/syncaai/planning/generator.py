@@ -37,6 +37,17 @@ class Generation:
 
 
 class PlanGenerator(Protocol):
+    @property
+    def provider(self) -> str:
+        """Who answers, as ``prices.toml`` names them (ADR-0041)."""
+        ...
+
+    @property
+    def model(self) -> str:
+        """The model asked for: what a failed call is recorded against, having no answer to
+        say which model gave it."""
+        ...
+
     def generate(self, prompt: PlanPrompt, *, repair: Repair | None = None) -> Generation:
         """One call. ``repair`` turns it into the correction of a previous answer."""
         ...
@@ -49,7 +60,8 @@ class FakeGenerator:
     script has made a call it did not expect, and saying so is the point.
     """
 
-    MODEL = "fake"
+    provider = "fake"
+    model = "fake"
 
     def __init__(self, answers: Iterable[str]) -> None:
         self._answers = list(answers)
@@ -61,7 +73,7 @@ class FakeGenerator:
             raise RuntimeError(f"call {len(self.calls)} was not scripted")
         return Generation(
             raw=self._answers[len(self.calls) - 1],
-            model=self.MODEL,
+            model=self.model,
             input_tokens=0,
             output_tokens=0,
         )
@@ -75,7 +87,8 @@ class SampleGenerator:
     No test that asserts what a model would do uses it: those script their answers.
     """
 
-    MODEL = "sample"
+    provider = "sample"
+    model = "sample"
 
     # ``repair`` is the interface's; an answer that always passes is never asked to repair.
     def generate(self, prompt: PlanPrompt, *, repair: Repair | None = None) -> Generation:  # noqa: ARG002
@@ -101,7 +114,7 @@ class SampleGenerator:
         ]
         return Generation(
             raw=json.dumps({"items": items}),
-            model=self.MODEL,
+            model=self.model,
             input_tokens=0,
             output_tokens=0,
         )

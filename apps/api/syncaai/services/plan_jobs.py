@@ -5,7 +5,8 @@ Three phases, and only the middle one talks to a model:
 1. **read**: the job, its owner, and the prompt built from their calendar. Nothing is
    written, and the transaction ends before the call.
 2. **ask**: the ladder, at most two calls, outside any transaction. A lock never spans a
-   network call (ADR-0031).
+   network call (ADR-0031). Each call's usage is committed on its own as the call ends, so
+   it is counted whatever happens to this attempt afterwards (ADR-0041).
 3. **write**: in one transaction, the answers and either the draft or the failure. The
    calendar is read again, because it may have changed while the model was answering, and
    the steps are placed against what is there now.
@@ -38,8 +39,10 @@ from syncaai.models import (
 from syncaai.planning.context import PlanPrompt
 from syncaai.planning.generator import PlanGenerator
 from syncaai.planning.ladder import LadderResult, run_ladder
+from syncaai.planning.metering import MeteredGenerator
 from syncaai.planning.scheduler import Step, schedule_this_week, week_end
 from syncaai.planning.validation import PlanReport
+from syncaai.services.ai_usage import usage_recorder
 from syncaai.services.plan_context import plan_prompt_for, plannable_days
 
 ONE_PENDING_DRAFT = "ux_plan_drafts_one_pending"
@@ -81,7 +84,15 @@ def run_plan_job(
         )
         block = user.preferred_block_minutes
 
-    result = run_ladder(generator, prompt, max_item_minutes=block)
+    record = usage_recorder(
+        factory,
+        user_id=user.id,
+        job_id=job_id,
+        attempt=attempt,
+        provider=generator.provider,
+        prompt_version=prompt.version,
+    )
+    result = run_ladder(MeteredGenerator(generator, record), prompt, max_item_minutes=block)
 
     with factory() as session, session.begin():
         locked = select(AiJob).where(AiJob.id == job_id).with_for_update()

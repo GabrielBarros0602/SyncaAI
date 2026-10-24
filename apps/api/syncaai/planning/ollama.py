@@ -53,6 +53,8 @@ def post_json(url: str, body: Mapping[str, Any], timeout: float) -> Mapping[str,
 
 
 class OllamaGenerator:
+    provider = "ollama"
+
     def __init__(
         self,
         *,
@@ -62,7 +64,7 @@ class OllamaGenerator:
         timeout: float = TIMEOUT_SECONDS,
     ) -> None:
         self._url = f"{base_url.rstrip('/')}/api/chat"
-        self._model = model
+        self.model = model
         self._post = post
         self._timeout = timeout
         self._schema = response_schema()
@@ -81,7 +83,7 @@ class OllamaGenerator:
                 {"role": "user", "content": repair.message},
             ]
         body = {
-            "model": self._model,
+            "model": self.model,
             "messages": messages,
             "format": self._schema,
             "stream": False,
@@ -98,7 +100,7 @@ class OllamaGenerator:
         answer = self._post(self._url, body, self._timeout)
         return Generation(
             raw=answer["message"]["content"],
-            model=answer.get("model", self._model),
+            model=answer.get("model", self.model),
             input_tokens=int(answer.get("prompt_eval_count", 0)),
             output_tokens=int(answer.get("eval_count", 0)),
         )
