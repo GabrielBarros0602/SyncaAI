@@ -1,0 +1,194 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "82e288a5dfd3dd9a68e941d0116cce18b461883aa1fbde5ab4ac1a2a01b4ec55"
+  },
+  "request": "Practice algorithms: arrays, hash maps and two pointers",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 14,
+    "block_minutes": 60,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-11",
+        "free": [
+          [
+            "2031-06-11T22:00:00+00:00",
+            "2031-06-12T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-12",
+        "free": [
+          [
+            "2031-06-12T22:00:00+00:00",
+            "2031-06-13T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-13",
+        "free": [
+          [
+            "2031-06-13T22:00:00+00:00",
+            "2031-06-14T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-14",
+        "free": [
+          [
+            "2031-06-14T12:00:00+00:00",
+            "2031-06-14T15:00:00+00:00"
+          ],
+          [
+            "2031-06-14T17:00:00+00:00",
+            "2031-06-14T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-16",
+        "free": [
+          [
+            "2031-06-16T22:00:00+00:00",
+            "2031-06-17T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-17",
+        "free": [
+          [
+            "2031-06-17T22:00:00+00:00",
+            "2031-06-18T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Review Array Fundamentals\",\n      \"description\": \"Study core array operations including indexing, traversal, and common manipulation patterns.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"W3Schools Arrays Tutorial\",\n          \"url\": \"https://www.w3schools.com/python/python_arrays.asp\"\n        },\n        {\n          \"label\": \"GeeksforGeeks Array Operations\",\n          \"url\": \"https://www.geeksforgeeks.org/array-manipulation/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Master Hash Map Concepts\",\n      \"description\": \"Learn how hash maps work, their time complexity, and key-value pair management.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n      ],\n      \"links\": [\n        {\n          \"label\": \"Hash Maps Explained\",\n          \"url\": \"https://www.geeksforgeeks.org/hash-map-in-java/\"\n        },\n        {\n          \"label\": \"LeetCode Hash Map Problems\",\n          \"url\": \"https://leetcode.com/tag/hash-table/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Two Pointers Technique Deep Dive\",\n      \"description\": \"Understand the logic behind using two pointers for problems like reverse, merge, and remove duplicates.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        0,\n        1\n      ],\n      \"links\": [\n        {\n          \"label\": \"Two Pointers Pattern\",\n          \"url\": \"https://www.youtube.com/watch?v=5qap5aOZh3A\"\n        },\n        {\n          \"label\": \"Visualgo Two Pointers\",\n          \"url\": \"https://visualgo.net/en/two-pointers\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Practice Array Problems\",\n      \"description\": \"Solve 5 problems focusing on array manipulation and traversal.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Practice Hash Map Problems\",\n      \"description\": \"Complete 5 problems utilizing hash maps for efficient lookups and counting.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Practice Two Pointers Problems\",\n      \"description\": \"Work through 5 problems specifically designed to test two pointer logic.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Mixed Challenge: Arrays + Hash Maps\",\n      \"description\": \"Solve a complex problem requiring both data structures.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0,\n        1\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Mixed Challenge: Two Pointers + Arrays\",\n      \"description\": \"Tackle a problem combining array traversal with two pointer techniques.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Mixed Challenge: Hash Maps + Two Pointers\",\n      \"description\": \"Address a scenario where hash maps store data accessed via two pointers.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1,\n        2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Code Review and Optimization\",\n      \"description\": \"Analyze solutions for efficiency and correctness.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        4,\n        5,\n        6,\n        7,\n        8,\n        9\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Final Project: Build a Data Structure\",\n      \"description\": \"Create a small application using arrays, hash maps, and two pointers.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        10\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1503,
+      "output_tokens": 1017
+    },
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Review Array Fundamentals\",\n      \"description\": \"Study core array operations including indexing, traversal, and common manipulation patterns.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"W3Schools Arrays Tutorial\",\n          \"url\": \"https://www.w3schools.com/python/python_arrays.asp\"\n        },\n        {\n          \"label\": \"GeeksforGeeks Array Operations\",\n          \"url\": \"https://www.geeksforgeeks.org/array-manipulation/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Master Hash Map Concepts\",\n      \"description\": \"Learn how hash maps work, their time complexity, and key-value pair management.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Hash Maps Explained\",\n          \"url\": \"https://www.geeksforgeeks.org/hash-map-in-java/\"\n        },\n        {\n          \"label\": \"LeetCode Hash Map Problems\",\n          \"url\": \"https://leetcode.com/tag/hash-table/\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Two Pointers Technique Deep Dive\",\n      \"description\": \"Understand the logic behind using two pointers for problems like reverse, merge, and remove duplicates.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        0,\n        1\n      ],\n      \"links\": [\n        {\n          \"label\": \"Two Pointers Pattern\",\n          \"url\": \"https://www.youtube.com/watch?v=5qap5aOZh3A\"\n        },\n        {\n          \"label\": \"Visualgo Two Pointers\",\n          \"url\": \"https://visualgo.net/en/two-pointers\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Practice Array Problems\",\n      \"description\": \"Solve 5 problems focusing on array manipulation and traversal.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Practice Hash Map Problems\",\n      \"description\": \"Complete 5 problems utilizing hash maps for efficient lookups and counting.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Practice Two Pointers Problems\",\n      \"description\": \"Work through 5 problems specifically designed to test two pointer logic.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Mixed Challenge: Arrays + Hash Maps\",\n      \"description\": \"Solve a complex problem requiring both data structures.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0,\n        1\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Mixed Challenge: Two Pointers + Arrays\",\n      \"description\": \"Tackle a problem combining array traversal with two pointer techniques.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Mixed Challenge: Hash Maps + Two Pointers\",\n      \"description\": \"Address a scenario where hash maps store data accessed via two pointers.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1,\n        2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Code Review and Optimization\",\n      \"description\": \"Analyze solutions for efficiency and correctness.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        4,\n        5,\n        6,\n        7,\n        8,\n        9\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Final Project: Build a Data Structure\",\n      \"description\": \"Create a small application using arrays, hash maps, and two pointers.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        10\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 2618,
+      "output_tokens": 1014
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {
+          "9": "it depends on items[9]",
+          "10": "it depends on items[10]"
+        }
+      },
+      {
+        "parses": true,
+        "discarded": {
+          "9": "it depends on items[9]",
+          "10": "it depends on items[10]"
+        }
+      }
+    ],
+    "chosen": 1,
+    "note": "Steps 9 and 10 each list themselves as prerequisites. The repair changed the wording, not the dependencies."
+  }
+}

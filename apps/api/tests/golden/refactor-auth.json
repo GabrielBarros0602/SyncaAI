@@ -1,0 +1,114 @@
+{
+  "captured": {
+    "model": "qwen3.5:4b",
+    "ollama": "0.40.10",
+    "on": "2026-10-24",
+    "generator": {
+      "think": false,
+      "temperature": 0,
+      "num_ctx": 16384,
+      "num_predict": 4096,
+      "timeout_seconds": 50.0
+    },
+    "prompt_version": "plan-1",
+    "prompt_sha256": "a967688266f20332e4a4c2f282f527dae1d0321b090497e9f50daa416ccf8364"
+  },
+  "request": "Refatorar o módulo de autenticação da API e cobrir com testes",
+  "context": {
+    "now": "2031-06-04T15:00:00+00:00",
+    "zone": "America/Sao_Paulo",
+    "horizon_days": 7,
+    "block_minutes": 90,
+    "days_off": [
+      7
+    ],
+    "days": [
+      {
+        "day": "2031-06-04",
+        "free": [
+          [
+            "2031-06-04T16:00:00+00:00",
+            "2031-06-04T20:00:00+00:00"
+          ],
+          [
+            "2031-06-04T22:00:00+00:00",
+            "2031-06-05T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-05",
+        "free": [
+          [
+            "2031-06-05T22:00:00+00:00",
+            "2031-06-06T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-06",
+        "free": [
+          [
+            "2031-06-06T22:00:00+00:00",
+            "2031-06-07T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-07",
+        "free": [
+          [
+            "2031-06-07T12:00:00+00:00",
+            "2031-06-07T15:00:00+00:00"
+          ],
+          [
+            "2031-06-07T17:00:00+00:00",
+            "2031-06-07T21:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 420
+      },
+      {
+        "day": "2031-06-09",
+        "free": [
+          [
+            "2031-06-09T22:00:00+00:00",
+            "2031-06-10T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      },
+      {
+        "day": "2031-06-10",
+        "free": [
+          [
+            "2031-06-10T22:00:00+00:00",
+            "2031-06-11T01:00:00+00:00"
+          ]
+        ],
+        "budget_minutes": 180
+      }
+    ]
+  },
+  "answers": [
+    {
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Análise do código atual de autenticação\",\n      \"description\": \"Revisar a implementação existente para identificar dependências, fluxos críticos e áreas propensas a falhas.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": []\n    },\n    {\n      \"title\": \"Definição da nova arquitetura de autenticação\",\n      \"description\": \"Escolher o protocolo (ex: OAuth2, JWT) e definir os contratos de API para login, registro e validação.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [0],\n      \"links\": []\n    },\n    {\n      \"title\": \"Implementação do módulo de autenticação\",\n      \"description\": \"Desenvolver as funções de login, recuperação de senha e gestão de tokens seguindo a nova arquitetura.\",\n      \"estimated_minutes\": 90,\n      \"depends_on\": [1],\n      \"links\": []\n    },\n    {\n      \"title\": \"Criação do ambiente de testes\",\n      \"description\": \"Configurar ferramentas de teste (ex: Jest, Pytest) e definir casos base para o módulo.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [2],\n      \"links\": []\n    },\n    {\n      \"title\": \"Escrita de testes unitários\",\n      \"description\": \"Criar testes para cada função crítica do módulo, cobrindo cenários de sucesso e falha.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [3],\n      \"links\": []\n    },\n    {\n      \"title\": \"Execução e correção de testes\",\n      \"description\": \"Rodar a suíte completa, identificar bugs na implementação e refatorar conforme necessário.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [4],\n      \"links\": []\n    },\n    {\n      \"title\": \"Integração com o banco de dados\",\n      \"description\": \"Garantir que as novas rotinas de autenticação funcionem corretamente com a persistência de dados.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [5],\n      \"links\": []\n    },\n    {\n      \"title\": \"Documentação da API\",\n      \"description\": \"Atualizar a documentação para refletir as mudanças na autenticação e novos endpoints.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [6],\n      \"links\": []\n    }\n  ]\n}",
+      "model": "qwen3.5:4b",
+      "input_tokens": 1169,
+      "output_tokens": 587
+    }
+  ],
+  "label": {
+    "answers": [
+      {
+        "parses": true,
+        "discarded": {}
+      }
+    ],
+    "chosen": 0,
+    "note": "Valid at a 90-minute block, its longest step exactly at the block's limit."
+  }
+}
