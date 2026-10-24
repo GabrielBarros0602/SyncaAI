@@ -26,6 +26,12 @@ Post = Callable[[str, Mapping[str, Any], float], Mapping[str, Any]]
 # lock (ADR-0031, ADR-0039).
 TIMEOUT_SECONDS = 50.0
 
+# Left unset, Ollama sizes the context from the GPU: 4096 tokens on 8 GB, where a repair of
+# 4,102 tokens was read as 3,724 and answered cut off, with no error (ADR-0040). The answer is
+# capped too, so the longest repair fits on a GPU fast enough to outrun the timeout.
+CONTEXT_TOKENS = 16384
+ANSWER_TOKENS = 4096
+
 
 def post_json(url: str, body: Mapping[str, Any], timeout: float) -> Mapping[str, Any]:
     """POST ``body`` as JSON and read the JSON answer."""
@@ -76,8 +82,12 @@ class OllamaGenerator:
             # A model that reasons first spent each call's fifty seconds doing it and answered
             # nothing; without it, every request measured became a plan (ADR-0040).
             "think": False,
-            # Reproducible answers make a captured fixture worth comparing against.
-            "options": {"temperature": 0},
+            "options": {
+                # Reproducible answers make a captured fixture worth comparing against.
+                "temperature": 0,
+                "num_ctx": CONTEXT_TOKENS,
+                "num_predict": ANSWER_TOKENS,
+            },
         }
         answer = self._post(self._url, body, self._timeout)
         return Generation(

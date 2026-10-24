@@ -8,30 +8,51 @@ exercised too. Nothing here needs Ollama installed.
 import json
 import threading
 from collections.abc import Iterator, Mapping
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, ClassVar
+from zoneinfo import ZoneInfo
 
 import pytest
 from pydantic import ValidationError
 
 from syncaai.config import Settings
 from syncaai.planning.context import build_plan_context, build_repair_message
-from syncaai.planning.contract import response_schema
+from syncaai.planning.contract import (
+    MAX_DESCRIPTION_CHARS,
+    MAX_HORIZON_DAYS,
+    MAX_ITEM_MINUTES,
+    MAX_LINKS_PER_ITEM,
+    MAX_PLAN_ITEMS,
+    MAX_REQUEST_CHARS,
+    MAX_TITLE_CHARS,
+    PlanResponse,
+    response_schema,
+)
 from syncaai.planning.generator import Repair, SampleGenerator
 from syncaai.planning.ladder import run_ladder
-from syncaai.planning.ollama import TIMEOUT_SECONDS, OllamaGenerator, post_json
+from syncaai.planning.ollama import (
+    ANSWER_TOKENS,
+    CONTEXT_TOKENS,
+    TIMEOUT_SECONDS,
+    OllamaGenerator,
+    post_json,
+)
+from syncaai.planning.slots import DaySlots
+from syncaai.planning.validation import check_plan
 from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
 from syncaai.worker import generator_from
 
+ZONE = "America/Sao_Paulo"
+NOW = datetime(2031, 6, 2, 15, 0, tzinfo=timezone.utc)
 PROMPT = build_plan_context(
     "Plano de estudos para a prova de sábado",
     slots=[],
     horizon_days=1,
     days_off=frozenset({1}),
     block_minutes=60,
-    zone_name="America/Sao_Paulo",
-    now=datetime(2031, 6, 2, 15, 0, tzinfo=timezone.utc),
+    zone_name=ZONE,
+    now=NOW,
 )
 ANSWER = SampleGenerator().generate(PROMPT).raw
 
@@ -70,7 +91,11 @@ def test_the_request_holds_the_answer_to_the_contract_s_schema() -> None:
     assert body["format"] == response_schema()
     assert body["stream"] is False
     assert body["think"] is False
-    assert body["options"] == {"temperature": 0}
+    assert body["options"] == {
+        "temperature": 0,
+        "num_ctx": CONTEXT_TOKENS,
+        "num_predict": ANSWER_TOKENS,
+    }
     assert body["messages"] == [
         {"role": "system", "content": PROMPT.instructions},
         {"role": "user", "content": PROMPT.message},
@@ -118,6 +143,57 @@ def test_an_answer_and_its_repair_fit_inside_one_claim() -> None:
     """Each call waits at most this long, so that two, an answer and its repair, end before
     the claim's lock does and another worker takes the job (ADR-0031, ADR-0039)."""
     assert VISIBILITY_TIMEOUT.total_seconds() > 2 * TIMEOUT_SECONDS
+
+
+def _free_days(count: int) -> list[DaySlots]:
+    zone = ZoneInfo(ZONE)
+    first = NOW.astimezone(zone).date()
+    days = []
+    for offset in range(count):
+        day = first + timedelta(days=offset)
+        opens = datetime.combine(day, time(8), tzinfo=zone).astimezone(timezone.utc)
+        closes = datetime.combine(day, time(22), tzinfo=zone).astimezone(timezone.utc)
+        days.append(DaySlots(day, ((opens, closes),), 14 * 60))
+    return days
+
+
+def _a_plan_failing_every_rule() -> PlanResponse:
+    item = {
+        "title": "t" * (MAX_TITLE_CHARS + 1),
+        "description": "d" * (MAX_DESCRIPTION_CHARS + 1),
+        "estimated_minutes": 10**9,
+        "depends_on": [MAX_PLAN_ITEMS - 1],
+        "links": [{"label": "", "url": "not-a-url"}] * MAX_LINKS_PER_ITEM,
+    }
+    return PlanResponse.model_validate({"items": [item] * MAX_PLAN_ITEMS})
+
+
+def test_the_longest_repair_fits_inside_the_context_it_is_sent_with() -> None:
+    """Ollama cuts what does not fit without an error (ADR-0040), so the longest conversation
+    a job sends has to fit whole: the longest prompt, a first answer as long as the cap
+    allows, the longest correction, and room for the second answer."""
+    prompt = build_plan_context(
+        "\N{GRINNING FACE}" * MAX_REQUEST_CHARS,
+        slots=_free_days(MAX_HORIZON_DAYS),
+        horizon_days=MAX_HORIZON_DAYS,
+        days_off=frozenset(),
+        block_minutes=MAX_ITEM_MINUTES,
+        zone_name=ZONE,
+        now=NOW,
+    )
+    errors = check_plan(_a_plan_failing_every_rule(), max_item_minutes=MAX_ITEM_MINUTES).errors
+    post = _Recorder()
+
+    _generator(post).generate(prompt, repair=Repair("", build_repair_message(errors)))
+
+    system, message, _, correction = (turn["content"] for turn in post.calls[0][1]["messages"])
+    request = json.loads(message)["request"]
+    written = len(system) + len(message) - len(request) + len(correction)
+    # What the code writes measured about three characters a token on qwen3.5 (ADR-0040); two
+    # leaves room for a tokenizer that does worse. The request can be in any script, so it is
+    # counted by its bytes: a byte-level tokenizer never spends more than a token on one.
+    longest = written // 2 + len(request.encode()) + 2 * ANSWER_TOKENS
+    assert longest <= CONTEXT_TOKENS
 
 
 # --- Over real HTTP ------------------------------------------------------------------------
