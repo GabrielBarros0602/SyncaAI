@@ -275,8 +275,13 @@ class PlanCommitRefusedError(DomainError):
         self.problems = problems
 
 
+class PlanFullError(DomainError):
+    """Raised when a step is added to a plan that holds as many as a plan may (ADR-0047)."""
+
+
 class PlanEmptyError(DomainError):
-    """Raised when a plan whose every step was removed is committed (ADR-0030)."""
+    """Raised when a plan with no step is committed: every one removed, or a plan written by
+    hand before any was added (ADR-0030, ADR-0047)."""
 
 
 class PlanCommitRaceError(DomainError):

@@ -730,7 +730,9 @@ def test_a_plan_with_every_step_removed_has_nothing_to_commit(
     response = _commit(client, plan)
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Nothing is left to commit. Discard the plan instead."}
+    assert response.json() == {
+        "detail": "The plan has no steps to commit. Add one, or discard the plan."
+    }
 
 
 def test_a_discarded_plan_cannot_be_committed_and_someone_else_s_is_not_found(

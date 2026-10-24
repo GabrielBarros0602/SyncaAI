@@ -14,6 +14,7 @@ from syncaai.api.dependencies import CurrentUserId, SessionDep, SettingsDep
 from syncaai.schemas.plans import (
     JobRead,
     PlanCommitRead,
+    PlanItemCreate,
     PlanItemRead,
     PlanItemUpdate,
     PlanRead,
@@ -48,6 +49,15 @@ def request_plan(payload: PlanRequest, service: ServiceDep, session: SessionDep)
     return JobRead(job_id=job.id, status="queued")
 
 
+@router.post("/plans", status_code=status.HTTP_201_CREATED, summary="Start a plan to write by hand")
+def write_plan(payload: PlanRequest, service: ServiceDep, session: SessionDep) -> PlanRead:
+    plan = service.write(
+        payload.request, horizon_days=payload.horizon_days, now=datetime.now(timezone.utc)
+    )
+    session.commit()
+    return plan
+
+
 @router.get("/ai/plans/{job_id}", summary="How a plan request is going")
 def read_job(job_id: uuid.UUID, service: ServiceDep) -> JobRead:
     return service.job(job_id)
@@ -57,6 +67,19 @@ def read_job(job_id: uuid.UUID, service: ServiceDep) -> JobRead:
 def read_plan(plan_id: uuid.UUID, service: ServiceDep) -> PlanRead:
     # One clock read, so every step's "passed" is measured against the same instant.
     return service.plan(plan_id, now=datetime.now(timezone.utc))
+
+
+@router.post(
+    "/plans/{plan_id}/items",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a step, placed at the earliest free time",
+)
+def add_item(
+    plan_id: uuid.UUID, new: PlanItemCreate, service: ServiceDep, session: SessionDep
+) -> PlanItemRead:
+    item = service.add_item(plan_id, new, now=datetime.now(timezone.utc))
+    session.commit()
+    return item
 
 
 @router.patch("/plans/{plan_id}/items/{item_id}", summary="Rename, resize or move a step")

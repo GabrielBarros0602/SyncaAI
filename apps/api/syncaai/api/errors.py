@@ -24,6 +24,7 @@ from syncaai.errors import (
     PlanCommitRaceError,
     PlanCommitRefusedError,
     PlanEmptyError,
+    PlanFullError,
     PlanInProgressError,
     PlanItemNotFoundError,
     PlanJobNotFoundError,
@@ -46,7 +47,7 @@ from syncaai.errors import (
     UsableWindowTooShortError,
     WeekdayOutOfRangeError,
 )
-from syncaai.planning.contract import MAX_ITEM_MINUTES, MIN_ITEM_MINUTES
+from syncaai.planning.contract import MAX_ITEM_MINUTES, MAX_PLAN_ITEMS, MIN_ITEM_MINUTES
 from syncaai.schemas.tasks import MAX_CHECKLIST_ITEMS
 from syncaai.security.passwords import PasswordTooLongError
 from syncaai.services.capacity import MAX_HORIZON_DAYS, MAX_USABLE_MINUTES, MIN_USABLE_MINUTES
@@ -360,7 +361,14 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _plan_empty(_: Request, __: PlanEmptyError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
-            content={"detail": "Nothing is left to commit. Discard the plan instead."},
+            content={"detail": "The plan has no steps to commit. Add one, or discard the plan."},
+        )
+
+    @app.exception_handler(PlanFullError)
+    async def _plan_full(_: Request, __: PlanFullError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": f"A plan holds at most {MAX_PLAN_ITEMS} steps."},
         )
 
     @app.exception_handler(PlanCommitRaceError)

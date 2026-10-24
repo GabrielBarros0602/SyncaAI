@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from syncaai.models import MINUTES_IN_A_DAY
 from syncaai.planning.contract import (
+    MAX_DESCRIPTION_CHARS,
     MAX_HORIZON_DAYS,
     MAX_REQUEST_CHARS,
     MAX_TITLE_CHARS,
@@ -71,6 +72,22 @@ class PlanRead(BaseModel):
     week_ends_on: date
     items: list[PlanItemRead]
     discarded: list[PlanDiscardRead]
+
+
+class PlanItemCreate(BaseModel):
+    """A step a person adds to a plan, theirs or a model's (ADR-0047).
+
+    No time: it is placed where the plan is placed again, at the earliest free time. Its
+    minutes are a task's, as an edit's are (ADR-0032).
+    """
+
+    title: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_TITLE_CHARS)
+    ]
+    minutes: int = Field(ge=1, le=MINUTES_IN_A_DAY)
+    description: Annotated[
+        str, StringConstraints(strip_whitespace=True, max_length=MAX_DESCRIPTION_CHARS)
+    ] = ""
 
 
 class PlanItemUpdate(BaseModel):
