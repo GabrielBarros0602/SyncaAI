@@ -6,6 +6,7 @@ belongs to somebody else is simply not found.
 
 import uuid
 from collections import defaultdict
+from collections.abc import Collection, Sequence
 from datetime import datetime, timedelta
 
 from sqlalchemy import Select, exists, func, select
@@ -24,6 +25,21 @@ class AiJobRepository(OwnedRepository[AiJob]):
     def any_in_progress(self) -> bool:
         statement = self._scoped().where(AiJob.status.in_(IN_PROGRESS))
         return bool(self._session.scalar(select(exists(statement))))
+
+    def newest_first(
+        self, *, statuses: Collection[str], limit: int, offset: int
+    ) -> Sequence[AiJob]:
+        """A page of the owner's jobs in any of ``statuses``, or in any status when none is
+        given (ADR-0050). The id breaks a tie, so a page never shows a row twice."""
+        statement = (
+            self._scoped()
+            .order_by(AiJob.created_at.desc(), AiJob.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        if statuses:
+            statement = statement.where(AiJob.status.in_(statuses))
+        return self._session.scalars(statement).all()
 
     def holding_statement(self, *, window: timedelta, limit: int) -> Select[tuple[datetime]]:
         """The job that keeps a moving window full: the ``limit``-th newest in it, or no row
@@ -56,6 +72,16 @@ class PlanDraftRepository(OwnedRepository[PlanDraft]):
 
     def for_job(self, job_id: uuid.UUID) -> PlanDraft | None:
         return self._session.scalar(self._scoped().where(PlanDraft.job_id == job_id))
+
+    def ids_for_jobs(self, job_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, uuid.UUID]:
+        """The plan each job produced, for the jobs that produced one."""
+        rows = self._session.execute(
+            self._scoped()
+            .with_only_columns(PlanDraft.job_id, PlanDraft.id)
+            .where(PlanDraft.job_id.in_(job_ids))
+        )
+        # Nullable in the model, for a plan by hand; every row here was found by its job.
+        return {job_id: plan_id for job_id, plan_id in rows if job_id is not None}
 
     def get_for_review(self, plan_id: uuid.UUID) -> PlanDraft | None:
         """The plan with everything a review shows, in a fixed number of queries."""

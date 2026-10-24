@@ -8,11 +8,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Query, status
 
 from syncaai.api.dependencies import CurrentUserId, SessionDep, SettingsDep
 from syncaai.schemas.plans import (
+    JobPage,
     JobRead,
+    JobStatus,
     PlanCommitRead,
     PlanItemCreate,
     PlanItemRead,
@@ -22,6 +24,7 @@ from syncaai.schemas.plans import (
 )
 from syncaai.services.ai_spend import ceilings_from
 from syncaai.services.plans import PlanService
+from syncaai.services.tasks import MAX_PAGE_SIZE
 
 router = APIRouter(tags=["plans"])
 
@@ -56,6 +59,19 @@ def write_plan(payload: PlanRequest, service: ServiceDep, session: SessionDep) -
     )
     session.commit()
     return plan
+
+
+@router.get("/ai/plans", summary="Your plan requests, newest first")
+def list_jobs(
+    service: ServiceDep,
+    statuses: Annotated[list[JobStatus] | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> JobPage:
+    """``status`` repeats for more than one: ``?status=queued&status=running&limit=1`` finds
+    the request to follow after a reload, and ``?limit=1`` the latest (ADR-0050)."""
+    jobs = service.jobs(statuses=statuses or [], limit=limit, offset=offset)
+    return JobPage(items=jobs, limit=limit, offset=offset)
 
 
 @router.get("/ai/plans/{job_id}", summary="How a plan request is going")

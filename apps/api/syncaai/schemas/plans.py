@@ -17,6 +17,7 @@ from syncaai.planning.contract import (
 from syncaai.schemas.tasks import reject_an_explicit_null, require_an_offset
 
 ItemState = Literal["placed", "passed", "no_room", "not_this_week", "after_unplaced"]
+JobStatus = Literal["queued", "running", "done", "failed"]
 
 
 class PlanRequest(BaseModel):
@@ -31,11 +32,20 @@ class PlanRequest(BaseModel):
 
 class JobRead(BaseModel):
     job_id: uuid.UUID
-    status: Literal["queued", "running", "done", "failed"]
+    status: JobStatus
     #: A sentence for the person, once the job has failed.
     failure_reason: str | None = None
     #: The plan the job produced, once there is one (ADR-0038).
     plan_id: uuid.UUID | None = None
+
+
+class JobPage(BaseModel):
+    """A slice of a person's plan requests, newest first, with no total, as tasks are paged
+    (ADR-0020, ADR-0050)."""
+
+    items: list[JobRead]
+    limit: int
+    offset: int
 
 
 class PlanLinkRead(BaseModel):
