@@ -1,5 +1,6 @@
 """Asking for a plan and reading what came of it (ADR-0033, ADR-0038)."""
 
+import math
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -17,6 +18,7 @@ from syncaai.errors import (
     PlanJobNotFoundError,
     PlanNotFoundError,
     PlanNotPendingError,
+    PlanRateLimitedError,
     StepOverlapsStepError,
     StepOverlapsTaskError,
     StepStartsInThePastError,
@@ -50,6 +52,13 @@ from syncaai.services.tasks import OVERLAP_CONSTRAINT
 # What a step sent on carries until it is placed again (ADR-0033).
 NOT_THIS_WEEK = Unplaced.NOT_THIS_WEEK.value
 
+# ADR-0006's numbers, over moving windows of a person's own jobs (ADR-0042): the window, how
+# many jobs it holds, and how the refusal names it.
+PLAN_LIMITS = (
+    (timedelta(hours=1), 10, "an hour"),
+    (timedelta(hours=24), 30, "in 24 hours"),
+)
+
 
 class PlanService:
     def __init__(self, session: Session, user_id: uuid.UUID) -> None:
@@ -58,16 +67,30 @@ class PlanService:
         self._drafts = PlanDraftRepository(session, user_id)
 
     def request(self, request: str, *, horizon_days: int) -> AiJob:
-        """Queue a plan, or refuse while another is still being made or reviewed.
+        """Queue a plan, or refuse it: past the rate limit first, the cheapest refusal
+        (ADR-0006), then while another plan is still being made or reviewed.
 
-        Checked here so the answer is a sentence, and held by the partial unique index on jobs
+        Neither refusal leaves a job, so neither spends the allowance (ADR-0042). The second is
+        checked here so the answer is a sentence, and held by the partial unique index on jobs
         either way: a double submit loses the race there (ADR-0033). A draft left pending in
         the same race is caught when the job writes its own, and the job fails with the same
         sentence.
         """
+        self._refuse_past_the_rate_limit()
         if self._jobs.any_in_progress() or self._drafts.any_pending():
             raise PlanInProgressError
         return enqueue_plan(self._session, self._jobs.owner_id, request, horizon_days=horizon_days)
+
+    def _refuse_past_the_rate_limit(self) -> None:
+        full = []
+        for window, limit, per in PLAN_LIMITS:
+            wait = self._jobs.seconds_until_room(window=window, limit=limit)
+            if wait is not None:
+                full.append((wait, limit, per))
+        if full:
+            # With both windows full, the longer wait is the one that is true.
+            wait, limit, per = max(full)
+            raise PlanRateLimitedError(max(1, math.ceil(wait)), limit=limit, per=per)
 
     def job(self, job_id: uuid.UUID) -> JobRead:
         job = self._jobs.get(job_id)

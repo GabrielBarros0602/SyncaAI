@@ -28,6 +28,7 @@ from syncaai.errors import (
     PlanJobNotFoundError,
     PlanNotFoundError,
     PlanNotPendingError,
+    PlanRateLimitedError,
     RateLimitExceededError,
     StartCorrectionTooFarBackError,
     StepOverlapsStepError,
@@ -100,6 +101,16 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={"detail": "Too many attempts. Try again later."},
+            headers={"Retry-After": str(error.retry_after_seconds)},
+        )
+
+    # Found before the handler above for this subclass: a handler is looked up along the
+    # exception's own classes first.
+    @app.exception_handler(PlanRateLimitedError)
+    async def _plans_rate_limited(_: Request, error: PlanRateLimitedError) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": f"At most {error.limit} plans {error.per}. Try again later."},
             headers={"Retry-After": str(error.retry_after_seconds)},
         )
 
