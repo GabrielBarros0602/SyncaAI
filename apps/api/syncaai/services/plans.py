@@ -13,6 +13,7 @@ from syncaai.errors import (
     PlanCommitRaceError,
     PlanCommitRefusedError,
     PlanEmptyError,
+    PlanFullError,
     PlanInProgressError,
     PlanItemNotFoundError,
     PlanJobNotFoundError,
@@ -24,6 +25,7 @@ from syncaai.errors import (
     StepStartsInThePastError,
 )
 from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task, User
+from syncaai.planning.contract import MAX_PLAN_ITEMS
 from syncaai.planning.notes import compose_note
 from syncaai.planning.scheduler import (
     Step,
@@ -39,6 +41,7 @@ from syncaai.schemas.plans import (
     JobRead,
     PlanCommitRead,
     PlanDiscardRead,
+    PlanItemCreate,
     PlanItemRead,
     PlanItemUpdate,
     PlanLinkRead,
@@ -48,7 +51,7 @@ from syncaai.services.ai_breaker import refuse_while_open
 from syncaai.services.ai_queue import enqueue_plan
 from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, refuse_past_the_ceilings
 from syncaai.services.plan_context import plannable_days
-from syncaai.services.plan_jobs import PLACED
+from syncaai.services.plan_jobs import ONE_PENDING_DRAFT, PLACED
 from syncaai.services.tasks import OVERLAP_CONSTRAINT
 
 # What a step sent on carries until it is placed again (ADR-0033).
@@ -106,6 +109,58 @@ class PlanService:
             # With both windows full, the longer wait is the one that is true.
             wait, limit, per = max(full)
             raise PlanRateLimitedError(max(1, math.ceil(wait)), limit=limit, per=per)
+
+    def write(self, request: str, *, horizon_days: int, now: datetime) -> PlanRead:
+        """An empty plan to write by hand: pending, with no job and no prompt (ADR-0047).
+
+        Refused while a plan is being made or reviewed, as a request is (ADR-0033), and held
+        by the same index on drafts if two arrive at once. Not a job, so neither the rate
+        limit, the ceilings nor the breaker read it: there is no model to protect.
+        """
+        if self._jobs.any_in_progress() or self._drafts.any_pending():
+            raise PlanInProgressError
+        today = self._today(now)
+        draft = PlanDraft(
+            user_id=self._jobs.owner_id,
+            request=request,
+            first_day=today,
+            last_day=today + timedelta(days=horizon_days - 1),
+        )
+        try:
+            with self._session.begin_nested():
+                self._session.add(draft)
+                self._session.flush()
+        except IntegrityError as error:
+            diagnostics = getattr(error.orig, "diag", None)
+            if getattr(diagnostics, "constraint_name", None) == ONE_PENDING_DRAFT:
+                raise PlanInProgressError from error
+            raise
+        return self.plan(draft.id, now=now)
+
+    def add_item(self, plan_id: uuid.UUID, new: PlanItemCreate, *, now: datetime) -> PlanItemRead:
+        """Add a step after the plan's last, and place it as placing the plan again would: the
+        earliest free time, the other steps held where they are (ADR-0033, ADR-0047).
+
+        The plan is locked first, as for every edit, so two additions cannot both see room
+        for the last step a plan may hold.
+        """
+        draft = self._pending(plan_id, now)
+        if len(draft.items) >= MAX_PLAN_ITEMS:
+            raise PlanFullError
+        item = PlanDraftItem(
+            id=uuid.uuid4(),
+            position=max((step.position for step in draft.items), default=-1) + 1,
+            title=new.title,
+            description=new.description,
+            minutes=new.minutes,
+            start_at=None,
+            # Until the scheduler below says where it goes.
+            placement=Unplaced.NO_ROOM.value,
+        )
+        draft.items.append(item)
+        self._session.flush()
+        self._place(draft, [item], now=now, next_week=False)
+        return _item(item, [], draft, now)
 
     def job(self, job_id: uuid.UUID) -> JobRead:
         job = self._jobs.get(job_id)
