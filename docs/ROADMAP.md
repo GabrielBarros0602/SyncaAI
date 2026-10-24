@@ -382,9 +382,9 @@ de "nenhum projeto com testes automatizados publicados".
       exemplo em qualquer deploy
       → [ADR-0039](adr/0039-a-local-open-model-until-a-provider-is-paid-for.md)
 - [x] Gerador real local (Ollama), preso ao schema do contrato, escolhido por `AI_PROVIDER`
-- [ ] Corrigir o gerador local com o que a primeira medição contra um modelo real achou
-      (`docs/backlog.md`, 2026-10-24): hoje um modelo que pensa por padrão não responde a
-      nenhum pedido
+- [x] Corrigir o gerador local com o que a primeira medição contra um modelo real achou:
+      sem raciocínio, contexto e resposta limitados, o schema visível ao modelo, nome de
+      nuvem recusado → [ADR-0040](adr/0040-what-the-local-model-is-held-to-measured.md)
 - [ ] Cliente do provedor pago (Anthropic, Haiku 5.5): **aguarda a decisão de pagar**
 - [ ] Tabela `ai_usage` escrita em toda chamada concluída: tokens de entrada e saída, custo
       calculado, latência, modelo, `prompt_version`, id do job

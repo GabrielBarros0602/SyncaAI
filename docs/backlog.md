@@ -456,12 +456,16 @@ quando chegar.
   chave costuma mudar assim que o relógio anda alguns minutos (ADR-0034) — mas não à noite,
   depois do fim da janela, quando hoje já não tem minuto planejável que possa mudar.
 
-### Aberto pela medição do modelo local — 2026-10-24
+### Aberto pela medição do modelo local — 2026-10-24 — ✅ decidido no mesmo dia (ADR-0040)
+
+**Decidido:** `think: false` em toda chamada; `num_ctx` de 16.384 e `num_predict` de 4.096,
+com um teste que mantém o pior reparo dentro do contexto; o schema anexado às instruções, só
+no gerador Ollama; nome de modelo de nuvem recusado no boot, e `OLLAMA_NO_CLOUD=1`
+documentado no `.env.example`. O que segue é o registro da medição que levou a isso.
 
 Medido com `qwen3.5:4b` (4,2B, Q4_K_M, inteiro numa RTX 4060 de 8 GB): seis pedidos, quatro
 em português e dois em inglês, sobre sete dias de horário livre, pelo `OllamaGenerator` como
-está no `main`. Os quatro achados pedem decisão antes do resto do S7, e a correção leva uma ADR
-que emenda a ADR-0039. Seis pedidos são amostra pequena: os números orientam a decisão, não
+estava no `main`. Seis pedidos são amostra pequena: os números orientaram a decisão, não
 fixam limiares.
 
 - **O gerador como está não responde a nenhum pedido.** O modelo pensa por padrão
