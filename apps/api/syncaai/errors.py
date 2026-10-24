@@ -47,6 +47,19 @@ class RateLimitExceededError(DomainError):
         self.retry_after_seconds = retry_after_seconds
 
 
+class PlanRateLimitedError(RateLimitExceededError):
+    """Raised when a person has had as many plans as a window allows (ADR-0042).
+
+    Its own class so the answer can say which limit, in a sentence a person reads, where the
+    sign-in's limit says only to try later.
+    """
+
+    def __init__(self, retry_after_seconds: int, *, limit: int, per: str) -> None:
+        super().__init__(retry_after_seconds)
+        self.limit = limit
+        self.per = per
+
+
 class TaskOverlapsError(DomainError):
     """Raised when a task would occupy time another already occupies.
 

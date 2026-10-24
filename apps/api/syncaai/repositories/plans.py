@@ -6,8 +6,9 @@ belongs to somebody else is simply not found.
 
 import uuid
 from collections import defaultdict
+from datetime import datetime, timedelta
 
-from sqlalchemy import exists, select
+from sqlalchemy import Select, exists, func, select
 from sqlalchemy.orm import selectinload
 
 from syncaai.models import AiJob, PlanDraft, PlanDraftItem, PlanDraftItemPrerequisite
@@ -23,6 +24,26 @@ class AiJobRepository(OwnedRepository[AiJob]):
     def any_in_progress(self) -> bool:
         statement = self._scoped().where(AiJob.status.in_(IN_PROGRESS))
         return bool(self._session.scalar(select(exists(statement))))
+
+    def holding_statement(self, *, window: timedelta, limit: int) -> Select[tuple[datetime]]:
+        """The job that keeps a moving window full: the ``limit``-th newest in it, or no row
+        while the window has room (ADR-0042). Measured with the database's clock, the one
+        ``created_at`` is written with."""
+        return (
+            self._scoped()
+            .with_only_columns(AiJob.created_at)
+            .where(AiJob.created_at > func.now() - window)
+            .order_by(AiJob.created_at.desc())
+            .offset(limit - 1)
+            .limit(1)
+        )
+
+    def seconds_until_room(self, *, window: timedelta, limit: int) -> float | None:
+        """How long until fewer than ``limit`` of the person's jobs fall in the window; None
+        while they already do."""
+        holding = self.holding_statement(window=window, limit=limit).scalar_subquery()
+        wait = self._session.scalar(select(func.extract("epoch", holding + window - func.now())))
+        return None if wait is None else float(wait)
 
 
 class PlanDraftRepository(OwnedRepository[PlanDraft]):
