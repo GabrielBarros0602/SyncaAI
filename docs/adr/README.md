@@ -14,7 +14,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0003](0003-ai-request-lifecycle.md) | AI request lifecycle and transport | Accepted |
 | [0004](0004-context-assembly-policy.md) | Calendar context assembly policy | Accepted; field list and fingerprint amended by 0034 |
 | [0005](0005-structured-output-contract.md) | Structured output contract and failure handling | Accepted; decision 1 amended by 0030, decision 4 by 0035 |
-| [0006](0006-cost-limits-cache-degradation.md) | Cost control, rate limiting, caching and degradation | Accepted; `ai_usage` amended by 0041, rate limiting by 0042, the spend cap by 0044, the cache deferred by 0045 |
+| [0006](0006-cost-limits-cache-degradation.md) | Cost control, rate limiting, caching and degradation | Accepted; `ai_usage` amended by 0041, rate limiting by 0042, the spend cap by 0044, the cache deferred by 0045, the circuit breaker by 0046 |
 | [0007](0007-synchronous-persistence.md) | Synchronous SQLAlchemy for persistence | Accepted |
 | [0008](0008-task-time-block.md) | Task time block: start plus duration, generated end | Accepted |
 | [0009](0009-time-and-timezone-storage.md) | Store instants in UTC, derive the local day | Accepted |
@@ -54,6 +54,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0043](0043-the-local-model-is-qwen3-5-4b.md) | The local model is qwen3.5:4b | Accepted |
 | [0044](0044-the-spend-ceilings-are-checked-before-the-queue-and-before-each-call.md) | The spend ceilings are checked before the queue and before each call | Accepted |
 | [0045](0045-no-response-cache-until-one-is-measured-to-pay.md) | No response cache until one is measured to pay | Accepted |
+| [0046](0046-the-circuit-breaker-is-read-from-the-calls-themselves.md) | The circuit breaker is read from the calls themselves | Accepted |
 
 ## Template
 
