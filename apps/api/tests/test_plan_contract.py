@@ -177,12 +177,22 @@ def test_a_description_past_its_bound_is_discarded() -> None:
     assert _checked(_item(description="x" * (MAX_DESCRIPTION_CHARS + 1))).kept == ()
 
 
-@pytest.mark.parametrize("prerequisite", [1, 2, -1])
+@pytest.mark.parametrize("prerequisite", [2, -1])
 def test_a_dependency_has_to_point_backwards(prerequisite: int) -> None:
-    """Itself, a later step, or nothing at all. Only backwards keeps cycles unwritable."""
+    """A later step, or nothing at all. Only backwards keeps cycles unwritable."""
     report = _checked(_item(title="first"), _item(title="second", depends_on=[prerequisite]))
 
     assert [item.position for item in report.kept] == [0]
+
+
+def test_a_step_that_waits_for_itself_keeps_everything_else() -> None:
+    """The dependency on itself goes, carrying no order; the step and its other
+    dependencies stay (ADR-0049)."""
+    report = _checked(_item(title="first"), _item(title="second", depends_on=[0, 1]))
+
+    assert [item.position for item in report.kept] == [0, 1]
+    assert report.kept[1].depends_on == (0,)
+    assert report.discarded == ()
 
 
 def test_a_repeated_dependency_is_read_once() -> None:

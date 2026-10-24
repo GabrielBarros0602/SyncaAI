@@ -40,13 +40,13 @@ def _steps(count: int, *, broken: frozenset[int] = frozenset()) -> str:
 
 
 # Twelve steps, three invalid: the seventh repeats the third's title, the eleventh takes 300
-# minutes against a block of 60, and the twelfth depends on itself.
+# minutes against a block of 60, and the twelfth depends on a step after it.
 NINE_OF_TWELVE = _answer(
     *(_item(f"Step {n}") for n in range(6)),
     _item("Step 2"),
     *(_item(f"Step {n}") for n in range(7, 10)),
     _item("Step 10", minutes=300),
-    _item("Step 11", depends_on=(11,)),
+    _item("Step 11", depends_on=(12,)),
 )
 TWELVE_OF_TWELVE = _steps(12)
 TEN_OF_TWELVE = _steps(12, broken=frozenset({10, 11}))
@@ -82,7 +82,7 @@ def test_any_step_that_fails_asks_for_the_one_repair() -> None:
         [
             "items[6]: the title repeats an earlier step's",
             "items[10]: it takes 300 minutes, and a step has to take between 15 and 60",
-            "items[11]: it depends on items[11], which does not come before it",
+            "items[11]: it depends on items[12], which does not come before it",
         ]
     )
     assert result.chosen == 1

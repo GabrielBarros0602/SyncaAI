@@ -117,6 +117,11 @@ def _reasons(item: PlanItem, position: int, limit: int, titles_kept: set[str]) -
         )
 
     for prerequisite in _unique(item.depends_on):
+        if prerequisite == position:
+            # Waiting for itself says nothing about order, and the step is still worth doing:
+            # the dependency goes, the step stays (ADR-0049). The model did not correct it when
+            # asked to, twice in the first golden batch.
+            continue
         if not 0 <= prerequisite < position:
             # Only backwards, so the list's own order is a valid order and a cycle cannot
             # be written at all (ADR-0030).
