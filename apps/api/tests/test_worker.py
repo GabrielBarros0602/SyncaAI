@@ -19,7 +19,7 @@ from sqlalchemy import delete, func, insert, select, update
 
 from syncaai.config import get_settings
 from syncaai.db import get_session_factory
-from syncaai.models import AiJob, PlanDraft, User
+from syncaai.models import AiJob, AiUsage, PlanDraft, User
 from syncaai.planning.context import PROMPT_VERSION, PlanPrompt
 from syncaai.planning.generator import Generation, PlanGenerator, Repair, SampleGenerator
 from syncaai.services.ai_queue import GAVE_UP, MAX_QUEUED, enqueue_plan
@@ -50,6 +50,8 @@ def people() -> Iterator[list[uuid.UUID]]:
         yield ids
     finally:
         with get_session_factory()() as session:
+            # Usage outlives an account on purpose (ADR-0041), so it is deleted by hand.
+            session.execute(delete(AiUsage).where(AiUsage.user_id.in_(ids)))
             session.execute(delete(User).where(User.id.in_(ids)))
             session.commit()
 
