@@ -47,10 +47,11 @@ the old one and update the status of the old one — never rewrite history.
 | [0036](0036-a-job-s-answers-are-rows-of-their-own.md) | A job's answers are rows of their own | Accepted |
 | [0037](0037-a-draft-in-five-tables-and-only-an-approved-one-stays.md) | A draft is held in five tables, and only an approved one stays | Accepted |
 | [0038](0038-a-job-and-its-plan-are-two-resources-linked-by-id.md) | A job and its plan are two resources, linked by id | Accepted |
-| [0039](0039-a-local-open-model-until-a-provider-is-paid-for.md) | A local open model until a provider is paid for | Accepted; decision 2 amended by 0040 |
+| [0039](0039-a-local-open-model-until-a-provider-is-paid-for.md) | A local open model until a provider is paid for | Accepted; decision 2 amended by 0040, its model named by 0043 |
 | [0040](0040-what-the-local-model-is-held-to-measured.md) | What the local model is held to, measured | Accepted |
 | [0041](0041-every-call-is-metered-when-it-ends.md) | Every call is metered when it ends | Accepted |
 | [0042](0042-plan-requests-are-limited-over-moving-windows-of-jobs.md) | Plan requests are limited over moving windows, counted from jobs | Accepted |
+| [0043](0043-the-local-model-is-qwen3-5-4b.md) | The local model is qwen3.5:4b | Accepted |
 
 ## Template
 

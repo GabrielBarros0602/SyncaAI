@@ -385,6 +385,8 @@ de "nenhum projeto com testes automatizados publicados".
 - [x] Corrigir o gerador local com o que a primeira medição contra um modelo real achou:
       sem raciocínio, contexto e resposta limitados, o schema visível ao modelo, nome de
       nuvem recusado → [ADR-0040](adr/0040-what-the-local-model-is-held-to-measured.md)
+- [x] **Decidido:** o modelo local é o `qwen3.5:4b`; o 9b não cabe na GPU de 8 GB e não é
+      significativamente melhor → [ADR-0043](adr/0043-the-local-model-is-qwen3-5-4b.md)
 - [ ] Cliente do provedor pago (Anthropic, Haiku 5.5): **aguarda a decisão de pagar**
 - [x] Tabela `ai_usage` escrita em toda chamada, concluída ou não, quando ela termina: tokens
       de entrada e saída, custo calculado de `prices.toml`, latência, modelo,
