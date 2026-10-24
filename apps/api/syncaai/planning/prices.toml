@@ -1,0 +1,15 @@
+# What a million tokens cost, in US dollars, per provider and model (ADR-0006, ADR-0041).
+#
+# Read from each provider's own pricing page; `checked` says when. A change of price is a
+# change to this file, reviewed like any other, and costs already recorded keep the price
+# they were computed with.
+#
+# The sample, a model run locally and the test double cost nothing by rule and are not
+# listed. A paid model that is not listed has no price, which is an error, never zero.
+
+# Not wired yet: the client waits for a decision to pay (ADR-0039). Listed so that the
+# day it is, its cost is already reviewed.
+[anthropic."claude-haiku-5-5"]
+input = 0.10
+output = 0.50
+checked = 2026-10-23
