@@ -282,3 +282,17 @@ def test_the_local_model_answers_when_it_is_named() -> None:
 def test_a_local_model_without_a_name_is_refused_at_boot(model: str | None) -> None:
     with pytest.raises(ValidationError, match="OLLAMA_MODEL"):
         _settings(ai_provider="ollama", ollama_model=model)
+
+
+@pytest.mark.parametrize("model", ["gemma4:cloud", "gpt-oss:120b-cloud", "Gemma4:Cloud"])
+def test_a_model_ollama_runs_in_its_cloud_is_refused_at_boot(model: str) -> None:
+    """The local address answers for it, and the prompt would leave the machine (ADR-0040)."""
+    with pytest.raises(ValidationError, match="Ollama's servers"):
+        _settings(ai_provider="ollama", ollama_model=model)
+
+
+@pytest.mark.parametrize("model", ["qwen3.5:4b", "cloudberry:8b", "registry.local:5000/a/b:4b"])
+def test_a_local_model_is_not_mistaken_for_a_cloud_one(model: str) -> None:
+    generator = generator_from(_settings(ai_provider="ollama", ollama_model=model))
+
+    assert isinstance(generator, OllamaGenerator)
