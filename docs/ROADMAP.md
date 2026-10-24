@@ -402,9 +402,13 @@ de "nenhum projeto com testes automatizados publicados".
       (ADR-0044)
 - [x] Kill switch global de gasto — é este que protege a conta bancária, porque a falha
       realista é um bug no próprio front-end em loop: US$ 5 por mês UTC, `503` (ADR-0044)
-- [ ] Cache com chave incluindo `prompt_version` e `context_fingerprint` (ADR-0006, ADR-0034)
-- [ ] **Teste de integração que prova a ordem** `rate limit → cache → teto`: especificamente,
-      um cache hit é servido mesmo com o usuário acima do teto
+- [x] **Decidido:** sem cache de respostas até ele ser medido: a chave muda a cada 5 minutos
+      dentro da janela do dia, e o duplo clique e as rajadas já são barrados; cada job guarda a
+      impressão digital do contexto e `would_be_cache_hits` conta os acertos que teria havido
+      → [ADR-0045](adr/0045-no-response-cache-until-one-is-measured-to-pay.md)
+- [ ] ~~Cache com chave incluindo `prompt_version` e `context_fingerprint`~~ e o **teste da
+      ordem** `rate limit → cache → teto`: esperam a medição (ADR-0045). A ordem que existe,
+      `rate limit → tetos`, já é testada (ADR-0044)
 - [ ] Circuit breaker no cliente; testar aberto e half-open
 - [ ] Fallback manual: criar checklist à mão, no mesmo editor do draft gerado
 - [ ] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
