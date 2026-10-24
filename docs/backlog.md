@@ -60,9 +60,11 @@ redesign.
   pessoas. Uma restrição segue valendo e precisa entrar nessa conversa: sem domínio verificado,
   um provedor transacional como o Resend só entrega para o dono da conta — ou seja, ninguém
   além do autor completa o cadastro.
-- **Provedor de IA: no S7**, contra os critérios que os ADRs já impõem — não treinar com os
-  dados do usuário (ADR-0004), saída estruturada nativa (ADR-0005), teto de gasto rígido
-  (ADR-0006). O S6 roda contra um dublê e não depende dessa escolha.
+- **Provedor de IA: decidido em 2026-10-23 (ADR-0039).** Nenhum provedor pago por ora,
+  porque o projeto é de portfólio. Na teoria, a Anthropic, que cumpre os três critérios:
+  não treina com dados da API, tem saída estruturada nativa e um teto de gasto rígido por
+  workspace. Ela começaria no Claude Haiku 5.5, medindo antes de subir de modelo. Agora, um
+  modelo aberto local via Ollama, e o gerador de exemplo em qualquer deploy.
 
 ### O trabalho de base, na ordem
 
