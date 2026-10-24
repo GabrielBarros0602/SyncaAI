@@ -19,6 +19,9 @@ MIN_HORIZON_DAYS = 1
 MAX_HORIZON_DAYS = 14
 MAX_PLAN_ITEMS = 12
 MAX_LINKS_PER_ITEM = 3
+# The longest answer any generator is let to write, in tokens: the cap a call's estimate is
+# priced at, and half of what a repair's context has to hold (ADR-0040, ADR-0044).
+MAX_ANSWER_TOKENS = 4096
 
 # Per item, enforced by the domain layer. The upper bound on minutes is the person's
 # preferred block (ADR-0032), which can never be more than this.
