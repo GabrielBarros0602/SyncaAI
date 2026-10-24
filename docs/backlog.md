@@ -486,3 +486,28 @@ fixam limiares.
   mesmo `localhost:11434`, e esse modelo roda nos servidores do Ollama. Nada recusa o nome hoje
   (ameaça 22). Segundo a própria documentação, a nuvem do Ollama também não tem saída
   estruturada.
+
+### Comparação com um modelo local maior — 2026-10-24
+
+Os mesmos seis pedidos, pelo gerador da ADR-0040, com o `qwen3.5:9b` (Q4_K_M, 6,7 GB, dos
+quais 5,6 GB na GPU e o resto na CPU) contra o `qwen3.5:4b`:
+
+| | 4b | 9b |
+|---|---|---|
+| Planos | 6 de 6 | 6 de 6 |
+| Reparos | 1 | 1 |
+| Chamada mais longa | 29 s | 41 s |
+| Pior pedido, com reparo | 47 s | 80 s |
+
+- **O 9b ordena melhor.** Na mudança de apartamento, o 4b entrega as chaves e inspeciona o
+  apartamento novo antes de se mudar; o 9b segue a ordem real: cotar, contratar, embalar,
+  desmontar, limpar, montar.
+- **Mais específico não é mais correto.** No violão o 9b nomeia os acordes, mas põe Fá menor e
+  Si menor entre os básicos, pede barra no Dó maior e repete acordes de um passo para outro; o
+  reparo foi por título repetido.
+- **Fica perto do limite de tempo.** Uma chamada usou 41 dos 50 s; um plano mais longo estoura e
+  falha a tentativa (ADR-0040). Trocar o `OLLAMA_MODEL` para ele nesta máquina pede medir os
+  tempos antes.
+
+O salto de 4b para 9b não muda a natureza dos planos. Quanto um modelo hospedado muda continua
+sem medida.
