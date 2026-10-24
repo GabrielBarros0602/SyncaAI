@@ -455,3 +455,30 @@ quando chegar.
   com a mesma chave foi descartado; tirar do cache a entrada ao descartar; ou aceitar, porque a
   chave costuma mudar assim que o relógio anda alguns minutos (ADR-0034) — mas não à noite,
   depois do fim da janela, quando hoje já não tem minuto planejável que possa mudar.
+
+### Aberto pela medição do modelo local — 2026-10-24
+
+Medido com `qwen3.5:4b` (4,2B, Q4_K_M, inteiro numa RTX 4060 de 8 GB): seis pedidos, quatro
+em português e dois em inglês, sobre sete dias de horário livre, pelo `OllamaGenerator` como
+está no `main`. Os quatro achados pedem decisão antes do resto do S7, e a correção leva uma ADR
+que emenda a ADR-0039. Seis pedidos são amostra pequena: os números orientam a decisão, não
+fixam limiares.
+
+- **O gerador como está não responde a nenhum pedido.** O modelo pensa por padrão
+  (`/api/show`: `thinking.default: true`) e o gerador não manda `think`. Os seis pedidos
+  estouraram os 50 s com uns 2.700 tokens de raciocínio e nenhuma resposta. Com
+  `think: false`, os seis viraram plano: chamadas de 8 a 24 s, o pior caso com reparo em 46 s.
+- **O contexto padrão corta o reparo sem avisar.** Numa GPU de 8 GB o Ollama abre 4096
+  tokens. Uma conversa de reparo de 4.102 tokens foi lida em 3.724, e a resposta parou em 372
+  tokens com `done_reason: "length"`: JSON cortado, que a escada lê como erro do modelo. Com
+  `num_ctx` de 16384 leu tudo, mas a resposta levou 74 s. Nesta máquina quem limita a
+  resposta é o tempo (uns 45 tokens/s), não o contexto.
+- **O modelo não vê o schema.** O `format` prende a forma da resposta, mas não mostra as
+  descrições dos campos. Sem elas, dois dos seis planos vieram com links relativos
+  (`/verificar-espaço-novo`, `#start`): todo passo descartado, salvo pelo reparo. Com o schema
+  anexado às instruções, os seis passaram de primeira, sem reparo, em até 19 s; o prompt foi
+  de ~650 para ~1.165 tokens.
+- **Um nome de modelo de nuvem sai da máquina.** O servidor local resolve `gemma4:cloud` pelo
+  mesmo `localhost:11434`, e esse modelo roda nos servidores do Ollama. Nada recusa o nome hoje
+  (ameaça 22). Segundo a própria documentação, a nuvem do Ollama também não tem saída
+  estruturada.
