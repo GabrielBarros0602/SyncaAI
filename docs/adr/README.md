@@ -38,7 +38,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
 | [0028](0028-the-checklist-is-its-own-resource.md) | The checklist is its own resource | Accepted |
 | [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted |
-| [0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) | A plan is placed in real free time, reviewed item by item, and committed whole | Accepted; amended by 0033 |
+| [0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) | A plan is placed in real free time, reviewed item by item, and committed whole | Accepted; amended by 0033 and 0049 |
 | [0031](0031-a-job-queue-in-postgresql-woken-by-notify.md) | A job queue in PostgreSQL, woken by NOTIFY and swept for what it misses | Accepted; decisions 1 and 5 amended by 0036 |
 | [0032](0032-days-off-and-a-preferred-block-length.md) | Days off and a preferred block length, for the planner | Accepted |
 | [0033](0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md) | A plan fills this week first, in the request's language, one at a time | Accepted |
@@ -57,6 +57,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0046](0046-the-circuit-breaker-is-read-from-the-calls-themselves.md) | The circuit breaker is read from the calls themselves | Accepted |
 | [0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md) | A plan can be written by hand, in the same draft | Accepted |
 | [0048](0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md) | Golden fixtures are captured by a script and labelled by a person | Accepted |
+| [0049](0049-a-step-that-waits-for-itself-loses-only-that.md) | A step that waits for itself loses only that | Accepted |
 
 ## Template
 

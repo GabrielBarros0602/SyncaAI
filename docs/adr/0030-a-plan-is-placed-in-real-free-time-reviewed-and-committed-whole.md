@@ -2,7 +2,9 @@
 
 **Status:** Accepted; amended by
 [ADR-0033](0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md) — a default
-horizon, this week first, the life of an unreviewed draft, and one plan at a time
+horizon, this week first, the life of an unreviewed draft, and one plan at a time — and by
+[ADR-0049](0049-a-step-that-waits-for-itself-loses-only-that.md), which drops a dependency on
+itself instead of discarding the step
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
