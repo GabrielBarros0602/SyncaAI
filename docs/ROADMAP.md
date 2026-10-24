@@ -377,7 +377,12 @@ de "nenhum projeto com testes automatizados publicados".
 
 ## S7 — Provedor real, guardrails e degradação
 
-- [ ] Cliente real com structured output nativo do provedor
+- [x] **Decidido:** nenhum provedor pago por ora. Na teoria, a Anthropic, começando no
+      Claude Haiku 5.5 e medindo; agora, um modelo aberto local via Ollama, e o gerador de
+      exemplo em qualquer deploy
+      → [ADR-0039](adr/0039-a-local-open-model-until-a-provider-is-paid-for.md)
+- [x] Gerador real local (Ollama), preso ao schema do contrato, escolhido por `AI_PROVIDER`
+- [ ] Cliente do provedor pago (Anthropic, Haiku 5.5): **aguarda a decisão de pagar**
 - [ ] Tabela `ai_usage` escrita em toda chamada concluída: tokens de entrada e saída, custo
       calculado, latência, modelo, `prompt_version`, id do job
 - [ ] Estimativa de custo **antes** da chamada; recusa se a estimativa estoura o teto
@@ -390,8 +395,10 @@ de "nenhum projeto com testes automatizados publicados".
       um cache hit é servido mesmo com o usuário acima do teto
 - [ ] Circuit breaker no cliente; testar aberto e half-open
 - [ ] Fallback manual: criar checklist à mão, no mesmo editor do draft gerado
-- [ ] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas
-- [ ] Alerta de orçamento do lado do provedor, abaixo do teto global
+- [ ] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
+      local por ora, cada uma marcada com o modelo que a produziu (ADR-0039)
+- [ ] Alerta de orçamento do lado do provedor, abaixo do teto global: **aguarda a decisão
+      de pagar**
 
 ---
 

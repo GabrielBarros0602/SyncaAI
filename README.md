@@ -51,7 +51,7 @@ Two design decisions carry most of the weight:
 | Mail | one interface, console and recording implementations ([ADR-0018](docs/adr/0018-email-delivery.md)) |
 | Dependencies | pip, with `uv` as the resolver ([why](CONTRIBUTING.md#dependencies)) |
 | AI queue | PostgreSQL itself: `SELECT ... FOR UPDATE SKIP LOCKED`, woken by `NOTIFY`, with a worker as its own service ([ADR-0031](docs/adr/0031-a-job-queue-in-postgresql-woken-by-notify.md)) |
-| AI provider | one `PlanGenerator` interface; a sample generator until S7, so nothing costs money ([ADR-0003](docs/adr/0003-ai-request-lifecycle.md)) |
+| AI provider | one `PlanGenerator` interface: a sample generator by default, or an open model run locally through Ollama; no paid provider, so nothing costs money ([ADR-0003](docs/adr/0003-ai-request-lifecycle.md), [ADR-0039](docs/adr/0039-a-local-open-model-until-a-provider-is-paid-for.md)) |
 | Web | Vite, React 19, TypeScript strict ([ADR-0021](docs/adr/0021-browser-session-and-origin.md)) |
 | Quality | ruff, mypy (strict), pytest; eslint, tsc, vitest |
 | Runtime | Docker Compose |
