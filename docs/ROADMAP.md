@@ -390,7 +390,9 @@ de "nenhum projeto com testes automatizados publicados".
       de entrada e saída, custo calculado de `prices.toml`, latência, modelo,
       `prompt_version`, id do job → [ADR-0041](adr/0041-every-call-is-metered-when-it-ends.md)
 - [ ] Estimativa de custo **antes** da chamada; recusa se a estimativa estoura o teto
-- [ ] Rate limit por usuário, duas janelas: 10/hora e 30/dia, `429` com `Retry-After`
+- [x] Rate limit por usuário, duas janelas móveis: 10 em qualquer hora e 30 em quaisquer 24
+      horas, contadas nos próprios jobs; só pedido que vira job gasta; `429` com `Retry-After`
+      → [ADR-0042](adr/0042-plan-requests-are-limited-over-moving-windows-of-jobs.md)
 - [ ] Teto mensal por usuário
 - [ ] Kill switch global de gasto — é este que protege a conta bancária, porque a falha
       realista é um bug no próprio front-end em loop
