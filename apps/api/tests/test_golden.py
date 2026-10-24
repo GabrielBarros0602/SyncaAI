@@ -71,13 +71,20 @@ def _replayed(fixture: dict[str, Any]) -> LadderResult:
     )
 
 
+def _invalid(answer: dict[str, Any]) -> bool:
+    """Not a plan, a step discarded, or a dependency the validator had to drop (ADR-0049)."""
+    return (
+        not answer["parses"]
+        or bool(answer["discarded"])
+        or bool(answer.get("dropped_dependencies"))
+    )
+
+
 def test_the_batch_holds_what_adr_0005_asked_for() -> None:
     """Five to ten real answers, at least two of them invalid."""
     labels = [_load(path)["label"] for path in FIXTURES]
     invalid = [
-        label
-        for label in labels
-        if label and any(not answer["parses"] or answer["discarded"] for answer in label["answers"])
+        label for label in labels if label and any(_invalid(answer) for answer in label["answers"])
     ]
 
     assert 5 <= len(FIXTURES) <= 10
@@ -103,7 +110,9 @@ def test_the_validator_agrees_with_the_label(path: Path) -> None:
 
     # The ladder asks again exactly when the model was asked again.
     assert len(result.attempts) == len(fixture["answers"])
-    for attempt, expected in zip(result.attempts, label["answers"], strict=True):
+    for attempt, answer, expected in zip(
+        result.attempts, fixture["answers"], label["answers"], strict=True
+    ):
         assert (attempt.report is not None) == expected["parses"], label["note"]
         if attempt.report is None:
             continue
@@ -111,6 +120,12 @@ def test_the_validator_agrees_with_the_label(path: Path) -> None:
         assert sorted(discarded) == sorted(int(p) for p in expected["discarded"]), label["note"]
         for position, why in expected["discarded"].items():
             assert any(why in reason for reason in discarded[int(position)]), label["note"]
+        kept = {item.position: item.depends_on for item in attempt.report.kept}
+        written = json.loads(answer["raw"])["items"]
+        for position, dropped in expected.get("dropped_dependencies", {}).items():
+            # The model wrote them, and the validator kept the step without them.
+            assert set(dropped) <= set(written[int(position)]["depends_on"]), label["note"]
+            assert not set(dropped) & set(kept[int(position)]), label["note"]
     assert result.chosen == label["chosen"], label["note"]
 
 

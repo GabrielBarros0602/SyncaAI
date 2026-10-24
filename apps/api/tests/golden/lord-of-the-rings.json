@@ -159,16 +159,16 @@
   },
   "answers": [
     {
-      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Ler 'O Senhor dos Anéis: A Sociedade do Anel'\",\n      \"description\": \"Leitura completa da obra de J.R.R. Tolkien, dividida em capítulos para manter o ritmo.\",\n      \"estimated_minutes\": 480,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Texto completo em português\",\n          \"url\": \"https://pt.wikisource.org/wiki/O_Senhor_dos_An%C3%A9is:_A_Sociedade_do_Anel\"\n        },\n        {\n          \"label\": \"Análise crítica da obra\",\n          \"url\": \"https://www.literatura.com.br/obras/o-senhor-dos-anéis-a-sociedade-do-anel\"\n        }\n      ]\n    }\n  ]\n}",
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Ler 'O Senhor dos Anéis: A Sociedade do Anel'\",\n      \"description\": \"Continuar a leitura do livro até completar o mês de junho de 2031.\",\n      \"estimated_minutes\": 480,\n      \"depends_on\": [],\n      \"links\": []\n    }\n  ]\n}",
       "model": "qwen3.5:4b",
       "input_tokens": 1513,
-      "output_tokens": 198
+      "output_tokens": 89
     },
     {
-      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Ler 'O Senhor dos Anéis: A Sociedade do Anel'\",\n      \"description\": \"Leitura da obra dividida em capítulos para garantir o ritmo e a compreensão.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Texto completo em português\",\n          \"url\": \"https://pt.wikisource.org/wiki/O_Senhor_dos_An%C3%A9is:_A_Sociedade_do_Anel\"\n        },\n        {\n          \"label\": \"Análise crítica da obra\",\n          \"url\": \"https://www.literatura.com.br/obras/o-senhor-dos-anéis-a-sociedade-do-anel\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 2\",\n      \"description\": \"Avançar para a segunda parte da obra, focando na jornada de Frodo.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      0\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 3\",\n      \"description\": \"Desenvolver a trama com a chegada à Morada das Árvores.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      1\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 4\",\n      \"description\": \"Explorar os eventos em Bree e a partida para Rivendell.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      2\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 5\",\n      \"description\": \"Seguir Frodo e seus companheiros até a Floresta Negra.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      3\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 6\",\n      \"description\": \"Confrontos na Floresta Negra e a descoberta da Torre de Cirian.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      4\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 7\",\n      \"description\": \"A chegada à Morada das Árvores e a reunião com os elfos.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      5\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 8\",\n      \"description\": \"A partida para Rivendell e a preparação para o próximo passo.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      6\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 9\",\n      \"description\": \"A chegada a Rivendell e a conversa com Galadriel.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      7\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 10\",\n      \"description\": \"A jornada para o Monte Gorgoroth e a batalha final.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      8\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 11\",\n      \"description\": \"A derrota de Sauron e a destruição do Anel.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      9\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Continuar leitura do capítulo 12\",\n      \"description\": \"O retorno à Terra-Média e a conclusão da jornada.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [\n      10\n      ],\n      \"links\": []\n    }\n  ]\n}",
+      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Ler 'O Senhor dos Anéis: A Sociedade do Anel'\",\n      \"description\": \"Continuar a leitura do livro até completar o mês de junho de 2031.\",\n      \"estimated_minutes\": 60,\n      \"depends_on\": [],\n      \"links\": []\n    }\n  ]\n}",
       "model": "qwen3.5:4b",
-      "input_tokens": 1797,
-      "output_tokens": 978
+      "input_tokens": 1688,
+      "output_tokens": 88
     }
   ],
   "label": {
@@ -185,6 +185,6 @@
       }
     ],
     "chosen": 1,
-    "note": "The whole book as one 480-minute step against a 60-minute block. The repair split it into twelve chapters of sixty minutes, each after the last."
+    "note": "The whole book as one 480-minute step against a 60-minute block. The repair met the block by shrinking the book to one hour of reading: valid by the contract, wrong by meaning, which only the review catches. In an earlier capture the same repair split it into twelve chapters; answers vary between runs even at temperature 0."
   }
 }

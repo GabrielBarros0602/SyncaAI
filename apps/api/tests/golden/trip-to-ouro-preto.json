@@ -99,30 +99,21 @@
       "model": "qwen3.5:4b",
       "input_tokens": 1164,
       "output_tokens": 767
-    },
-    {
-      "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Definir datas e roteiro da viagem\",\n      \"description\": \"Escolher as três noites em que ficará em Ouro Preto e traçar o caminho entre cidades.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [],\n      \"links\": [\n        {\n          \"label\": \"Guia de viagens do Brasil\",\n          \"url\": \"https://www.brasilviagens.com/guia\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Reservar hotéis em Ouro Preto\",\n      \"description\": \"Comparar preços e reservar acomodações para as três noites escolhidas.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"Booking.com - Ouro Preto\",\n          \"url\": \"https://www.booking.com/destinations/location/ouro-preto\"\n        },\n        {\n          \"label\": \"Agoda - Minas Gerais\",\n          \"url\": \"https://www.agoda.com/minas-gerais\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Comprar passagens aéreas ou de ônibus\",\n      \"description\": \"Verificar rotas para chegar a Ouro Preto e reservar o transporte.\",\n      \"estimated_minutes\": 40,\n      \"depends_on\": [\n        0\n      ],\n      \"links\": [\n        {\n          \"label\": \"Google Flights\",\n          \"url\": \"https://www.google.com/flights\"\n        },\n        {\n          \"label\": \"BusPass - Minas Gerais\",\n          \"url\": \"https://www.buspass.com.br\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Planejar roteiro de visitas diárias\",\n      \"description\": \"Selecionar os principais pontos turísticos para cada dia da viagem.\",\n      \"estimated_minutes\": 45,\n      \"depends_on\": [\n        1,\n        2\n      ],\n      \"links\": [\n        {\n          \"label\": \"Turismo de Minas Gerais\",\n          \"url\": \"https://www.turismominas.gov.br\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Reservar entradas para atrações principais\",\n      \"description\": \"Comprar ingressos antecipados para igrejas, museus e cachoeiras.\",\n      \"estimated_minutes\": 35,\n      \"depends_on\": [\n        3\n      ],\n      \"links\": [\n        {\n          \"label\": \"Entradas Ouro Preto\",\n          \"url\": \"https://www.ouropreto.com.br/entradas\"\n        }\n      ]\n    },\n    {\n      \"title\": \"Organizar malas e documentação\",\n      \"description\": \"Pacotar roupas, documentos de identidade e itens essenciais.\",\n      \"estimated_minutes\": 30,\n      \"depends_on\": [\n        4\n      ],\n      \"links\": []\n    },\n    {\n      \"title\": \"Confirmar reservas finais\",\n      \"description\": \"Revisar todas as confirmações de hotel, transporte e entradas.\",\n      \"estimated_minutes\": 25,\n      \"depends_on\": [\n        5,\n        6\n      ],\n      \"links\": []\n    }\n  ]\n}",
-      "model": "qwen3.5:4b",
-      "input_tokens": 2007,
-      "output_tokens": 766
     }
   ],
   "label": {
     "answers": [
       {
         "parses": true,
-        "discarded": {
-          "6": "it depends on items[6]"
-        }
-      },
-      {
-        "parses": true,
-        "discarded": {
-          "6": "it depends on items[6]"
+        "discarded": {},
+        "dropped_dependencies": {
+          "6": [
+            6
+          ]
         }
       }
     ],
-    "chosen": 1,
-    "note": "Step 6 lists itself among its prerequisites. The repair sent the same answer back, word for word; the tie goes to the repair (ADR-0035)."
+    "chosen": 0,
+    "note": "Step 6 lists itself among its prerequisites. The validator drops that one and keeps the step after step 5 (ADR-0049). Under the earlier rule this same answer was discarded, and its repair sent it back word for word."
   }
 }
