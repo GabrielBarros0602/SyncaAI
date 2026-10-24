@@ -128,6 +128,7 @@ def _job(session: Session, owner: uuid.UUID, finished: timedelta, answers: int =
             request=SECRET_REQUEST,
             horizon_days=14,
             prompt_version=PROMPT_VERSION,
+            context_fingerprint="ab" * 32,
             status="done",
             finished_at=_ago(finished),
             chosen_answer=answers - 1,
@@ -156,7 +157,7 @@ def test_thirty_days_after_a_job_finished_its_content_goes_and_its_metadata_stay
     assert (report.answers, report.requests_cleared) == (2, 1)
     job = session.get_one(AiJob, old)
     session.refresh(job)
-    assert job.request is None
+    assert (job.request, job.context_fingerprint) == (None, None)
     assert (job.status, job.chosen_answer, job.prompt_version) == ("done", 1, PROMPT_VERSION)
     assert (
         session.scalar(
@@ -166,7 +167,7 @@ def test_thirty_days_after_a_job_finished_its_content_goes_and_its_metadata_stay
     )
     kept = session.get_one(AiJob, recent)
     session.refresh(kept)
-    assert kept.request == SECRET_REQUEST
+    assert (kept.request, kept.context_fingerprint) == (SECRET_REQUEST, "ab" * 32)
     assert (
         session.scalar(
             select(func.count()).select_from(AiJobAnswer).where(AiJobAnswer.job_id == recent)

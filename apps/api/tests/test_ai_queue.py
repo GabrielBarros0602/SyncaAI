@@ -319,6 +319,18 @@ def test_a_job_that_died_on_its_last_attempt_is_not_claimed_but_failed(
             "ck_ai_jobs_answer_when_done",
         ),
         ({"chosen_answer": 0}, "ck_ai_jobs_answer_when_done"),
+        ({"context_fingerprint": "not-a-digest"}, "ck_ai_jobs_context_fingerprint_shape"),
+        ({"context_fingerprint": "AB" * 32}, "ck_ai_jobs_context_fingerprint_shape"),
+        (
+            {
+                "status": "done",
+                "finished_at": func.now(),
+                "chosen_answer": 0,
+                "request": None,
+                "context_fingerprint": "ab" * 32,
+            },
+            "ck_ai_jobs_context_fingerprint_with_its_request",
+        ),
         (
             {"status": "done", "finished_at": func.now(), "chosen_answer": 2},
             "ck_ai_jobs_chosen_answer",

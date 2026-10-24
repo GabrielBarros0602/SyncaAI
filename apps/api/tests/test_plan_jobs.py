@@ -191,6 +191,20 @@ def test_after_a_repair_both_answers_are_kept_and_the_better_one_used(
         assert draft is not None and len(draft.items) == 3 and draft.discards == []
 
 
+def test_a_job_keeps_the_fingerprint_of_the_context_it_was_built_from(
+    person: uuid.UUID,
+) -> None:
+    """What a response cache would have keyed on, kept to measure one first (ADR-0045)."""
+    job_id = _claimed(person)
+    model = FakeGenerator([THREE_STEPS])
+
+    _run(job_id, model)
+
+    [(prompt, _)] = model.calls
+    with get_session_factory()() as session:
+        assert session.get_one(AiJob, job_id).context_fingerprint == prompt.fingerprint
+
+
 def test_every_call_a_job_makes_is_recorded_with_whose_it_was(person: uuid.UUID) -> None:
     job_id = _claimed(person)
 
