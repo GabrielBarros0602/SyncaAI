@@ -475,6 +475,13 @@ class AiJob(Base, TimestampMixin):
         CheckConstraint(
             "request IS NOT NULL OR finished_at IS NOT NULL", name="request_kept_until_finished"
         ),
+        CheckConstraint("context_fingerprint ~ '^[0-9a-f]{64}$'", name="context_fingerprint_shape"),
+        # A digest of a person's free time, of use only beside the request it went with, so
+        # it goes when the request goes (ADR-0045).
+        CheckConstraint(
+            "context_fingerprint IS NULL OR request IS NOT NULL",
+            name="context_fingerprint_with_its_request",
+        ),
         CheckConstraint(
             "status <> 'running' OR locked_until IS NOT NULL", name="running_is_locked"
         ),
@@ -524,6 +531,9 @@ class AiJob(Base, TimestampMixin):
     request: Mapped[str | None] = mapped_column(Text, nullable=True)
     horizon_days: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: What a response cache would have keyed on beside the request, written when the job
+    #: runs, so the hits it would have had can be counted before one is built (ADR-0045).
+    context_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     #: Claims, not model calls: a worker that dies spends one (ADR-0031).
     attempts: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=0, server_default=text("0")

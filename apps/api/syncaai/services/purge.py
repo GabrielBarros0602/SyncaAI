@@ -5,7 +5,8 @@
 - **Rate-limit windows** that ended more than a day ago (ADR-0031). The counter of an hour that
   has passed limits nothing.
 - **A finished job's content** after thirty days: its answers are deleted and its request is
-  cleared, and the job keeps only its metadata (ADR-0031, ADR-0036).
+  cleared, with the context fingerprint that only meant something beside it, and the job
+  keeps only its metadata (ADR-0031, ADR-0036, ADR-0045).
 - **Discarded and expired drafts** thirty days after they ended, whole (ADR-0037). An approved
   draft stays: its tasks point at it.
 
@@ -70,7 +71,7 @@ def purge(session: Session) -> PurgeReport:
     cleared = session.execute(
         update(AiJob)
         .where(*holding_content)
-        .values(request=None)
+        .values(request=None, context_fingerprint=None)
         .returning(AiJob.id)
         .execution_options(synchronize_session=False)
     ).all()

@@ -111,15 +111,14 @@ def run_plan_job(
         result = run_ladder(metered, prompt, max_item_minutes=block)
     except CeilingReachedError as refusal:
         # Failed rather than left to its lock: another attempt would meet the same ceiling.
-        return _refused(factory, job_id, attempt, refusal.sentence)
+        return _refused(factory, job_id, attempt, prompt, refusal.sentence)
 
     with factory() as session, session.begin():
         job = _locked_if_mine(session, job_id, attempt)
         if job is None:
             return Outcome.LOST
         _keep_answers(session, job, result)
-        # The version actually built, should a deploy have landed since the job was queued.
-        job.prompt_version = prompt.version
+        _built_from(job, prompt)
         if result.report is None:
             _finish(job, failure=result.failure)
             return Outcome.FAILED
@@ -149,7 +148,11 @@ def _locked_if_mine(session: Session, job_id: uuid.UUID, attempt: int) -> AiJob 
 
 
 def _refused(
-    factory: sessionmaker[Session], job_id: uuid.UUID, attempt: int, reason: str
+    factory: sessionmaker[Session],
+    job_id: uuid.UUID,
+    attempt: int,
+    prompt: PlanPrompt,
+    reason: str,
 ) -> Outcome:
     """A job a ceiling stopped. Answers made before the refusal are not kept: the ladder did
     not finish, and their usage is already recorded (ADR-0044)."""
@@ -157,8 +160,16 @@ def _refused(
         job = _locked_if_mine(session, job_id, attempt)
         if job is None:
             return Outcome.LOST
+        _built_from(job, prompt)
         _finish(job, failure=reason)
         return Outcome.FAILED
+
+
+def _built_from(job: AiJob, prompt: PlanPrompt) -> None:
+    # The version actually built, should a deploy have landed since the job was queued.
+    job.prompt_version = prompt.version
+    # What a response cache would have keyed on, kept to measure one first (ADR-0045).
+    job.context_fingerprint = prompt.fingerprint
 
 
 def _keep_answers(session: Session, job: AiJob, result: LadderResult) -> None:

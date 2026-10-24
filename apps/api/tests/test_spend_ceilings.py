@@ -306,6 +306,8 @@ def test_a_job_whose_person_has_spent_the_month_fails_without_a_call(
 
     assert _job(job_id).failure_reason == AllowanceSpentError.sentence
     assert (model.calls, _usage(job_id)) == ([], [])
+    # A refused request could have been a cache hit, so it is measured too (ADR-0045).
+    assert _job(job_id).context_fingerprint is not None
 
 
 def test_a_paid_call_is_not_made_when_its_estimate_would_cross_the_ceiling(
