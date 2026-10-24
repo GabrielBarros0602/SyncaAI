@@ -666,6 +666,9 @@ class PlanDraft(Base, TimestampMixin):
         CheckConstraint(
             "(status = 'approved') = (idempotency_key IS NOT NULL)", name="key_when_approved"
         ),
+        # A model's draft has its job and the prompt it was built from; one written by hand
+        # has neither (ADR-0047).
+        CheckConstraint("(job_id IS NULL) = (prompt_version IS NULL)", name="job_with_its_prompt"),
         Index(
             "ux_plan_drafts_one_pending",
             "user_id",
@@ -685,14 +688,15 @@ class PlanDraft(Base, TimestampMixin):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    job_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("ai_jobs.id", ondelete="CASCADE"), nullable=False, unique=True
+    #: None for a plan written by hand (ADR-0047).
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("ai_jobs.id", ondelete="CASCADE"), nullable=True, unique=True
     )
     request: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="pending", server_default=text("'pending'")
     )
-    prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    prompt_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     #: The horizon in the person's local days. The Sunday it fills first is derived from
     #: ``first_day``, never stored (ADR-0010, ADR-0033).
     first_day: Mapped[date] = mapped_column(Date, nullable=False)

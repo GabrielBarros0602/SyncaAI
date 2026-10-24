@@ -147,12 +147,21 @@ def test_a_job_has_at_most_one_draft(session: Session, owner: uuid.UUID) -> None
         ({"status": "discarded"}, "ck_plan_drafts_ended_unless_pending"),
         ({"status": "approved", "ended_at": func.now()}, "ck_plan_drafts_key_when_approved"),
         ({"idempotency_key": "k-1"}, "ck_plan_drafts_key_when_approved"),
+        ({"prompt_version": None}, "ck_plan_drafts_job_with_its_prompt"),
+        ({"job_id": None, "prompt_version": PROMPT_VERSION}, "ck_plan_drafts_job_with_its_prompt"),
     ],
 )
 def test_a_draft_that_contradicts_its_own_state_is_refused(
     session: Session, owner: uuid.UUID, fields: dict[str, Any], constraint: str
 ) -> None:
     _refused(session, constraint, lambda: _draft(session, owner, **fields))
+
+
+def test_a_draft_written_by_hand_has_no_job_and_no_prompt(
+    session: Session, owner: uuid.UUID
+) -> None:
+    """A model's draft has both; one a person writes has neither (ADR-0047)."""
+    _draft(session, owner, job_id=None, prompt_version=None)
 
 
 def test_fourteen_days_is_the_longest_horizon(session: Session, owner: uuid.UUID) -> None:
