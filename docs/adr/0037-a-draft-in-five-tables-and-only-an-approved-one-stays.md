@@ -1,6 +1,7 @@
 # ADR-0037: A draft is held in five tables, and only an approved one stays
 
-**Status:** Accepted
+**Status:** Accepted; a draft's job and prompt made optional, for a plan written by hand, by
+[ADR-0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 

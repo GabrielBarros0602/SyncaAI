@@ -1,6 +1,7 @@
 # ADR-0038: A job and its plan are two resources, linked by id
 
-**Status:** Accepted
+**Status:** Accepted; `POST /plans` and adding a step to a plan by
+[ADR-0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
