@@ -413,7 +413,10 @@ de "nenhum projeto com testes automatizados publicados".
       por 60 s, depois uma chamada passa como teste; aberto, o pedido recebe `503` e o worker
       não pega job; testado aberto, half-open e fechado
       → [ADR-0046](adr/0046-the-circuit-breaker-is-read-from-the-calls-themselves.md)
-- [ ] Fallback manual: criar checklist à mão, no mesmo editor do draft gerado
+- [x] Fallback manual: `POST /plans` cria um plano vazio, sem job nem prompt, e
+      `POST /plans/{id}/items` acrescenta passo a qualquer plano pendente, posicionado pelo
+      mesmo agendador; até 12 passos; sempre disponível
+      → [ADR-0047](adr/0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)
 - [ ] Golden fixtures de respostas reais, incluindo pelo menos duas inválidas — do modelo
       local por ora, cada uma marcada com o modelo que a produziu (ADR-0039)
 - [ ] Alerta de orçamento do lado do provedor, abaixo do teto global: **aguarda a decisão
