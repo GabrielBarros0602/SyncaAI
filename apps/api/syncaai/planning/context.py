@@ -127,6 +127,13 @@ def build_repair_message(errors: Sequence[str]) -> str:
     return REPAIR_INSTRUCTIONS.format(errors="\n".join(shown))
 
 
+def prompt_digest(prompt: PlanPrompt) -> str:
+    """SHA-256 over everything a prompt sends, the request included: what a golden fixture is
+    pinned to, so one captured from another prompt fails rather than ages (ADR-0048)."""
+    text = "\n".join((prompt.version, prompt.instructions, prompt.message))
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 def _fingerprint(context: Mapping[str, object]) -> str:
     canonical = json.dumps(context, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
