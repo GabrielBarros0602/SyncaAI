@@ -121,6 +121,21 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def _refuse_a_model_ollama_runs_in_its_cloud(self) -> "Settings":
+        """Ollama answers for its cloud models at the same local address, so the name is the
+        only sign the prompt would leave the machine (ADR-0040). The tag says it: `:cloud`,
+        `:31b-cloud`. OLLAMA_NO_CLOUD=1, where Ollama runs, is the switch that holds when a
+        name does not."""
+        model = (self.ollama_model or "").lower()
+        if self.ai_provider == "ollama" and model.rpartition(":")[2].endswith("cloud"):
+            message = (
+                f"OLLAMA_MODEL={self.ollama_model} runs on Ollama's servers, not this machine. "
+                "Name a model `ollama list` shows."
+            )
+            raise ValueError(message)
+        return self
+
+    @model_validator(mode="after")
     def _refuse_a_mailer_that_discards_in_production(self) -> "Settings":
         """A production deployment that records mail instead of sending it accepts every
         registration and delivers nothing, and nobody finds out.
