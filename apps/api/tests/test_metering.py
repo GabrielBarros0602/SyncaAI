@@ -1,9 +1,11 @@
 """Measuring each call as it ends (ADR-0041), with no database and no model."""
 
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import pytest
 
+from syncaai.errors import AllowanceSpentError
 from syncaai.planning.context import build_plan_context
 from syncaai.planning.generator import Generation, Repair
 from syncaai.planning.metering import ERROR_CHARS, Call, MeteredGenerator
@@ -110,3 +112,60 @@ def test_it_answers_as_the_generator_it_measures() -> None:
     metered = MeteredGenerator(_Model(), lambda call: None)
 
     assert (metered.provider, metered.model) == ("ollama", "asked-model")
+
+
+# --- Admitting a call ----------------------------------------------------------------------
+
+
+class _Counting(_Model):
+    def __init__(self, raises: Exception | None = None) -> None:
+        super().__init__(raises)
+        self.calls = 0
+
+    def generate(self, prompt: object, *, repair: Repair | None = None) -> Generation:
+        self.calls += 1
+        return super().generate(prompt, repair=repair)
+
+
+def test_a_call_past_a_ceiling_is_never_made_nor_recorded() -> None:
+    """Refused before it starts: nothing was sent, so there is nothing to count (ADR-0044)."""
+    inner = _Counting()
+    recorded: list[Call] = []
+
+    def refuse(prompt: object, repair: Repair | None) -> Decimal:
+        raise AllowanceSpentError(60)
+
+    with pytest.raises(AllowanceSpentError):
+        MeteredGenerator(inner, recorded.append, admit=refuse).generate(PROMPT)
+
+    assert (inner.calls, recorded) == (0, [])
+
+
+def test_admit_is_asked_about_the_call_about_to_be_made() -> None:
+    asked: list[tuple[object, Repair | None]] = []
+    repair = Repair("{}", "fix it")
+
+    def admit(prompt: object, repair: Repair | None) -> Decimal:
+        asked.append((prompt, repair))
+        return Decimal(0)
+
+    MeteredGenerator(_Model(), lambda call: None, admit=admit).generate(PROMPT, repair=repair)
+
+    assert asked == [(PROMPT, repair)]
+
+
+def test_a_failed_call_carries_the_estimate_it_was_admitted_at() -> None:
+    """What a failed call is charged: the most it could have cost (ADR-0041, ADR-0044)."""
+    recorded: list[Call] = []
+    ticks = iter([10.0, 10.25])
+    metered = MeteredGenerator(
+        _Model(raises=TimeoutError()),
+        recorded.append,
+        admit=lambda prompt, repair: Decimal("0.0022403"),
+        monotonic=lambda: next(ticks),
+    )
+
+    with pytest.raises(TimeoutError):
+        metered.generate(PROMPT)
+
+    assert recorded[0].estimate == Decimal("0.0022403")

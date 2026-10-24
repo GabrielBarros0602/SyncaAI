@@ -29,6 +29,7 @@ from syncaai.main import configure_logging
 from syncaai.planning.generator import PlanGenerator, SampleGenerator
 from syncaai.planning.ollama import OllamaGenerator
 from syncaai.services.ai_queue import CHANNEL, claim_next, sweep
+from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, ceilings_from
 from syncaai.services.plan_drafts import expire_drafts
 from syncaai.services.plan_jobs import run_plan_job
 from syncaai.services.purge import purge
@@ -55,12 +56,14 @@ class Worker:
         listen_url: str,
         clock: Callable[[], datetime] = _utc_now,
         monotonic: Callable[[], float] = time.monotonic,
+        ceilings: Ceilings = DEFAULT_CEILINGS,
     ) -> None:
         self._factory = factory
         self._generator = generator
         self._listen_url = listen_url
         self._clock = clock
         self._monotonic = monotonic
+        self._ceilings = ceilings
         self._stopping = False
         self._purged_at: float | None = None
 
@@ -90,7 +93,12 @@ class Worker:
             ran += 1
             try:
                 outcome = run_plan_job(
-                    self._factory, self._generator, job_id, attempt=attempt, clock=self._clock
+                    self._factory,
+                    self._generator,
+                    job_id,
+                    attempt=attempt,
+                    clock=self._clock,
+                    ceilings=self._ceilings,
                 )
             except Exception:
                 # Left to its lock: the next claim takes it back, with one attempt fewer, and
@@ -151,6 +159,7 @@ def main() -> None:
         get_session_factory(),
         generator_from(settings),
         listen_url=listen_url(settings.database_url),
+        ceilings=ceilings_from(settings),
     )
     signal.signal(signal.SIGTERM, worker.stop)
     signal.signal(signal.SIGINT, worker.stop)

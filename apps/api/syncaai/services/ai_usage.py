@@ -25,7 +25,9 @@ def usage_recorder(
     def record(call: Call) -> None:
         measured: dict[str, object]
         if call.input_tokens is None or call.output_tokens is None:
-            measured = {"outcome": "failed", "error": call.error}
+            # Charged at the most it could have cost: a provider can bill a call that failed
+            # on this side (ADR-0041, ADR-0044).
+            measured = {"outcome": "failed", "error": call.error, "cost_usd": call.estimate}
         else:
             cost = cost_of(
                 provider,
