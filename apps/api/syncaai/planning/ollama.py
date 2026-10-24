@@ -17,7 +17,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from syncaai.planning.context import PlanPrompt
-from syncaai.planning.contract import response_schema
+from syncaai.planning.contract import MAX_ANSWER_TOKENS, response_schema
 from syncaai.planning.generator import Generation, Repair
 
 Post = Callable[[str, Mapping[str, Any], float], Mapping[str, Any]]
@@ -30,7 +30,7 @@ TIMEOUT_SECONDS = 50.0
 # 4,102 tokens was read as 3,724 and answered cut off, with no error (ADR-0040). The answer is
 # capped too, so the longest repair fits on a GPU fast enough to outrun the timeout.
 CONTEXT_TOKENS = 16384
-ANSWER_TOKENS = 4096
+ANSWER_TOKENS = MAX_ANSWER_TOKENS
 
 # ``format`` holds the answer to the schema's shape without showing the model its
 # descriptions, which are where a link's URL is said to be absolute (ADR-0040).
