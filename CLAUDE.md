@@ -174,19 +174,23 @@ Rules:
 ## Where the project is
 
 **Done:** S0–S4 (repository, domain and schema, authentication and owner isolation, email
-verification, domain CRUD and the capacity query), most of S5, and S6 (the AI pipeline
-against a test double, closed on 2026-10-23).
+verification, domain CRUD and the capacity query), most of S5, S6 (the AI pipeline against
+a test double, closed on 2026-10-23) and S7 (the guardrails and the degradation, against a
+local model, closed on 2026-10-24).
 
 **The current shape.** The API is FastAPI + SQLAlchemy 2.0 + PostgreSQL 16, with the rules the
 database can hold held there: a GiST exclusion constraint refuses overlapping bookings, a
 trigger derives `end_at`, and a CHECK caps a task at one day. The web app is Vite + React 19 +
-TypeScript in strict mode, CSS Modules, no component library. The AI layer runs end to end
-against a sample generator: the queue, the worker (`python -m syncaai.worker`, its own compose
-service), the prompt, the repair ladder, the scheduler and the draft are built (ADR-0030 to
-ADR-0038). Over HTTP a plan can be asked for, read, edited, placed again, sent to next week,
-discarded and committed. No provider is paid for, so a second generator runs an open model on
-the developer's machine through Ollama, chosen by `AI_PROVIDER` (ADR-0039); any deployment
-keeps the sample.
+TypeScript in strict mode, CSS Modules, no component library. The AI layer runs end to end:
+the queue, the worker (`python -m syncaai.worker`, its own compose service), the prompt, the
+repair ladder, the scheduler and the draft (ADR-0030 to ADR-0038). It answers with an open
+model on the developer's machine through Ollama, `qwen3.5:4b`, or with a sample generator
+where none is installed, as any deployment is (ADR-0039, ADR-0043). Every call is metered in
+`ai_usage` (ADR-0041), and every request is held to a moving rate limit, monthly spend
+ceilings and a circuit breaker, all read from PostgreSQL (ADR-0042, ADR-0044, ADR-0046). Over
+HTTP a plan can be asked for, read, edited, placed again, sent to next week, discarded and
+committed, or written by hand in the same draft (ADR-0047). Real answers are kept as golden
+fixtures, labelled by hand (ADR-0048). No provider is paid for, and nothing costs money.
 
 **The front end is frozen, since 2026-10-22.** A third design round is coming, with large
 changes likely. Build no screen, UI component, UI test or new CSS until it returns — PRs 6, 7
@@ -205,13 +209,10 @@ base work that list began with is done (ADR-0027 to ADR-0029).
    decided. The third round's briefs are local, in `docs/design-brief-3.md` and
    `docs/design-brief-3-passo-2.md`; the desktop week went back for two corrections, recorded
    in the backlog.
-2. S7 — the guardrails and the degradation, against the local model. Like S6 it does not
-   depend on the redesign. The provider is chosen (ADR-0039): Anthropic in theory, starting
-   at its cheapest model and measured, but nothing is paid for now. What needs no money is
-   built anyway — the rate limit, the monthly cap and the kill switch (threat 13), the
-   estimate, the cache, the circuit breaker and the fallback; the paid client and its cost
-   in money wait for a decision to pay. The checklist in `docs/ROADMAP.md` is the order of
-   work.
+2. Nothing else moves on its own. S8 and S10 wait for the third design round, S9 for S8 to
+   be published (ADR-0002), and the paid client for a decision to pay (`docs/backlog.md`,
+   "Quando um provedor for pago"). Parts of S11 — the multi-stage Dockerfile, metrics read
+   from `ai_usage`, a final audit — need neither, and are the open candidates.
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when
