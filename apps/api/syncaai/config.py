@@ -6,6 +6,7 @@ injects the same variables into the process environment, and process variables t
 precedence over the file, so one class serves both cases without branching.
 """
 
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -105,6 +106,11 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     # No default: which open model is a choice for the machine it runs on.
     ollama_model: str | None = None
+
+    # What a UTC month may spend on models, in US dollars, per person and for everyone
+    # (ADR-0044). They bound what costs money, so with a free model they are never reached.
+    ai_ceiling_per_person_usd: Decimal = Field(default=Decimal("0.50"), ge=0)
+    ai_ceiling_everyone_usd: Decimal = Field(default=Decimal("5.00"), ge=0)
 
     app_env: Literal["local", "ci", "production"] = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"

@@ -10,7 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, status
 
-from syncaai.api.dependencies import CurrentUserId, SessionDep
+from syncaai.api.dependencies import CurrentUserId, SessionDep, SettingsDep
 from syncaai.schemas.plans import (
     JobRead,
     PlanCommitRead,
@@ -19,13 +19,16 @@ from syncaai.schemas.plans import (
     PlanRead,
     PlanRequest,
 )
+from syncaai.services.ai_spend import ceilings_from
 from syncaai.services.plans import PlanService
 
 router = APIRouter(tags=["plans"])
 
 
-def get_plan_service(session: SessionDep, user_id: CurrentUserId) -> PlanService:
-    return PlanService(session, user_id)
+def get_plan_service(
+    session: SessionDep, user_id: CurrentUserId, settings: SettingsDep
+) -> PlanService:
+    return PlanService(session, user_id, ceilings=ceilings_from(settings))
 
 
 ServiceDep = Annotated[PlanService, Depends(get_plan_service)]

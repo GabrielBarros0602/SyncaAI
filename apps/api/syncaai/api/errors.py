@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from syncaai.errors import (
     AccountNotVerifiedError,
+    AllowanceSpentError,
     BlockLengthOutOfRangeError,
     CannotReopenTaskError,
     ChecklistFullError,
@@ -26,6 +27,7 @@ from syncaai.errors import (
     PlanInProgressError,
     PlanItemNotFoundError,
     PlanJobNotFoundError,
+    PlanningPausedError,
     PlanNotFoundError,
     PlanNotPendingError,
     PlanRateLimitedError,
@@ -111,6 +113,25 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={"detail": f"At most {error.limit} plans {error.per}. Try again later."},
+            headers={"Retry-After": str(error.retry_after_seconds)},
+        )
+
+    @app.exception_handler(AllowanceSpentError)
+    async def _allowance_spent(_: Request, error: AllowanceSpentError) -> JSONResponse:
+        # A limit on this person, like the rate limit, so the same status (ADR-0044).
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": error.sentence},
+            headers={"Retry-After": str(error.retry_after_seconds)},
+        )
+
+    @app.exception_handler(PlanningPausedError)
+    async def _planning_paused(_: Request, error: PlanningPausedError) -> JSONResponse:
+        # Nothing this person did: the service is unavailable to everyone until the month
+        # turns, which is what 503 with Retry-After says (ADR-0006, ADR-0044).
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": error.sentence},
             headers={"Retry-After": str(error.retry_after_seconds)},
         )
 
