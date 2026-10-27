@@ -15,9 +15,9 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 51 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 52 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
-| `docs/design/README.md` | the three screens as designed, and what was decided in them |
+| `docs/design/README.md` | the five screens of the third design round, the specification, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
 | `CONTRIBUTING.md` | commit format, dependency workflow, test commands |
 | `docs/threat-model.md` | the security decisions and what they address |
@@ -193,27 +193,24 @@ HTTP a plan can be asked for, read, edited, placed again, sent to next week, dis
 committed, or written by hand in the same draft (ADR-0047). Real answers are kept as golden
 fixtures, labelled by hand (ADR-0048). No provider is paid for, and nothing costs money.
 
-**The front end is frozen, since 2026-10-22.** A third design round is coming, with large
-changes likely. Build no screen, UI component, UI test or new CSS until it returns — PRs 6, 7
-and 8 of item 2 are paused, and work written against a design system about to be replaced is
-work done twice.
+**The front end reopened on 2026-10-27** (ADR-0052). The third design round is back and
+checked, and its five screens in `docs/design/` are the specification for structure,
+behaviour, copy and appearance. Pages are routed with `react-router`; every screen gets an
+`axe-core` check beside its Testing Library tests; widths and 200% text are measured in the
+browser on each pull request. `tokens.css` is direction Papel under its contrast test
+(ADR-0026); its legacy block goes once the last module has moved to the new names.
 
-The round's first step, the design system, is in: `tokens.css` is direction Papel and a test
-holds every contrast pair it promises (ADR-0026). Its legacy block keeps the old names working;
-moving a module to the new ones is screen work, and waits with the screens.
+**Open, in the order ADR-0052 sets:**
 
-**Open, in the order `docs/backlog.md` sets** — first what a redesign cannot invalidate. The
-base work that list began with is done (ADR-0027 to ADR-0029).
+1. Base: the round's new token, the router, the header with Plan and Menu, the shortcut
+   legend, the status region and the breakpoints (640 and 1100px).
+2. The week, on a desktop and on a phone, with creating a task.
+3. The three server problems the round found (`docs/backlog.md`), then the plan screens: S8.
+4. Settings.
+5. Signing in and recovering a password.
 
-1. The rest of the three screens, after the redesign: the day's "move something" offer,
-   address confirmation and settings. `docs/design/README.md` records what the second round
-   decided. The third round's briefs are local, in `docs/design-brief-3*.md`; the desktop week,
-   the phone's day view and the plan screens are back and checked, and settings and signing in
-   are the round's last two steps, as the backlog orders them.
-2. Nothing else moves on its own. S8 and S10 wait for the third design round, S9 for S8 to
-   be published (ADR-0002), and the paid client for a decision to pay (`docs/backlog.md`,
-   "Quando um provedor for pago"). Parts of S11 — the multi-stage Dockerfile, metrics read
-   from `ai_usage`, a final audit — need neither, and are the open candidates.
+S9 waits for S8 to be published (ADR-0002), and the paid client for a decision to pay
+(`docs/backlog.md`, "Quando um provedor for pago").
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when
