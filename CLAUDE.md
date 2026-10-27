@@ -104,9 +104,10 @@ Rules:
 - **The integration tests are the ones that matter most**, because they assert what only
   PostgreSQL can prove: the exclusion constraint, the `end_at` trigger, the capacity query's
   clipping, and that the query still reaches its rows through `ix_tasks_user_start_at`. They
-  are marked `integration` and skip silently without a database — a green run that skipped
-  them is not a green run. `pytest -m integration` counts them; there are 351 today, and a run
-  that reports fewer found no database.
+  are marked `integration` and run in a database of their own, `syncaai_test`, which the
+  suite creates when it is missing and migrates to head before the first of them; the
+  development database is never touched. Without PostgreSQL the run stops at once and says
+  so. `pytest -m integration` counts them; there are 351 today.
 - **`alembic check` is not optional and has no substitute in the test suite.** Change a model,
   forget the migration, and every test still passes: the ones that never touch the new column
   cannot tell. The drift surfaces sprints later, with conflicting migrations to untangle.
