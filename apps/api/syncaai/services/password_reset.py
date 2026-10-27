@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from syncaai.config import Settings
 from syncaai.errors import InvalidLinkTokenError
 from syncaai.mail import Mailer, send_or_log
-from syncaai.mail.messages import password_reset_requested
+from syncaai.mail.messages import password_changed, password_reset_requested
 from syncaai.models import PasswordResetToken
 from syncaai.repositories.password_reset_tokens import PasswordResetTokenRepository
 from syncaai.repositories.refresh_tokens import RefreshTokenRepository
@@ -68,11 +68,12 @@ class PasswordResetService:
         )
 
     def reset(self, raw_token: str, new_password: str) -> None:
-        """Spend a token, set the password, and end every open session.
+        """Spend a token, set the password, end every open session, and tell the owner.
 
         Ending sessions is the part that is easy to leave out and makes the rest pointless:
         whoever knew the old password would otherwise keep a live session for up to thirty
-        days, and the reset would have secured nothing.
+        days, and the reset would have secured nothing. No session is opened in their place:
+        the person signs in with the new password (ADR-0051).
         """
         token = self._tokens.get_by_hash(hash_token(raw_token))
         now = datetime.now(timezone.utc)
@@ -83,3 +84,4 @@ class PasswordResetService:
         token.used_at = now
         token.user.password_hash = hash_password(new_password)
         self._sessions.revoke_all_for(token.user_id)
+        send_or_log(self._mailer, password_changed(token.user.email))

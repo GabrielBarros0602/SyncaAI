@@ -142,6 +142,20 @@ def test_resetting_signs_every_device_out(settings: Settings, mailer: RecordingM
     assert sessions.rows[0].revoked_at is not None
 
 
+def test_resetting_tells_the_owner_with_no_link(
+    settings: Settings, mailer: RecordingMailer
+) -> None:
+    """A reset made by somebody with the inbox is seen by the owner too (ADR-0051)."""
+    service, _, _ = _service(FakeUsers(_existing()), mailer, settings)
+    service.request(AN_EMAIL)
+
+    service.reset(_take_link(mailer, AN_EMAIL), A_NEW_PASSWORD)
+
+    told = [m for m in mailer.to(AN_EMAIL) if m.subject == "Your SyncaAI password was changed"]
+    assert len(told) == 1
+    assert "http" not in told[0].text
+
+
 def test_a_reset_token_works_only_once(settings: Settings, mailer: RecordingMailer) -> None:
     service, _, _ = _service(FakeUsers(_existing()), mailer, settings)
     service.request(AN_EMAIL)
