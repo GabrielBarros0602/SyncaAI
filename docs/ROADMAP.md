@@ -435,9 +435,8 @@ backlog, em "Quando um provedor for pago".
 - ~~Protótipo migrado do HTML estático para build real, preservando o design system em `_ds/`~~
   — fora do plano desde 2026-10-21; o S8 constrói sobre o front-end atual (nota no fim do S5)
 - [ ] Fluxo de autenticação completo. Entrar, cadastrar e confirmar o endereço existem desde o
-      S5; faltam recuperar e trocar a senha, e as duas pedem ADR antes do endpoint, porque o
-      reset atual desloga todas as sessões e a troca desenhada em `docs/design/settings.html`
-      não desloga (backlog, rodada 4)
+      S5; faltam as telas de recuperar e trocar a senha. O que cada uma faz com as sessões está
+      decidido no ADR-0051: a troca mantém esta e encerra as outras, o reset encerra todas
 - [ ] Terceiro destino `To plan` na Captura rápida, e o comando equivalente no `⌘K`
 - [ ] Card de revisão do draft: itens, dia sugerido de cada um, edição, Approve e Discard
 - [ ] Polling do status do job com backoff
