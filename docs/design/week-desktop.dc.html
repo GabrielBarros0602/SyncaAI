@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SyncaAI — Week, desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500;700&family=Atkinson+Hyperlegible+Next:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens/syncaai-a-papel.css">
+<style>
+@keyframes ds-saving { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+a { color: var(--ink); }
+a:hover { color: var(--ink); text-decoration-color: var(--ink); }
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="min-height: 100vh; background: var(--bg); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); display: flex; flex-direction: column;">
+
+  <div data-screen-label="Review controls" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-6); background: var(--sunken); border-bottom: 1px solid var(--line);">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2);">
+      <span style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); margin-right: var(--space-2);">Review — outside the product</span>
+      <sc-for list="{{ scenarios }}" as="sc" hint-placeholder-count="12">
+        <button type="button" aria-pressed="{{ sc.pressed }}" onClick="{{ sc.on }}" style="min-height: max(32px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ sc.bg }}; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">{{ sc.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2);">
+      <sc-for list="{{ toggles }}" as="tg" hint-placeholder-count="5">
+        <button type="button" aria-pressed="{{ tg.pressed }}" onClick="{{ tg.on }}" style="min-height: max(32px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: {{ tg.bg }}; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">{{ tg.label }}</button>
+      </sc-for>
+      <span role="status" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-2); margin-left: var(--space-2); text-wrap: pretty;">{{ auditText }}</span>
+      <sc-for list="{{ auditFails }}" as="af" hint-placeholder-count="0">
+        <span style="font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--alert-ink);">{{ af }}</span>
+      </sc-for>
+    </div>
+  </div>
+
+  <main data-screen-label="Week · desktop" style="display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-6); min-width: 1180px;">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6);">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5);">
+        <span style="font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); letter-spacing: var(--tracking-tight);">SyncaAI</span>
+        <nav aria-label="Weeks" style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);">
+          <div style="display: flex; gap: var(--space-1);">
+            <button type="button" aria-label="Previous week" aria-keyshortcuts="[" onClick="{{ prevWeek }}" style="width: max(40px, var(--target)); height: max(40px, var(--target)); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-4)/1 var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">‹</button>
+            <button type="button" aria-label="Next week" aria-keyshortcuts="]" onClick="{{ nextWeek }}" style="width: max(40px, var(--target)); height: max(40px, var(--target)); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-4)/1 var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">›</button>
+          </div>
+          <h1 style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums;">{{ rangeText }}</h1>
+          <sc-if value="{{ isThisWeek }}" hint-placeholder-val="{{ true }}">
+            <span style="display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--tag); color: var(--ink-2); font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans);">this week</span>
+          </sc-if>
+          <sc-if value="{{ notThisWeek }}" hint-placeholder-val="{{ false }}">
+            <button type="button" aria-keyshortcuts="T" onClick="{{ thisWeek }}" style="display: inline-flex; align-items: center; gap: var(--space-2); min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">back to this week<span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3); padding: 0 var(--space-1); border-radius: var(--radius-1); box-shadow: inset 0 0 0 1px var(--line);">T</span></button>
+          </sc-if>
+          <div style="position: relative;">
+            <button type="button" aria-expanded="{{ dateOpenStr }}" aria-controls="goto" onClick="{{ toggleDate }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">go to date</button>
+            <sc-if value="{{ dateOpen }}" hint-placeholder-val="{{ false }}">
+              <form id="goto" onSubmit="{{ goDate }}" style="position: absolute; top: calc(100% + var(--space-2)); left: 0; z-index: 10; width: 248px; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-3); background: var(--raised); box-shadow: var(--shadow-raised), inset 0 0 0 1px var(--line);">
+                <label for="goto-date" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Date</label>
+                <input id="goto-date" type="date" value="{{ dateVal }}" onChange="{{ onDate }}" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono);">
+                <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">Opens the week that holds it and focuses that day.</span>
+                <div style="display: flex; gap: var(--space-2);">
+                  <button type="submit" style="min-height: max(40px, var(--target)); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-2); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--primary-hover)" style-active="background: var(--primary-pressed)">go</button>
+                  <button type="button" onClick="{{ toggleDate }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">cancel</button>
+                </div>
+              </form>
+            </sc-if>
+          </div>
+        </nav>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4);">
+        <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">gabriel.barros@example.com</span>
+        <span title="Time zone" style="display: inline-flex; align-items: center; min-height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--tag); color: var(--ink-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono);">Europe/Lisbon</span>
+        <button type="button" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">sign out</button>
+      </div>
+    </header>
+
+    <sc-if value="{{ showLegend }}" hint-placeholder-val="{{ true }}">
+      <section aria-label="Keyboard shortcuts" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-radius: var(--radius-3); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);">
+        <button type="button" aria-expanded="{{ legendOpenStr }}" aria-controls="kb-list" onClick="{{ toggleLegend }}" style="align-self: flex-start; display: inline-flex; align-items: center; gap: var(--space-2); min-height: max(32px, var(--target)); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)"><span aria-hidden="true" style="display: inline-block; width: 1em; text-align: center;">{{ legendCaret }}</span>keyboard shortcuts</button>
+        <sc-if value="{{ legendOpen }}" hint-placeholder-val="{{ true }}">
+          <dl id="kb-list" style="margin: 0 0 var(--space-2); display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2) var(--space-6);">
+            <sc-for list="{{ legend }}" as="k" hint-placeholder-count="12">
+              <div style="display: flex; align-items: baseline; gap: var(--space-3);">
+                <dt style="flex: none; display: flex; gap: var(--space-1);"><sc-for list="{{ k.keys }}" as="c" hint-placeholder-count="1"><kbd style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3); padding: 0 var(--space-1); border-radius: var(--radius-1); box-shadow: inset 0 0 0 1px var(--line);">{{ c }}</kbd></sc-for></dt>
+                <dd style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ k.label }}</dd>
+              </div>
+            </sc-for>
+          </dl>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <div role="grid" aria-label="{{ gridLabel }}" onKeyDown="{{ onGridKey }}" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--gap-columns); align-items: start;">
+      <sc-for list="{{ days }}" as="day" hint-placeholder-count="7">
+        <div role="row" aria-label="{{ day.aria }}" style="--row-hover: {{ day.hoverVar }}; --row-pressed: {{ day.pressedVar }}; --row-open: {{ day.openVar }}; min-width: 0; display: flex; flex-direction: column; gap: var(--gap-rows); padding: var(--space-1); border-radius: var(--radius-4); background: {{ day.bg }}; box-shadow: {{ day.edge }};">
+
+          <div role="gridcell" data-cell="{{ day.hCell }}" tabIndex="{{ day.hTab }}" onFocus="{{ day.onFocus }}" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--pad-row-y) var(--pad-row-x); border-radius: var(--radius-3); outline-offset: -2px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-2);">
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); min-width: 0;">
+                <span style="font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); color: {{ day.nameColor }};">{{ day.wdLong }}</span>
+                <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); white-space: nowrap;">{{ day.date }}</span>
+              </div>
+              <sc-if value="{{ day.today }}" hint-placeholder-val="{{ false }}"><span style="flex: none; padding: 2px var(--space-2); border-radius: var(--radius-full); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans);">today</span></sc-if>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; align-items: baseline; gap: var(--space-2);">
+                <span style="font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-mono); letter-spacing: var(--tracking-figure); font-variant-numeric: tabular-nums;">{{ day.bookedText }}</span>
+                <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">booked</span>
+              </div>
+              <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);"><span style="font-family: var(--font-mono);">{{ day.freeText }}</span> free of <span style="font-family: var(--font-mono);">16h</span></span>
+            </div>
+            <sc-if value="{{ day.over }}" hint-placeholder-val="{{ false }}">
+              <span style="align-self: flex-start; padding: 2px var(--space-2); border-radius: var(--radius-full); background: var(--raised); box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert-ink); font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-mono);">over by {{ day.overText }}</span>
+            </sc-if>
+            <div role="img" aria-label="{{ day.trailLabel }}" style="position: relative; height: 12px;">
+              <span style="position: absolute; left: 0; top: 3px; height: 6px; border-radius: var(--radius-full); background: var(--track); width: {{ day.trackW }};"></span>
+              <sc-if value="{{ day.over }}" hint-placeholder-val="{{ false }}">
+                <span style="position: absolute; left: 0; top: 3px; height: 6px; border-radius: var(--radius-full); background: var(--alert); width: {{ day.barW }};"></span>
+                <span style="position: absolute; top: 0; width: 2px; height: 12px; background: var(--alert-surface); left: {{ day.budgetL }};"></span>
+              </sc-if>
+              <sc-if value="{{ day.notOver }}" hint-placeholder-val="{{ true }}">
+                <span style="position: absolute; left: 0; top: 3px; height: 6px; border-radius: var(--radius-full); background: var(--bar); width: {{ day.barW }};"></span>
+                <span style="position: absolute; top: 0; width: 2px; height: 12px; border-radius: 1px; background: var(--tick); left: {{ day.budgetL }};"></span>
+              </sc-if>
+              <span style="position: absolute; top: 0; width: 2px; height: 12px; border-radius: 1px; background: var(--tick); left: {{ day.endL }};"></span>
+            </div>
+            <sc-if value="{{ day.levelAlert }}" hint-placeholder-val="{{ false }}">
+              <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ day.levelText }}</span>
+            </sc-if>
+            <sc-if value="{{ day.levelNeutral }}" hint-placeholder-val="{{ false }}">
+              <span style="font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ day.levelText }}</span>
+            </sc-if>
+            <sc-if value="{{ day.hasOffer }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                <button type="button" tabIndex="{{ day.innerTab }}" onClick="{{ day.offer.on }}" aria-busy="{{ day.offer.busy }}" style="display: flex; align-items: flex-start; gap: var(--space-2); width: 100%; min-height: max(40px, var(--target)); padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); text-align: left; font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer; transition: background var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-spring);" style-hover="background: var(--hover)" style-active="background: var(--pressed); transform: scale(var(--press-scale))"><span style="min-width: 0; text-wrap: pretty;">{{ day.offer.label }}</span><span aria-hidden="true" style="margin-left: auto;">→</span></button>
+                <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ day.offer.sub }}</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ day.empty }}" hint-placeholder-val="{{ false }}">
+            <span style="padding: 0 var(--pad-row-x) var(--pad-row-y); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-3);">Nothing booked.</span>
+          </sc-if>
+
+          <sc-for list="{{ day.bands }}" as="band" hint-placeholder-count="0">
+            <div role="gridcell" data-cell="{{ band.cell }}" tabIndex="{{ band.tab }}" onFocus="{{ band.onFocus }}" onClick="{{ band.go }}" style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--pad-row-y) var(--pad-row-x); border-radius: var(--radius-3); border: 1.5px dashed var(--line-strong); cursor: pointer; outline-offset: -2px;">
+              <div style="display: flex; justify-content: space-between; gap: var(--space-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);"><span>↳ carried from {{ band.from }}</span><span style="font-family: var(--font-mono);">{{ band.portion }} here</span></div>
+              <span style="font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ band.title }}</span>
+              <div style="display: flex; justify-content: space-between; gap: var(--space-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-2);"><span>{{ band.time }}</span><span style="text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong);">go to {{ band.from }}</span></div>
+            </div>
+          </sc-for>
+
+          <sc-for list="{{ day.rows }}" as="row" hint-placeholder-count="2">
+            <sc-if value="{{ row.closed }}" hint-placeholder-val="{{ true }}">
+              <div role="gridcell" data-cell="{{ row.cell }}" data-row="{{ row.id }}" tabIndex="{{ row.tab }}" aria-busy="{{ row.busy }}" onFocus="{{ row.onFocus }}" onClick="{{ row.onOpen }}" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--pad-row-y) var(--pad-row-x); border-radius: var(--radius-3); cursor: pointer; outline-offset: -2px; transition: background var(--dur-1) var(--ease-out);" style-hover="background: var(--row-hover)" style-active="background: var(--row-pressed)">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums;"><span style="white-space: nowrap;">{{ row.timeText }}<sc-if value="{{ row.plusOne }}" hint-placeholder-val="{{ false }}"><span style="margin-left: 2px; font: var(--weight-strong) var(--text-1)/1 var(--font-mono); color: var(--ink); vertical-align: super;">+1</span></sc-if></span><span>{{ row.durText }}</span></div>
+                <div style="display: flex; align-items: flex-start; gap: var(--space-2);">
+                  <button type="button" role="checkbox" aria-checked="{{ row.checked }}" aria-label="{{ row.checkLabel }}" tabIndex="{{ minusOne }}" onClick="{{ row.onToggle }}" style="flex: none; display: flex; align-items: center; justify-content: center; width: var(--target); height: var(--target); margin: -1px 0 0 -3px; padding: 0; border: 0; border-radius: var(--radius-1); background: transparent; cursor: pointer; transition: transform var(--dur-2) var(--ease-spring);" style-active="transform: scale(var(--press-scale))">
+                    <sc-if value="{{ row.done }}" hint-placeholder-val="{{ false }}"><span style="position: relative; width: 18px; height: 18px; border-radius: var(--radius-1); background: var(--primary);"><span style="position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border-right: 2px solid var(--on-primary); border-bottom: 2px solid var(--on-primary); transform: rotate(45deg);"></span></span></sc-if>
+                    <sc-if value="{{ row.notDone }}" hint-placeholder-val="{{ true }}"><span style="width: 18px; height: 18px; border-radius: var(--radius-1); background: var(--field); box-shadow: inset 0 0 0 1.5px var(--line-strong);"></span></sc-if>
+                  </button>
+                  <span style="min-width: 0; font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); color: {{ row.titleColor }}; text-decoration: {{ row.titleDeco }}; text-decoration-thickness: 1px; text-wrap: pretty; overflow-wrap: anywhere;">{{ row.title }}</span>
+                </div>
+                <sc-if value="{{ row.hasMeta }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding-left: calc(18px + var(--space-2));">
+                    <sc-if value="{{ row.hasTag }}" hint-placeholder-val="{{ false }}"><span style="padding: 2px var(--space-2); border-radius: var(--radius-full); background: var(--tag); color: var(--ink-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans);">{{ row.tag }}</span></sc-if>
+                    <sc-if value="{{ row.hasNote }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-3);">note</span></sc-if>
+                    <sc-if value="{{ row.hasList }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3);">{{ row.listText }}</span></sc-if>
+                    <sc-if value="{{ row.saving }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">saving…</span></sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ row.hasDoneLine }}" hint-placeholder-val="{{ false }}"><span style="padding-left: calc(18px + var(--space-2)); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-2); text-wrap: pretty;">{{ row.doneLine }}</span></sc-if>
+                <sc-if value="{{ row.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="padding: var(--space-1) var(--space-2); border-radius: var(--radius-1); background: var(--alert-surface); box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert-ink); font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans); text-wrap: pretty;">{{ row.err }}</span></sc-if>
+                {{ row.savingLine }}
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ row.open }}" hint-placeholder-val="{{ false }}">
+              <div role="gridcell" data-cell="{{ row.cell }}" data-row="{{ row.id }}" tabIndex="{{ row.tab }}" aria-busy="{{ row.busy }}" aria-expanded="true" onFocus="{{ row.onFocus }}" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-2); margin: 2px 0; padding: var(--pad-row-y) var(--pad-row-x); border-radius: var(--radius-3); background: var(--row-open); box-shadow: var(--shadow-raised); outline-offset: 2px;">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums;"><span style="white-space: nowrap;">{{ row.timeText }}<sc-if value="{{ row.plusOne }}" hint-placeholder-val="{{ false }}"><span style="margin-left: 2px; font: var(--weight-strong) var(--text-1)/1 var(--font-mono); color: var(--ink); vertical-align: super;">+1</span></sc-if></span><span>{{ row.durText }}</span></div>
+                <div style="display: flex; align-items: flex-start; gap: var(--space-2);">
+                  <button type="button" role="checkbox" aria-checked="{{ row.checked }}" aria-label="{{ row.checkLabel }}" aria-keyshortcuts="Space" onClick="{{ row.onToggle }}" style="flex: none; display: flex; align-items: center; justify-content: center; width: var(--target); height: var(--target); margin: -1px 0 0 -3px; padding: 0; border: 0; border-radius: var(--radius-1); background: transparent; cursor: pointer; transition: transform var(--dur-2) var(--ease-spring);" style-active="transform: scale(var(--press-scale))">
+                    <sc-if value="{{ row.done }}" hint-placeholder-val="{{ false }}"><span style="position: relative; width: 18px; height: 18px; border-radius: var(--radius-1); background: var(--primary);"><span style="position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border-right: 2px solid var(--on-primary); border-bottom: 2px solid var(--on-primary); transform: rotate(45deg);"></span></span></sc-if>
+                    <sc-if value="{{ row.notDone }}" hint-placeholder-val="{{ true }}"><span style="width: 18px; height: 18px; border-radius: var(--radius-1); background: var(--field); box-shadow: inset 0 0 0 1.5px var(--line-strong);"></span></sc-if>
+                  </button>
+                  <span style="min-width: 0; font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); color: {{ row.titleColor }}; text-decoration: {{ row.titleDeco }}; text-decoration-thickness: 1px; text-wrap: pretty; overflow-wrap: anywhere;">{{ row.title }}</span>
+                </div>
+                <sc-if value="{{ row.hasMeta }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding-left: calc(18px + var(--space-2));">
+                    <sc-if value="{{ row.hasTag }}" hint-placeholder-val="{{ false }}"><span style="padding: 2px var(--space-2); border-radius: var(--radius-full); background: var(--tag); color: var(--ink-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans);">{{ row.tag }}</span></sc-if>
+                    <sc-if value="{{ row.hasList }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3);">{{ row.listText }}</span></sc-if>
+                    <sc-if value="{{ row.saving }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">saving…</span></sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ row.hasDoneLine }}" hint-placeholder-val="{{ false }}"><span style="padding-left: calc(18px + var(--space-2)); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-2); text-wrap: pretty;">{{ row.doneLine }}</span></sc-if>
+                <sc-if value="{{ row.showNote }}" hint-placeholder-val="{{ false }}"><span style="padding-left: calc(18px + var(--space-2)); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); white-space: pre-wrap; text-wrap: pretty;">{{ row.note }}</span></sc-if>
+
+                <div role="toolbar" aria-label="{{ row.verbsLabel }}" style="display: flex; flex-wrap: wrap; gap: 2px; margin: 0 calc(var(--space-1) * -1);">
+                  <sc-for list="{{ row.verbs }}" as="v" hint-placeholder-count="5">
+                    <button type="button" aria-pressed="{{ v.pressed }}" aria-keyshortcuts="{{ v.key }}" onClick="{{ v.on }}" style="display: inline-flex; align-items: center; gap: var(--space-1); min-height: max(32px, var(--target)); padding: 0 var(--space-1); border: 0; border-radius: var(--radius-2); background: {{ v.bg }}; color: {{ v.color }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer; transition: background var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-spring);" style-hover="background: var(--hover); color: var(--ink)" style-active="background: var(--pressed); transform: scale(var(--press-scale))">{{ v.label }}<span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3); padding: 0 var(--space-1); border-radius: var(--radius-1); box-shadow: inset 0 0 0 1px var(--line);">{{ v.cap }}</span></button>
+                  </sc-for>
+                  <button type="button" aria-label="Close" aria-keyshortcuts="Escape" onClick="{{ row.onClose }}" style="display: inline-flex; align-items: center; min-height: max(32px, var(--target)); margin-left: auto; padding: 0 var(--space-1); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink-3); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); cursor: pointer;" style-hover="background: var(--hover); color: var(--ink)">esc</button>
+                </div>
+
+                <sc-if value="{{ row.pMove }}" hint-placeholder-val="{{ false }}">
+                  <div role="group" aria-label="Move to another day" style="display: flex; flex-direction: column; gap: var(--space-2);">
+                    <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Move to</span>
+                    <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Same clock time, <span style="font-family: var(--font-mono);">{{ row.moveTime }}</span>, on another day of this week.</span>
+                    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1);">
+                      <sc-for list="{{ row.moveDays }}" as="m" hint-placeholder-count="7">
+                        <sc-if value="{{ m.ok }}" hint-placeholder-val="{{ false }}">
+                          <button type="button" aria-label="{{ m.aria }}" onClick="{{ m.on }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; padding: var(--space-1); border-radius: var(--radius-2); border: 1px solid var(--line-strong); box-shadow: {{ m.ring }}; background: transparent; color: var(--ink); cursor: pointer; transition: background var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-spring);" style-hover="background: var(--hover)" style-active="background: var(--pressed); transform: scale(var(--press-scale))"><span style="font: var(--weight-medium) var(--text-2)/var(--leading-1) var(--font-mono);">{{ m.wd }}</span><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ m.sub }}</span></button>
+                        </sc-if>
+                        <sc-if value="{{ m.off }}" hint-placeholder-val="{{ true }}">
+                          <div aria-disabled="true" aria-label="{{ m.aria }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; padding: var(--space-1); border-radius: var(--radius-2); border: 1px dashed var(--line-strong); color: var(--ink-3);"><span style="font: var(--weight-medium) var(--text-2)/var(--leading-1) var(--font-mono);">{{ m.wd }}</span><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans);">{{ m.sub }}</span></div>
+                        </sc-if>
+                      </sc-for>
+                    </div>
+                    <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ row.moveWhy }}</span>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ row.pDelete }}" hint-placeholder-val="{{ false }}">
+                  <div role="group" aria-labelledby="del-h" style="display: flex; flex-direction: column; gap: var(--space-2);">
+                    <span id="del-h" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">No undo for this one</span>
+                    <ul style="margin: 0; padding: 0 0 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+                      <sc-for list="{{ row.delReasons }}" as="r" hint-placeholder-count="1"><li style="text-wrap: pretty;">{{ r }}</li></sc-for>
+                    </ul>
+                    <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Undo recreates a task from scratch, so it can only bring back one that hasn’t started, isn’t done and has nothing ticked. Deleting removes this task and its checklist for good.</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                      <button type="button" onClick="{{ row.onDeleteForGood }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--alert); background: var(--alert-surface); color: var(--alert-ink); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer; transition: background var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-spring);" style-hover="background: var(--alert-hover)" style-active="background: var(--alert-pressed); transform: scale(var(--press-scale))">delete for good</button>
+                      <button type="button" onClick="{{ row.onKeep }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">keep it</button>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ row.pEdit }}" hint-placeholder-val="{{ false }}">
+                  <form noValidate onSubmit="{{ ed.onSave }}" aria-label="Edit task" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                      <div style="display: flex; justify-content: space-between; gap: var(--space-2);"><label for="ed-title" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Title</label><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3);">{{ ed.titleCount }}</span></div>
+                      <input id="ed-title" value="{{ ed.title }}" onChange="{{ ed.onTitle }}" maxLength="200" aria-invalid="{{ ed.titleInvalid }}" aria-describedby="ed-title-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ ed.titleRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); min-width: 0;">
+                      <sc-if value="{{ ed.titleErr }}" hint-placeholder-val="{{ false }}"><span id="ed-title-err" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ ed.titleErr }}</span></sc-if>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                      <label for="ed-day" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Start</label>
+                      <select id="ed-day" aria-label="Start day" value="{{ ed.day }}" onChange="{{ ed.onDay }}" style="min-height: 40px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); min-width: 0;">
+                        <sc-for list="{{ ed.dayOptions }}" as="o" hint-placeholder-count="7"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
+                      </select>
+                      <input id="ed-time" aria-label="Start time" inputMode="numeric" value="{{ ed.time }}" onChange="{{ ed.onTime }}" aria-invalid="{{ ed.timeInvalid }}" aria-describedby="ed-time-hint ed-time-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ ed.timeRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono); min-width: 0;">
+                      <span id="ed-time-hint" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ ed.timeHint }}</span>
+                      <sc-if value="{{ ed.timeErr }}" hint-placeholder-val="{{ false }}"><span id="ed-time-err" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ ed.timeErr }}</span></sc-if>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                      <label for="ed-dur" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Duration</label>
+                      <input id="ed-dur" value="{{ ed.dur }}" onChange="{{ ed.onDur }}" aria-invalid="{{ ed.durInvalid }}" aria-describedby="ed-dur-hint ed-dur-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ ed.durRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono); min-width: 0;">
+                      <span id="ed-dur-hint" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">From 1m to 24h, like 2h30. Ends {{ ed.endsText }}.</span>
+                      <sc-if value="{{ ed.durErr }}" hint-placeholder-val="{{ false }}"><span id="ed-dur-err" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ ed.durErr }}</span></sc-if>
+                    </div>
+                    <div style="position: relative; display: flex; flex-direction: column; gap: var(--space-1);">
+                      <label for="ed-tag" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Tag</label>
+                      <input id="ed-tag" role="combobox" aria-autocomplete="list" aria-expanded="{{ ed.listOpenStr }}" aria-controls="ed-tag-list" aria-activedescendant="{{ ed.activeId }}" aria-describedby="ed-tag-note" autoComplete="off" value="{{ ed.tag }}" onChange="{{ ed.onTag }}" onKeyDown="{{ ed.onTagKey }}" onFocus="{{ ed.onTagFocus }}" onBlur="{{ ed.onTagBlur }}" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); min-width: 0;">
+                      <sc-if value="{{ ed.listOpen }}" hint-placeholder-val="{{ false }}">
+                        <ul id="ed-tag-list" role="listbox" aria-label="Your tags" style="list-style: none; margin: 0; padding: var(--space-1); display: flex; flex-direction: column; gap: 2px; border-radius: var(--radius-2); background: var(--raised); box-shadow: var(--shadow-raised), inset 0 0 0 1px var(--line);">
+                          <sc-for list="{{ ed.sugs }}" as="s" hint-placeholder-count="2">
+                            <li id="{{ s.id }}" role="option" aria-selected="{{ s.sel }}" onMouseDown="{{ s.pick }}" style="display: flex; align-items: center; min-height: max(32px, var(--target)); padding: 0 var(--space-2); border-radius: var(--radius-1); background: {{ s.bg }}; color: var(--ink); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">{{ s.label }}</li>
+                          </sc-for>
+                        </ul>
+                      </sc-if>
+                      <div id="ed-tag-note" aria-live="polite">
+                        <sc-if value="{{ ed.newTag }}" hint-placeholder-val="{{ false }}">
+                          <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken);">
+                            <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ ed.newTagText }}</span>
+                            <sc-if value="{{ ed.hasClosest }}" hint-placeholder-val="{{ false }}">
+                              <button type="button" onClick="{{ ed.useClosest }}" style="align-self: flex-start; min-height: max(32px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">use “{{ ed.closest }}”</button>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </div>
+                    <sc-if value="{{ row.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--alert-surface); box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert-ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); text-wrap: pretty;">{{ row.err }}</span></sc-if>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                      <button type="submit" aria-disabled="{{ row.busy }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-2); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer; text-align: left; transition: background var(--dur-1) var(--ease-out), transform var(--dur-2) var(--ease-spring);" style-hover="background: var(--primary-hover)" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale))">{{ ed.saveLabel }}</button>
+                      <button type="button" onClick="{{ row.onBackToVerbs }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">cancel</button>
+                    </div>
+                  </form>
+                </sc-if>
+
+                <sc-if value="{{ row.pNote }}" hint-placeholder-val="{{ false }}">
+                  <form onSubmit="{{ row.onSaveNote }}" style="display: flex; flex-direction: column; gap: var(--space-1);">
+                    <div style="display: flex; justify-content: space-between; gap: var(--space-2);"><label for="note-text" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Note</label><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3);">{{ noteCount }}</span></div>
+                    <textarea id="note-text" rows="5" maxLength="4000" value="{{ noteDraft }}" onChange="{{ onNote }}" style="resize: vertical; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); min-width: 0;"></textarea>
+                    <sc-if value="{{ row.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--alert-surface); box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert-ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans);">{{ row.err }}</span></sc-if>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1);">
+                      <button type="submit" style="min-height: max(40px, var(--target)); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-2); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--primary-hover)" style-active="background: var(--primary-pressed)">save note</button>
+                      <button type="button" onClick="{{ row.onBackToVerbs }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)">cancel</button>
+                    </div>
+                  </form>
+                </sc-if>
+
+                <sc-if value="{{ row.pList }}" hint-placeholder-val="{{ false }}">
+                  <div role="group" aria-labelledby="ls-h" style="display: flex; flex-direction: column; gap: var(--space-2);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2);"><span id="ls-h" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Checklist</span><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3);">{{ row.listText }}</span></div>
+                    <ul style="list-style: none; margin: 0 calc(var(--space-1) * -1); padding: 0; display: flex; flex-direction: column; gap: 2px;">
+                      <sc-for list="{{ ls.items }}" as="it" hint-placeholder-count="3">
+                        <li draggable="true" onDragStart="{{ it.onDragStart }}" onDragOver="{{ it.onDragOver }}" onDrop="{{ it.onDrop }}" onDragEnd="{{ it.onDragEnd }}" style="display: flex; align-items: center; gap: 0; min-height: 36px; border-radius: var(--radius-2); background: {{ it.bg }};">
+                          <button type="button" data-handle="{{ it.id }}" aria-label="{{ it.handleLabel }}" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" onKeyDown="{{ it.onHandleKey }}" style="flex: none; display: flex; align-items: center; justify-content: center; width: var(--target); height: var(--target); padding: 0; border: 0; border-radius: var(--radius-1); background: transparent; color: var(--ink-3); font: var(--weight-regular) var(--text-2)/1 var(--font-mono); cursor: grab;" style-hover="color: var(--ink)">⠿</button>
+                          <button type="button" role="checkbox" aria-checked="{{ it.checked }}" aria-label="{{ it.checkLabel }}" onClick="{{ it.onToggle }}" style="flex: none; display: flex; align-items: center; justify-content: center; width: var(--target); height: var(--target); padding: 0; border: 0; border-radius: var(--radius-1); background: transparent; cursor: pointer;">
+                            <sc-if value="{{ it.done }}" hint-placeholder-val="{{ false }}"><span style="position: relative; width: 16px; height: 16px; border-radius: 5px; background: var(--primary);"><span style="position: absolute; left: 5px; top: 2px; width: 4px; height: 8px; border-right: 2px solid var(--on-primary); border-bottom: 2px solid var(--on-primary); transform: rotate(45deg);"></span></span></sc-if>
+                            <sc-if value="{{ it.notDone }}" hint-placeholder-val="{{ true }}"><span style="width: 16px; height: 16px; border-radius: 5px; background: var(--field); box-shadow: inset 0 0 0 1.5px var(--line-strong);"></span></sc-if>
+                          </button>
+                          <sc-if value="{{ it.notRenaming }}" hint-placeholder-val="{{ true }}">
+                            <button type="button" aria-label="{{ it.renameLabel }}" onClick="{{ it.startRename }}" style="flex: 1; min-width: 0; min-height: var(--target); padding: 2px var(--space-1); border: 0; border-radius: var(--radius-1); background: transparent; color: {{ it.color }}; text-decoration: {{ it.deco }}; text-align: left; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); cursor: text; overflow-wrap: anywhere;" style-hover="background: var(--hover)">{{ it.label }}</button>
+                          </sc-if>
+                          <sc-if value="{{ it.renaming }}" hint-placeholder-val="{{ false }}">
+                            <input id="ren-input" aria-label="{{ it.renameLabel }}" value="{{ renText }}" onChange="{{ onRenText }}" onKeyDown="{{ onRenKey }}" onBlur="{{ commitRename }}" maxLength="200" style="flex: 1; min-width: 0; min-height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-1); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 2px var(--focus); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans);">
+                          </sc-if>
+                          <button type="button" aria-label="{{ it.removeLabel }}" onClick="{{ it.onRemove }}" style="flex: none; display: flex; align-items: center; justify-content: center; width: var(--target); height: var(--target); padding: 0; border: 0; border-radius: var(--radius-1); background: transparent; color: var(--ink-2); font: var(--weight-regular) var(--text-3)/1 var(--font-sans); cursor: pointer;" style-hover="background: var(--hover); color: var(--ink)">×</button>
+                        </li>
+                      </sc-for>
+                    </ul>
+                    <form onSubmit="{{ onAddItem }}" style="display: flex; flex-direction: column; gap: var(--space-1);">
+                      <label for="ls-add" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans);">Add an item</label>
+                      <div style="display: flex; gap: var(--space-1);">
+                        <input id="ls-add" value="{{ addText }}" onChange="{{ onAddText }}" maxLength="200" style="flex: 1; min-width: 0; min-height: 36px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans);">
+                        <button type="submit" style="flex: none; min-height: 36px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--primary-hover)">add</button>
+                      </div>
+                    </form>
+                    <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Drag ⠿ to reorder, or focus it and press Alt+↑ or Alt+↓. Click a label to rename it.</span>
+                    <span role="status" aria-live="polite" style="font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ listMsg }}</span>
+                    <sc-if value="{{ row.hasErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--alert-surface); box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert-ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); text-wrap: pretty;">{{ row.err }}</span></sc-if>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ row.pMoveErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--alert-surface); box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert-ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); text-wrap: pretty;">{{ row.err }}</span></sc-if>
+                {{ row.savingLine }}
+              </div>
+            </sc-if>
+          </sc-for>
+
+          <sc-if value="{{ day.canNew }}" hint-placeholder-val="{{ false }}">
+            <button type="button" tabIndex="{{ day.innerTab }}" aria-keyshortcuts="N" onClick="{{ day.onNew }}" style="display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: max(36px, var(--target)); padding: 0 var(--pad-row-x); border: 0; border-radius: var(--radius-3); background: transparent; color: var(--ink-2); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); text-align: left; cursor: pointer; transition: background var(--dur-1) var(--ease-out);" style-hover="background: var(--row-hover); color: var(--ink)" style-active="background: var(--row-pressed)">+ new task<sc-if value="{{ showKeys }}" hint-placeholder-val="{{ true }}"><kbd style="margin-left: auto; font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-3); padding: 0 var(--space-1); border-radius: var(--radius-1); box-shadow: inset 0 0 0 1px var(--line);">N</kbd></sc-if></button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </main>
+
+  <section data-screen-label="Decisions" style="display: flex; flex-direction: column; gap: var(--space-6); max-width: 1180px; padding: var(--space-7) var(--space-6) var(--space-10); border-top: 1px solid var(--line);">
+    <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+      <h2 style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans); letter-spacing: var(--tracking-tight);">What this screen decided, and why</h2>
+      <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Week of Mon 19 to Sun 25 Oct 2026, Europe/Lisbon, now Thu 22 at 14:20. Summer time ends on Sun 25, so that day is 1500 minutes and its trail runs longer than the rest.</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6) var(--space-7);">
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        <h3 style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">The day header (#17): each number once</h3>
+        <ul style="margin: 0; padding: 0 0 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Booked</strong> is the big number, and it is the sum of the minutes that fall on that day, the carried part included.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Free</strong> sits right under it, floored at zero and with its denominator: “0m free of 16h”. That is the only place 16h appears.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Unbooked</strong> left as text: the trail already shows it, and “16h of the day unbooked” gave 16h a second meaning. The trail’s screen-reader label carries the day length (“25-hour day”).</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Cut:</strong> the task count (the rows count themselves), “incl. 1h carried” (the band says it), the 01–07 index and “1440 min”.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Over budget</strong> adds two things only: the chip “over by 1h” and the load sentence from load.ts. Every level above fine carries the accent: heavy (past your 16h) names a consequence, “No margin for anything running late.”; strained (past 18h) and unsustainable (past 20h) add the unbooked figure, measured against the whole day, so Sunday’s 25 hours count. 18h and 20h are fixed in capacity.py; no setting moves them.</li>
+        </ul>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        <h3 style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">The undo notice (#12): one place for the whole week</h3>
+        <ul style="margin: 0; padding: 0 0 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+          <li style="text-wrap: pretty;">Pinned to the bottom centre of the window, outside every column: <code style="font-family: var(--font-mono);">role="status"</code>, <code style="font-family: var(--font-mono);">aria-live="polite"</code>. It is always in the page, empty until something happens, so screen readers already know it.</li>
+          <li style="text-wrap: pretty;">It names the day (“from Sun 25”), because in the one-day view on the phone that day may not be on screen. The same region will serve that view.</li>
+          <li style="text-wrap: pretty;">It lasts 10 seconds; Ctrl+Z works while it shows. Moves and restores are announced there too.</li>
+        </ul>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        <h3 style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Saving (#29) and the server</h3>
+        <ul style="margin: 0; padding: 0 0 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+          <li style="text-wrap: pretty;">The row stays where it is, says “saving…” and carries <code style="font-family: var(--font-mono);">aria-busy</code>. A 2px line runs along its foot only when motion is allowed; with reduced motion the word is the whole signal. Nothing turns into a skeleton.</li>
+          <li style="text-wrap: pretty;">The numbers change only when the server answers. A refusal shows the server’s own sentence where the action was taken, and the panel keeps what was typed.</li>
+        </ul>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        <h3 style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Keyboard (#6): one Tab stop</h3>
+        <ul style="margin: 0; padding: 0 0 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+          <li style="text-wrap: pretty;">The week is a <code style="font-family: var(--font-mono);">grid</code> with roving tabindex. Each day is a grid row drawn as a column: ← → change day, ↑ ↓ walk header, carried bands and rows, Home and End jump.</li>
+          <li style="text-wrap: pretty;">Enter opens a row; Tab then walks its controls; Esc closes and puts focus back on the row. E, M, O, C and ⌫ open a verb. Space completes, the same key as the checkbox it stands for. N opens a new task on the focused day. The legend above the week lists every key; it collapses, and touch screens never see it.</li>
+          <li style="text-wrap: pretty;">The ring is 2px of ink: inside a header cell and a row (rows sit 4px apart, so it sits inside the edge), outside an opened row.</li>
+        </ul>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        <h3 style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">The verbs</h3>
+        <ul style="margin: 0; padding: 0 0 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Move (#19)</strong> shows all seven days. The ones that can’t take the task say why on the button, and the sentence below names what is in the way.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Delete (#21)</strong> is immediate, with undo, only for a task that hasn’t started, isn’t done and has nothing ticked. Otherwise the row asks, and lists each reason.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Edit (#25)</strong> states the correction window before saving: “can go back to 14:20 yesterday”.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Tag (#23)</strong> suggests while you type. An unknown name gets a notice, a “did you mean”, and a save button that says it will create the tag.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Offer (#20)</strong> is a button that names the task and the day. It only considers days after today, and the line under it shows the arithmetic.</li>
+          <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Late completion (#22)</strong> puts the day it was done in the line (“done Wed 22:22”), so 56h22 reads as a fact, not a glitch.</li>
+        </ul>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        <h3 style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Tokens</h3>
+        <ul style="margin: 0; padding: 0 0 0 var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">
+          <li style="text-wrap: pretty;">No new token and no new pair. The new surfaces fall on grounds already in the list: the notice is on-primary on primary, the tag list ink on raised, hover and tag, the new-tag notice ink-2 on sunken, and an opened row in an overbooked day uses alert-open.</li>
+          <li style="text-wrap: pretty;">The review bar measures every text element against the ground it actually sits on, in the current theme, after every change.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <sc-if value="{{ crOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 25; display: flex; align-items: flex-start; justify-content: center; padding: 8vh var(--space-5) var(--space-5); pointer-events: none;">
+      <div role="dialog" aria-modal="true" aria-labelledby="cr-head" onKeyDown="{{ cr.onKey }}" style="pointer-events: auto; width: 100%; max-width: 520px; max-height: 84vh; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); border-radius: var(--radius-4); background: var(--raised); box-shadow: var(--shadow-raised), inset 0 0 0 1px var(--line-strong);">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);">
+          <h2 id="cr-head" style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans); letter-spacing: var(--tracking-tight);">New task</h2>
+          <sc-if value="{{ showKeys }}" hint-placeholder-val="{{ true }}"><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Esc closes</span></sc-if>
+        </div>
+        <form id="cr-form" onSubmit="{{ cr.onSave }}" aria-busy="{{ cr.busy }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+          <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+            <label for="cr-title" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Title</label>
+            <input id="cr-title" value="{{ cr.title }}" onChange="{{ cr.onTitle }}" maxLength="200" aria-invalid="{{ cr.titleInvalid }}" aria-describedby="cr-title-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ cr.titleRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+            <div style="display: flex; justify-content: space-between; gap: var(--space-2);"><span id="cr-title-err" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ cr.titleErr }}</span><span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-2);">{{ cr.titleCount }}</span></div>
+          </div>
+          <fieldset style="margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--space-3);">
+            <legend style="padding: 0; margin-bottom: var(--space-1); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Start</legend>
+            <div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 2px;">
+              <label for="cr-day" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Day</label>
+              <select id="cr-day" value="{{ cr.day }}" onChange="{{ cr.onDay }}" aria-describedby="cr-time-hint cr-time-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ cr.timeRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                <sc-for list="{{ cr.dayOptions }}" as="o" hint-placeholder-count="7"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+              </select>
+            </div>
+            <div style="flex: 1 1 120px; display: flex; flex-direction: column; gap: 2px;">
+              <label for="cr-time" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Time</label>
+              <input id="cr-time" inputMode="numeric" value="{{ cr.time }}" onChange="{{ cr.onTime }}" aria-invalid="{{ cr.timeInvalid }}" aria-describedby="cr-time-hint cr-time-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ cr.timeRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); font-family: var(--font-mono);">
+            </div>
+            <span id="cr-time-hint" style="flex: 1 1 100%; font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ cr.timeHint }}</span>
+            <span id="cr-time-err" role="{{ cr.errRole }}" style="flex: 1 1 100%; font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ cr.timeErr }}</span>
+          </fieldset>
+          <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+            <label for="cr-dur" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Duration</label>
+            <input id="cr-dur" value="{{ cr.dur }}" onChange="{{ cr.onDur }}" aria-invalid="{{ cr.durInvalid }}" aria-describedby="cr-dur-hint cr-dur-err" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: {{ cr.durRing }}; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); font-family: var(--font-mono); max-width: 200px;">
+            <span id="cr-dur-hint" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ cr.durHint }}</span>
+            <span id="cr-dur-err" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ cr.durErr }}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+            <label for="cr-tag" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Tag</label>
+            <input id="cr-tag" role="combobox" aria-autocomplete="list" aria-expanded="{{ cr.listOpenStr }}" aria-controls="cr-tag-list" aria-activedescendant="{{ cr.activeId }}" aria-describedby="cr-tag-new" autoComplete="off" value="{{ cr.tag }}" onChange="{{ cr.onTag }}" onKeyDown="{{ cr.onTagKey }}" onBlur="{{ cr.onTagBlur }}" style="min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+            <sc-if value="{{ cr.listOpen }}" hint-placeholder-val="{{ false }}">
+              <ul id="cr-tag-list" role="listbox" aria-label="Your tags" style="list-style: none; margin: 0; padding: var(--space-1); display: flex; flex-direction: column; gap: 2px; border-radius: var(--radius-2); background: var(--raised); box-shadow: var(--shadow-raised), inset 0 0 0 1px var(--line-strong);">
+                <sc-for list="{{ cr.sugs }}" as="o" hint-placeholder-count="2">
+                  <li id="{{ o.id }}" role="option" aria-selected="{{ o.sel }}" onMouseDown="{{ o.pick }}" style="display: flex; align-items: center; min-height: max(32px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-1); background: {{ o.bg }}; color: var(--ink); cursor: pointer;" style-hover="background: var(--hover)">{{ o.label }}</li>
+                </sc-for>
+              </ul>
+            </sc-if>
+            <div id="cr-tag-new">
+              <sc-if value="{{ cr.newTag }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken); color: var(--ink-2);">
+                  <span style="flex: 1 1 240px; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); text-wrap: pretty;">{{ cr.newTagText }}</span>
+                  <sc-if value="{{ cr.hasClosest }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ cr.useClosest }}" style="min-height: max(32px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">use “{{ cr.closest }}”</button>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          <div role="group" aria-labelledby="cr-list-head" style="display: flex; flex-direction: column; gap: var(--space-1);">
+            <span id="cr-list-head" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Checklist <span style="font-weight: var(--weight-regular); color: var(--ink-2);">(optional)</span></span>
+            <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+              <sc-for list="{{ cr.items }}" as="it" hint-placeholder-count="0">
+                <li style="display: flex; align-items: center; gap: var(--space-2); padding: 2px 0; border-bottom: 1px solid var(--line);">
+                  <span style="flex: 1; min-width: 0; overflow-wrap: anywhere;">{{ it.label }}</span>
+                  <button type="button" onClick="{{ it.remove }}" aria-label="{{ it.removeAria }}" style="width: max(32px, var(--target)); height: max(32px, var(--target)); border: 0; border-radius: var(--radius-1); background: transparent; color: var(--ink); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">✕</button>
+                </li>
+              </sc-for>
+            </ul>
+            <label for="cr-item" style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">New item</label>
+            <div style="display: flex; gap: var(--space-2);">
+              <input id="cr-item" value="{{ cr.newItem }}" onChange="{{ cr.onItem }}" onKeyDown="{{ cr.onItemKey }}" style="flex: 1; min-width: 0; min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-2); background: var(--field); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+              <button type="button" onClick="{{ cr.addItem }}" style="min-height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">add</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-top: var(--space-2);">
+            <button type="submit" aria-busy="{{ cr.busy }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-5); border: 0; border-radius: var(--radius-2); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--primary-hover)" style-active="background: var(--primary-pressed)">{{ cr.saveLabel }}</button>
+            <button type="button" onClick="{{ cr.onCancel }}" style="min-height: max(40px, var(--target)); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-hover="background: var(--hover)" style-active="background: var(--pressed)">cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </sc-if>
+
+  <div role="status" aria-live="polite" aria-busy="{{ toastBusy }}" style="position: fixed; left: 50%; bottom: var(--space-5); z-index: 30; transform: translateX(-50%); display: flex; pointer-events: none;">
+    <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+      <div style="pointer-events: auto; display: flex; align-items: center; gap: var(--space-4); min-height: 48px; padding: 0 var(--space-2) 0 var(--space-4); border-radius: var(--radius-3); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-raised); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans);">
+        <span>{{ toastText }}</span>
+        <sc-if value="{{ hasUndo }}" hint-placeholder-val="{{ false }}">
+          <button type="button" aria-keyshortcuts="Control+Z" onClick="{{ undo }}" style="display: inline-flex; align-items: center; gap: var(--space-2); min-height: max(36px, var(--target)); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--on-primary); background: transparent; color: var(--on-primary); outline-color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">undo<span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono);">Ctrl Z</span></button>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  WDL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  BASE = Date.UTC(2026, 9, 19);
+  NOW = 3 * 1440 + 860;
+  BUDGET = 960;
+  SCALE = 1500;
+  P = {
+    overlap: 'That time is already taken by another task.',
+    past: 'A task cannot start in the past.',
+    correction: 'A start can be corrected at most 24 hours back.',
+    reopen: 'Something else took that time while this task was done.',
+    checklist: 'The checklist changed since it was read. Read it again.',
+  };
+  rootRef = React.createRef();
+  state = Object.assign(this.fresh(), { theme: 'light', rm: false, scen: null, audit: null, focus: { d: 3, i: 0 }, legendOpen: true, coarse: !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) });
+
+  seed() {
+    const T = (id, day, start, dur, title, tag, x) => Object.assign({ id, day, start, dur, title, tag: tag || '', note: '', checklist: [], done: null }, x || {});
+    return [
+      T('t1', 0, 540, 120, 'Statistics problem set', 'faculdade', { done: { abs: 670 } }),
+      T('t2', 0, 840, 150, 'Write the capacity query tests', 'syncaai', { done: { abs: 2 * 1440 + 1342 }, note: 'Cover the 1380- and 1500-minute days.' }),
+      T('t3', 1, 600, 120, 'Review the ADR-0027 draft', 'syncaai', { done: { abs: 1440 + 725 } }),
+      T('t4', 1, 1140, 90, 'Gym', 'saúde', { done: { abs: 1440 + 1230 } }),
+      T('t5', 2, 540, 90, 'FIAP lecture notes', 'faculdade', { done: { abs: 2 * 1440 + 640 } }),
+      T('t6', 2, 1320, 180, 'Read for the thesis', 'faculdade'),
+      T('t7', 3, 360, 120, 'Write the hackathon brief', 'fiap', { done: { abs: 3 * 1440 + 485 } }),
+      T('t8', 3, 480, 720, 'Hackathon', 'fiap', { note: 'Room 4B. Bring the charger and the HDMI adapter.' }),
+      T('t9', 3, 1230, 120, 'Group project sync', 'faculdade', { checklist: [
+        { id: 'c1', label: 'Send the agenda to the group', done: true },
+        { id: 'c2', label: 'Review Lucas’s pull request', done: false },
+        { id: 'c3', label: 'Book the room for Monday', done: false },
+      ] }),
+      T('t10', 4, 540, 240, 'Thesis chapter 2', 'faculdade'),
+      T('t11', 4, 1200, 180, 'Hackathon retro', 'fiap'),
+      T('t12', 5, 600, 120, 'Groceries and laundry', ''),
+      T('t13', 6, 660, 120, 'Plan next week', 'syncaai'),
+    ];
+  }
+
+  fresh() {
+    return { tasks: this.seed(), tags: ['faculdade', 'fiap', 'saúde', 'syncaai'], offset: 0, open: null, saving: {}, frozen: null, err: {}, toast: null, draft: null, tagUi: { open: false, active: -1 }, noteDraft: '', cr: null, crUi: { open: false, active: -1 }, ren: null, renText: '', addText: '', drag: null, listMsg: '', refuseNext: false, dateOpen: false, dateVal: '2026-10-22' };
+  }
+
+  componentDidMount() {
+    this.applyTheme();
+    this.scheduleAudit();
+    this.onDocKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && this.state.toast && this.state.toast.undo) { e.preventDefault(); this.undo(); return; }
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      const tg = e.target, tn = tg && tg.tagName;
+      if (tn === 'INPUT' || tn === 'TEXTAREA' || tn === 'SELECT' || (tg && tg.isContentEditable) || this.state.cr) return;
+      const k = e.key;
+      if (k === 'n' || k === 'N') { e.preventDefault(); const cell = tg && tg.closest && tg.closest('[data-cell]'); this.openCreate(cell ? +cell.getAttribute('data-cell').split(':')[0] : this.state.focus ? this.state.focus.d : 3); }
+      else if (k === '[') { e.preventDefault(); this.setState((s) => ({ offset: s.offset - 1, open: null })); }
+      else if (k === ']') { e.preventDefault(); this.setState((s) => ({ offset: s.offset + 1, open: null })); }
+      else if (k === 't' || k === 'T') { e.preventDefault(); this.setState({ offset: 0, open: null }); }
+    };
+    if (window.matchMedia) { this.mq = window.matchMedia('(pointer: coarse)'); this.onMq = () => this.setState({ coarse: this.mq.matches }); this.mq.addEventListener && this.mq.addEventListener('change', this.onMq); }
+    document.addEventListener('keydown', this.onDocKey);
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.toastTimer); clearTimeout(this.auditTimer);
+    document.removeEventListener('keydown', this.onDocKey);
+    if (this.mq && this.mq.removeEventListener) this.mq.removeEventListener('change', this.onMq);
+  }
+
+  openCreate(d) {
+    if (this.state.offset !== 0) return;
+    if (d < 3) d = 3;
+    this.crOpener = document.activeElement;
+    this.setState({ cr: { day: String(d), title: '', time: d === 3 ? '14:30' : '09:00', dur: '1h', tag: '', list: [], newItem: '', tried: false, server: null, saving: false }, crUi: { open: false, active: -1 }, open: null });
+    this.wantSel = '#cr-title';
+  }
+  closeCreate() {
+    this.setState({ cr: null, frozen: this.state.frozen === 'cr' ? null : this.state.frozen });
+    const el = this.crOpener; this.crOpener = null;
+    setTimeout(() => { if (el && el.isConnected) el.focus(); }, 0);
+  }
+  setCr(p) { this.setState((s) => ({ cr: Object.assign({}, s.cr, p) })); }
+  saveCreate(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const c = this.state.cr; if (!c || c.saving) return;
+    const er = this.edErrors(c);
+    if (er.title || er.time || er.dur) { this.setCr({ tried: true }); this.wantSel = er.title ? '#cr-title' : er.time ? '#cr-time' : '#cr-dur'; return; }
+    this.setCr({ saving: true, server: null, tried: true });
+    if (this.state.frozen === 'cr') return;
+    setTimeout(() => {
+      const s = this.state, cc = s.cr; if (!cc) return;
+      const day = +cc.day, start = er.start, dur = er.durM;
+      let p = null;
+      if (day * 1440 + start < this.NOW) p = this.P.past;
+      else if (this.conflict(s.tasks, day, start, dur, null)) p = this.P.overlap;
+      if (p) { this.setCr({ saving: false, server: p }); this.wantSel = '#cr-time'; return; }
+      const tag = cc.tag.trim(), title = cc.title.trim(), isNew = !!tag && s.tags.indexOf(tag) < 0, id = 'n' + Date.now();
+      const t = { id, day, start, dur, title, tag, note: '', done: null, checklist: cc.list.map((l, i) => ({ id: id + 'c' + i, label: l, done: false })) };
+      this.crOpener = null;
+      this.setState({ tasks: s.tasks.concat([t]), cr: null, tags: isNew ? s.tags.concat([tag]) : s.tags });
+      this.wantSel = '[data-row="' + id + '"]';
+      const inf = this.dayInfo(0, day);
+      this.showToast({ text: 'Added “' + title + '” to ' + inf.wd + ' ' + inf.dn + ', ' + this.clock(start) + '.' + (isNew ? ' Created the tag “' + tag + '”.' : '') });
+    }, 900);
+  }
+
+  componentDidUpdate() {
+    const ps = this.prevState || {};
+    this.prevState = this.state;
+    if (this.wantSel) {
+      const sel = this.wantSel; this.wantSel = null;
+      const el = this.rootRef.current && this.rootRef.current.querySelector(sel);
+      if (el) el.focus();
+    }
+    if (ps.theme !== this.state.theme) this.applyTheme();
+    const s = this.state;
+    if (ps.theme !== s.theme || ps.tasks !== s.tasks || ps.open !== s.open || ps.toast !== s.toast || ps.err !== s.err || ps.saving !== s.saving || ps.draft !== s.draft || ps.offset !== s.offset) this.scheduleAudit();
+  }
+
+  applyTheme() { document.documentElement.setAttribute('data-theme', this.state.theme); }
+
+  pad(n) { return String(n).padStart(2, '0'); }
+  clock(m) { return this.pad(Math.floor(m / 60) % 24) + ':' + this.pad(m % 60); }
+  fmt(m) { m = Math.round(m); if (m < 60) return m + 'm'; const h = Math.floor(m / 60), r = m % 60; return r ? h + 'h' + this.pad(r) : h + 'h'; }
+  signed(d) { return d === 0 ? '±0' : (d > 0 ? '+' : '−') + this.fmt(Math.abs(d)); }
+
+  dayInfo(offset, d) {
+    const dt = new Date(this.BASE + (offset * 7 + d) * 864e5);
+    const dn = dt.getUTCDate(), mo = dt.getUTCMonth();
+    const lastSun = d === 6 && dn >= 25;
+    const minutes = lastSun && mo === 9 ? 1500 : lastSun && mo === 2 ? 1380 : 1440;
+    const abs = offset * 7 + d;
+    return { wd: this.WD[d], wdLong: this.WDL[d], dn, mo, y: dt.getUTCFullYear(), date: dn + ' ' + this.MON[mo], minutes, past: abs < 3, today: abs === 3 };
+  }
+  rel(d) { return d === 3 ? 'today' : d === 2 ? 'yesterday' : d === 4 ? 'tomorrow' : this.WD[d] + ' ' + this.dayInfo(0, d).dn; }
+  startAbs(t) { return t.day * 1440 + t.start; }
+  started(t) { return this.startAbs(t) <= this.NOW; }
+
+  intervals(ts, d, exId) {
+    const out = [];
+    for (const t of ts) {
+      if (t.id === exId) continue;
+      const e = t.start + t.dur;
+      if (t.day === d) out.push({ s: t.start, e: Math.min(e, 1440), t });
+      if (t.day === d - 1 && e > 1440) out.push({ s: 0, e: e - 1440, t, carried: true });
+    }
+    return out;
+  }
+  conflict(ts, d, s, dur, exId) {
+    const e = s + dur;
+    for (const iv of this.intervals(ts, d, exId)) if (iv.s < Math.min(e, 1440) && s < iv.e) return iv.t;
+    if (e > 1440 && d < 6) for (const iv of this.intervals(ts, d + 1, exId)) if (iv.s < e - 1440 && 0 < iv.e) return iv.t;
+    return null;
+  }
+  booked(ts, d) { return this.intervals(ts, d).reduce((a, iv) => a + iv.e - iv.s, 0); }
+  level(b) { return b > 1200 ? 'unsustainable' : b > 1080 ? 'strained' : b > this.BUDGET ? 'heavy' : 'fine'; }
+  undoable(t) { return !this.started(t) && !t.done && !t.checklist.some((c) => c.done); }
+  copy(ts) { return ts.map((x) => Object.assign({}, x, { checklist: x.checklist.map((c) => Object.assign({}, c)) })); }
+
+  write(id, o) {
+    this.setState((s) => ({ saving: Object.assign({}, s.saving, { [id]: true }), err: Object.assign({}, s.err, { [id]: null }) }));
+    setTimeout(() => {
+      const s = this.state;
+      let phrase = null;
+      const refused = s.refuseNext && o.refusal;
+      if (refused) phrase = o.refusal;
+      else if (o.check) phrase = o.check(s.tasks);
+      const saving = Object.assign({}, s.saving); delete saving[id];
+      if (phrase) { this.setState({ saving, err: Object.assign({}, s.err, { [id]: phrase }), refuseNext: refused ? false : s.refuseNext }); return; }
+      const tasks = o.apply(this.copy(s.tasks));
+      this.setState(Object.assign({ saving, tasks }, o.after ? o.after(s, tasks) : {}));
+      if (o.toast) this.showToast(o.toast);
+    }, o.ms || 900);
+  }
+
+  showToast(t) {
+    clearTimeout(this.toastTimer);
+    this.setState({ toast: t });
+    this.toastTimer = setTimeout(() => this.setState({ toast: null }), t.undo ? 10000 : 5000);
+  }
+  undo = () => {
+    const t = this.state.toast; if (!t || !t.undo) return;
+    const snap = t.undo; const info = this.dayInfo(0, snap.day);
+    clearTimeout(this.toastTimer);
+    this.setState({ toast: { text: 'Restoring “' + snap.title + '”…', busy: true } });
+    setTimeout(() => {
+      this.setState((s) => ({ tasks: s.tasks.concat([snap]) }));
+      this.wantSel = '[data-row="' + snap.id + '"]';
+      this.showToast({ text: 'Restored “' + snap.title + '” on ' + info.wd + ' ' + info.dn + '.' });
+    }, 900);
+  };
+
+  task(id) { return this.state.tasks.find((t) => t.id === id); }
+  draftFrom(t) { return { id: t.id, title: t.title, day: String(t.day), time: this.clock(t.start), dur: this.fmt(t.dur), tag: t.tag, tried: false }; }
+
+  openPanel(id, panel) {
+    const t = this.task(id); if (!t) return;
+    this.setState((s) => ({ open: { id, panel }, draft: panel === 'edit' ? this.draftFrom(t) : null, noteDraft: panel === 'note' ? t.note : '', ren: null, addText: '', listMsg: '', tagUi: { open: false, active: -1 }, err: Object.assign({}, s.err, { [id]: null }) }));
+    this.wantSel = panel === 'edit' ? '#ed-title' : panel === 'note' ? '#note-text' : '[data-row="' + id + '"]';
+  }
+  closeOpen() {
+    const o = this.state.open; if (!o) return;
+    this.setState({ open: null, draft: null });
+    this.wantSel = '[data-row="' + o.id + '"]';
+  }
+  toggleOpen(id) {
+    if (this.state.open && this.state.open.id === id) this.closeOpen();
+    else this.openPanel(id, 'verbs');
+  }
+
+  askDelete(t) {
+    if (this.undoable(t)) this.doDelete(t, true);
+    else this.openPanel(t.id, 'delete');
+  }
+  doDelete(t, withUndo) {
+    const info = this.dayInfo(0, t.day);
+    const snap = Object.assign({}, t, { checklist: t.checklist.map((c) => Object.assign({}, c)) });
+    this.write(t.id, {
+      apply: (ts) => ts.filter((x) => x.id !== t.id),
+      after: () => ({ open: null, draft: null }),
+      toast: withUndo ? { text: 'Deleted “' + t.title + '” from ' + info.wd + ' ' + info.dn + '.', undo: snap } : { text: 'Deleted “' + t.title + '” for good.' },
+    });
+    this.wantSel = '[data-cell="' + t.day + ':0"]';
+  }
+
+  toggleDone(t) {
+    if (t.done) {
+      this.write(t.id, { refusal: this.P.reopen, check: (ts) => (this.conflict(ts, t.day, t.start, t.dur, t.id) ? this.P.reopen : null), apply: (ts) => ts.map((x) => (x.id === t.id ? Object.assign(x, { done: null }) : x)) });
+    } else {
+      this.write(t.id, { apply: (ts) => ts.map((x) => (x.id === t.id ? Object.assign(x, { done: { abs: this.NOW } }) : x)) });
+    }
+  }
+
+  moveTo(t, d2) {
+    const info = this.dayInfo(0, d2);
+    this.write(t.id, {
+      refusal: this.P.overlap,
+      check: (ts) => (this.conflict(ts, d2, t.start, t.dur, t.id) ? this.P.overlap : null),
+      apply: (ts) => ts.map((x) => (x.id === t.id ? Object.assign(x, { day: d2 }) : x)),
+      after: () => ({ open: null }),
+      toast: { text: 'Moved “' + t.title + '” to ' + info.wd + ' ' + info.dn + ', ' + this.clock(t.start) + '.' },
+    });
+    this.wantSel = '[data-row="' + t.id + '"]';
+  }
+
+  parseDur(s) {
+    s = String(s).trim().toLowerCase().replace(/\s+/g, '');
+    let m = s.match(/^(\d{1,2})h(?:(\d{1,2})m?)?$/);
+    if (m) return +m[1] * 60 + (m[2] ? +m[2] : 0);
+    m = s.match(/^(\d{1,4})m?$/);
+    return m ? +m[1] : null;
+  }
+  parseTime(s) { const m = String(s).trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/); return m ? +m[1] * 60 + +m[2] : null; }
+  edErrors(dr) {
+    const start = this.parseTime(dr.time), dur = this.parseDur(dr.dur);
+    return {
+      title: !dr.title.trim() ? 'A task needs a title.' : dr.title.length > 200 ? 'At most 200 characters.' : null,
+      time: start == null ? 'Use 24-hour time, like 14:30.' : null,
+      dur: dur == null || dur < 1 || dur > 1440 ? 'Between 1m and 24h, like 2h30.' : null,
+      start, durM: dur,
+    };
+  }
+  saveEdit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const dr = this.state.draft; const t = this.task(dr.id); if (!t) return;
+    const er = this.edErrors(dr);
+    if (er.title || er.time || er.dur) {
+      this.setState({ draft: Object.assign({}, dr, { tried: true }) });
+      this.wantSel = er.title ? '#ed-title' : er.time ? '#ed-time' : '#ed-dur';
+      return;
+    }
+    const day = +dr.day, start = er.start, dur = er.durM, tag = dr.tag.trim(), title = dr.title.trim();
+    const wasStarted = this.started(t);
+    const isNew = tag && this.state.tags.indexOf(tag) < 0;
+    this.write(t.id, {
+      refusal: this.P.overlap,
+      check: (ts) => {
+        const abs = day * 1440 + start;
+        if (wasStarted && abs < this.NOW - 1440) return this.P.correction;
+        if (!wasStarted && abs < this.NOW) return this.P.past;
+        if (this.conflict(ts, day, start, dur, t.id)) return this.P.overlap;
+        return null;
+      },
+      apply: (ts) => ts.map((x) => (x.id === t.id ? Object.assign(x, { title, day, start, dur, tag }) : x)),
+      after: (s) => ({ open: { id: t.id, panel: 'verbs' }, draft: null, tags: isNew ? s.tags.concat([tag]) : s.tags }),
+      toast: isNew ? { text: 'Saved “' + title + '”, and created the tag “' + tag + '”.' } : null,
+    });
+  }
+
+  lev(a, b) {
+    const m = a.length, n = b.length; const d = [];
+    for (let i = 0; i <= m; i++) { d[i] = [i]; }
+    for (let j = 0; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[m][n];
+  }
+
+  listOp(t, apply, msg) {
+    this.write(t.id, { ms: 500, refusal: this.P.checklist, apply: (ts) => ts.map((x) => (x.id === t.id ? apply(x) : x)), after: () => (msg ? { listMsg: msg } : {}) });
+  }
+  reorder(t, from, to) {
+    if (to < 0 || to >= t.checklist.length || from === to) return;
+    const label = t.checklist[from].label; const cid = t.checklist[from].id;
+    this.listOp(t, (x) => { const l = x.checklist.slice(); const [it] = l.splice(from, 1); l.splice(to, 0, it); x.checklist = l; return x; }, 'Moved “' + label + '” to ' + (to + 1) + ' of ' + t.checklist.length + '.');
+    this.wantSel = '[data-handle="' + cid + '"]';
+  }
+  commitRename = () => {
+    const s = this.state; if (!s.ren || !s.open) return;
+    const t = this.task(s.open.id); const cid = s.ren; const label = s.renText.trim();
+    this.setState({ ren: null });
+    if (!t || !label) return;
+    const cur = t.checklist.find((c) => c.id === cid);
+    if (cur && cur.label !== label) this.listOp(t, (x) => { x.checklist = x.checklist.map((c) => (c.id === cid ? Object.assign(c, { label }) : c)); return x; }, 'Renamed to “' + label + '”.');
+  };
+
+  scen(key) {
+    const b = Object.assign(this.fresh(), { scen: key });
+    const T = (id) => b.tasks.find((t) => t.id === id);
+    const open = (id, panel) => { b.open = { id, panel }; this.wantSel = '[data-row="' + id + '"]'; };
+    let then = null;
+    if (key === 'move') open('t9', 'move');
+    if (key === 'undo') then = () => this.askDelete(this.task('t13'));
+    if (key === 'confirmTicked') open('t9', 'delete');
+    if (key === 'confirmStarted') open('t8', 'delete');
+    if (key === 'edit') { open('t8', 'edit'); b.draft = this.draftFrom(T('t8')); this.wantSel = '#ed-time'; }
+    if (key === 'tag') { open('t9', 'edit'); b.draft = Object.assign(this.draftFrom(T('t9')), { tag: 'facudade' }); this.wantSel = '#ed-tag'; }
+    if (key === 'note') { open('t8', 'note'); b.noteDraft = T('t8').note; }
+    if (key === 'list') open('t9', 'list');
+    if (key === 'saving') b.frozen = 't10';
+    if (key === 'refusal') { open('t9', 'move'); b.err = { t9: this.P.overlap }; }
+    if (key === 'late') this.wantSel = '[data-row="t2"]';
+    if (key === 'focus') this.wantSel = '[data-cell="3:0"]';
+    if (key && key.indexOf('new') === 0) {
+      const base = { day: '4', title: '', time: '15:00', dur: '1h', tag: '', list: [], newItem: '', tried: false, server: null, saving: false };
+      if (key === 'newErr') Object.assign(base, { dur: '0', time: '25:00', tried: true });
+      if (key === 'new422') Object.assign(base, { day: '3', title: 'Call the bank', time: '12:00', dur: '30m', tag: 'saúde', tried: true, server: this.P.past });
+      if (key === 'new409') Object.assign(base, { title: 'Meet the advisor', time: '10:00', dur: '1h', tag: 'faculdade', tried: true, server: this.P.overlap });
+      if (key === 'newSaving') { Object.assign(base, { title: 'Meet the advisor', time: '15:00', dur: '45m', tag: 'faculdade', list: ['Bring chapter 2 notes'], tried: true, saving: true }); b.frozen = 'cr'; }
+      b.cr = base; this.wantSel = key === 'new409' || key === 'new422' ? '#cr-time' : '#cr-title';
+    }
+    clearTimeout(this.toastTimer);
+    this.setState(b, then || undefined);
+  }
+
+  onGridKey = (e) => {
+    const cell = e.target.closest && e.target.closest('[data-cell]');
+    if (!cell) return;
+    if (e.key === 'Escape') { if (this.state.open) { e.preventDefault(); this.closeOpen(); } return; }
+    if (e.target !== cell) return;
+    const [d, i] = cell.getAttribute('data-cell').split(':').map(Number);
+    const counts = this.counts || [];
+    const kind = (this.kinds || {})[d + ':' + i] || {};
+    let nd = d, ni = i;
+    const k = e.key;
+    if (k === 'ArrowDown') ni = Math.min(i + 1, counts[d] - 1);
+    else if (k === 'ArrowUp') ni = Math.max(0, i - 1);
+    else if (k === 'ArrowRight') { nd = Math.min(6, d + 1); ni = Math.min(i, counts[nd] - 1); }
+    else if (k === 'ArrowLeft') { nd = Math.max(0, d - 1); ni = Math.min(i, counts[nd] - 1); }
+    else if (k === 'Home') ni = 0;
+    else if (k === 'End') ni = counts[d] - 1;
+    else if (k === 'Enter' || k === ' ') {
+      e.preventDefault();
+      if (kind.kind === 'row') { if (k === ' ') this.toggleDone(this.task(kind.id)); else this.toggleOpen(kind.id); }
+      if (kind.kind === 'band' && this.cellOf[kind.owner]) { this.wantSel = '[data-cell="' + this.cellOf[kind.owner] + '"]'; this.forceUpdate(); }
+      if (kind.kind === 'head') { const btn = cell.querySelector('button'); if (btn) btn.focus(); }
+      return;
+    } else if (kind.kind === 'row' && /^[emoc]$/i.test(k) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      const t = this.task(kind.id);
+      const map = { e: 'edit', m: 'move', o: 'note', c: 'list' };
+      this.openPanel(kind.id, map[k.toLowerCase()]);
+      return;
+    } else if (kind.kind === 'row' && (k === 'Delete' || k === 'Backspace')) { e.preventDefault(); this.askDelete(this.task(kind.id)); return; }
+    else return;
+    e.preventDefault();
+    this.wantSel = '[data-cell="' + nd + ':' + ni + '"]';
+    this.setState({ focus: { d: nd, i: ni } });
+  };
+
+  setFocus(d, i) { const f = this.state.focus; if (f.d !== d || f.i !== i) this.setState({ focus: { d, i } }); }
+
+  scheduleAudit() { clearTimeout(this.auditTimer); this.auditTimer = setTimeout(() => this.audit(), 350); }
+  audit() {
+    const root = this.rootRef.current; if (!root) return;
+    const parse = (c) => { const m = String(c).match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
+    const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+    const bgOf = (el) => { for (let n = el; n; n = n.parentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c && c.a >= 0.99) return c; } return parse(getComputedStyle(document.documentElement).backgroundColor) || { r: 255, g: 255, b: 255, a: 1 }; };
+    const freeze = document.createElement('style');
+    freeze.textContent = '*, *::before, *::after { transition: none !important; }';
+    document.head.appendChild(freeze);
+    void getComputedStyle(root).color;
+    let n = 0, worst = null; const fails = [];
+    root.querySelectorAll('*').forEach((el) => {
+      if (el.tagName === 'OPTION' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
+      if (!Array.from(el.childNodes).some((x) => x.nodeType === 3 && x.textContent.trim())) return;
+      if (el.closest('[aria-hidden="true"]') || el.disabled || !el.getClientRects().length) return;
+      const cs = getComputedStyle(el); if (cs.visibility === 'hidden') return;
+      const fg = parse(cs.color); if (!fg) return;
+      const bg = bgOf(el);
+      const mix = fg.a < 1 ? { r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a) } : fg;
+      const a = lum(mix), b = lum(bg); const r = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const size = parseFloat(cs.fontSize), wt = parseInt(cs.fontWeight, 10) || 400;
+      const min = size >= 24 || (size >= 18.66 && wt >= 700) ? 3 : 4.5;
+      const txt = el.textContent.trim().replace(/\s+/g, ' ').slice(0, 36);
+      n++;
+      if (!worst || r < worst.r) worst = { r, txt };
+      if (r < min) fails.push(r.toFixed(2) + ':1 “' + txt + '”');
+      if (size < 12) fails.push(size + 'px “' + txt + '”');
+    });
+    freeze.remove();
+    if (!n) return;
+    this.setState({ audit: { n, worst, fails: fails.slice(0, 6), count: fails.length, theme: this.state.theme } });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const ts = s.offset === 0 ? s.tasks : [];
+    const rm = s.rm || (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const openId = s.open && s.open.id;
+    const panel = s.open && s.open.panel;
+    const infos = this.WD.map((_, d) => this.dayInfo(s.offset, d));
+    const bookedBy = infos.map((_, d) => this.booked(ts, d));
+    this.counts = []; this.kinds = {}; this.cellOf = {};
+    const f = s.focus;
+    const pct = (m) => (m / this.SCALE) * 100 + '%';
+    const line = (color) => (rm ? null : React.createElement('span', { 'aria-hidden': true, style: { position: 'absolute', left: 0, bottom: 0, width: '40%', height: 2, borderRadius: 2, background: color, animation: 'ds-saving 1.1s cubic-bezier(0.45, 0, 0.55, 1) infinite' } }));
+    const isPastSlot = (d2, start) => s.offset !== 0 || d2 < 3 || (d2 === 3 && start <= this.NOW - 3 * 1440);
+
+    const days = infos.map((info, d) => {
+      const b = bookedBy[d];
+      const over = Math.max(0, b - this.BUDGET);
+      const lv = this.level(b);
+      const own = ts.filter((t) => t.day === d).sort((x, y) => x.start - y.start);
+      const carried = d > 0 ? ts.filter((t) => t.day === d - 1 && t.start + t.dur > 1440) : [];
+      let idx = 0;
+      const hCell = d + ':0';
+      this.kinds[hCell] = { kind: 'head' };
+      idx = 1;
+      const bands = carried.map((t) => {
+        const c = d + ':' + idx++;
+        this.kinds[c] = { kind: 'band', owner: t.id };
+        return {
+          cell: c, tab: f.d === d && f.i === idx - 1 ? 0 : -1, from: this.WD[d - 1], portion: this.fmt(t.start + t.dur - 1440), title: t.title,
+          time: this.clock(t.start) + ' → ' + this.clock((t.start + t.dur) % 1440),
+          onFocus: () => this.setFocus(d, +c.split(':')[1]),
+          go: () => { this.wantSel = '[data-row="' + t.id + '"]'; this.forceUpdate(); },
+        };
+      });
+      const rows = own.map((t) => {
+        const c = d + ':' + idx++;
+        const ci = +c.split(':')[1];
+        this.kinds[c] = { kind: 'row', id: t.id };
+        this.cellOf[t.id] = c;
+        const isOpen = openId === t.id;
+        const saving = !!s.saving[t.id] || s.frozen === t.id;
+        const end = t.start + t.dur;
+        const nDone = t.checklist.filter((x) => x.done).length;
+        let doneLine = '';
+        if (t.done) {
+          const actual = t.done.abs - this.startAbs(t);
+          const dd = Math.floor(t.done.abs / 1440), dm = t.done.abs % 1440;
+          const when = dd === t.day ? this.clock(dm) : this.WD[dd] + ' ' + this.clock(dm);
+          doneLine = actual < 0 ? 'done ' + when + ' · before its start' : 'done ' + when + ' · ' + this.fmt(actual) + ' of ' + this.fmt(t.dur) + ' · ' + this.signed(actual - t.dur);
+        } else if (end > 1440) {
+          doneLine = 'crosses midnight · ' + this.fmt(1440 - t.start) + ' ' + this.WD[d] + ' / ' + this.fmt(end - 1440) + ' ' + this.WD[Math.min(6, d + 1)];
+        }
+        const err = s.err[t.id] || null;
+        const row = {
+          id: t.id, cell: c, tab: f.d === d && f.i === ci ? 0 : -1, busy: saving ? 'true' : 'false',
+          closed: !isOpen, open: isOpen,
+          timeText: this.clock(t.start) + ' – ' + this.clock(end % 1440), plusOne: end > 1440, durText: this.fmt(t.dur),
+          title: t.title, done: !!t.done, notDone: !t.done, checked: t.done ? 'true' : 'false',
+          checkLabel: (t.done ? 'Reopen ' : 'Complete ') + t.title,
+          titleColor: t.done ? 'var(--ink-2)' : 'var(--ink)', titleDeco: t.done ? 'line-through' : 'none',
+          tag: t.tag, hasTag: !!t.tag, hasNote: !!t.note && !isOpen, note: t.note, showNote: isOpen && !!t.note && (panel === 'verbs' || panel === 'list'),
+          hasList: t.checklist.length > 0, listText: nDone + '/' + t.checklist.length + ' checked',
+          saving, hasMeta: !!t.tag || !!t.note || t.checklist.length > 0 || saving,
+          doneLine, hasDoneLine: !!doneLine,
+          err, hasErr: !!err && (!isOpen || panel === 'edit' || panel === 'note' || panel === 'list'),
+          pMoveErr: !!err && isOpen && (panel === 'move' || panel === 'verbs' || panel === 'delete'),
+          savingLine: saving ? line('var(--ink-2)') : null,
+          onFocus: () => this.setFocus(d, ci),
+          onOpen: () => { this.setFocus(d, ci); this.toggleOpen(t.id); },
+          onToggle: (e) => { e.stopPropagation(); this.toggleDone(t); },
+          onClose: () => this.closeOpen(),
+          onBackToVerbs: () => this.openPanel(t.id, 'verbs'),
+          pMove: false, pDelete: false, pEdit: false, pNote: false, pList: false,
+        };
+        if (isOpen) {
+          row.verbsLabel = 'Actions for ' + t.title;
+          row.verbs = [['edit', 'E', 'edit'], ['move', 'M', 'move'], ['note', 'O', 'note'], ['checklist', 'C', 'list'], ['delete', '⌫', 'delete']].map(([label, cap, p]) => {
+            const on = panel === p;
+            return { label, cap, key: cap === '⌫' ? 'Delete' : cap, pressed: on ? 'true' : 'false', bg: on ? 'var(--tag)' : 'transparent', color: on ? 'var(--ink)' : 'var(--ink-2)', on: () => (p === 'delete' ? this.askDelete(t) : on ? this.openPanel(t.id, 'verbs') : this.openPanel(t.id, p)) };
+          });
+          row.pMove = panel === 'move'; row.pDelete = panel === 'delete'; row.pEdit = panel === 'edit'; row.pNote = panel === 'note'; row.pList = panel === 'list';
+          if (row.pMove) {
+            row.moveTime = this.clock(t.start) + '–' + this.clock(end % 1440);
+            const opts = infos.map((inf, d2) => {
+              if (d2 === d) return { wd: inf.wd, sub: 'here', off: true, ok: false, aria: inf.wd + ': this day' };
+              if (isPastSlot(d2, t.start)) return { wd: inf.wd, sub: 'past', off: true, ok: false, aria: inf.wd + ': already past', why: 'past' };
+              const cf = this.conflict(ts, d2, t.start, t.dur, t.id);
+              if (cf) return { wd: inf.wd, sub: 'taken', off: true, ok: false, aria: inf.wd + ': taken by ' + cf.title, why: cf };
+              const free = Math.max(0, this.BUDGET - bookedBy[d2]);
+              return { wd: inf.wd, d2, free, sub: this.fmt(free) + ' free', ok: true, off: false };
+            });
+            const okOpts = opts.filter((o) => o.ok);
+            const best = okOpts.reduce((a, o) => (!a || o.free > a.free ? o : a), null);
+            row.moveDays = opts.map((o) => Object.assign(o, o.ok ? { ring: o === best ? 'inset 0 0 0 1px var(--ink)' : 'none', aria: o.wd + ', ' + o.sub + (o === best ? ', lightest' : ''), on: () => this.moveTo(t, o.d2) } : {}));
+            const pastDays = opts.filter((o) => o.why === 'past').map((o) => o.wd);
+            const taken = opts.filter((o) => o.why && o.why !== 'past');
+            const bits = [];
+            if (pastDays.length) bits.push((pastDays.length > 1 ? pastDays[0] + '–' + pastDays[pastDays.length - 1] : pastDays[0]) + ': already past.');
+            taken.forEach((o) => bits.push(o.wd + ': ' + o.why.title + ' is there, ' + this.clock(o.why.start) + '–' + this.clock((o.why.start + o.why.dur) % 1440) + '.'));
+            if (best) bits.push(best.wd + ' is the lightest.');
+            if (!okOpts.length) bits.push('No day this week has that time free.');
+            row.moveWhy = bits.join(' ');
+          }
+          if (row.pDelete) {
+            const rs = [];
+            if (t.done) rs.push('It is done.');
+            else if (this.started(t)) rs.push('It has started — ' + this.clock(t.start) + ' ' + this.rel(t.day) + '.');
+            if (nDone) rs.push(nDone + ' of ' + t.checklist.length + ' checklist items ' + (nDone === 1 ? 'is' : 'are') + ' ticked, and would come back unticked.');
+            row.delReasons = rs;
+            row.onDeleteForGood = () => this.doDelete(t, false);
+            row.onKeep = () => this.openPanel(t.id, 'verbs');
+          }
+          if (row.pNote) row.onSaveNote = (e) => { e.preventDefault(); const note = s.noteDraft; this.write(t.id, { apply: (xs) => xs.map((x) => (x.id === t.id ? Object.assign(x, { note }) : x)), after: () => ({ open: { id: t.id, panel: 'verbs' } }) }); };
+        }
+        return row;
+      });
+      this.counts[d] = idx;
+      const offerObj = (() => {
+        if (lv === 'fine' || info.past || s.offset !== 0) return null;
+        const targets = infos.map((inf, d2) => ({ d2, free: Math.max(0, this.BUDGET - bookedBy[d2]) })).filter((x) => x.d2 > 3 && x.d2 !== d).sort((a, z) => z.free - a.free || a.d2 - z.d2);
+        const cands = own.filter((t) => !this.started(t) && !t.done).sort((a, z) => a.dur - z.dur);
+        const pick = cands.filter((t) => t.dur >= over).concat(cands.filter((t) => t.dur < over).reverse());
+        for (const tg of targets) for (const t of pick) {
+          if (this.conflict(ts, tg.d2, t.start, t.dur, t.id)) continue;
+          const inf = infos[tg.d2];
+          const after = b - Math.min(t.dur, 1440 - t.start);
+          return {
+            label: 'Move “' + t.title + '” to ' + inf.wd + ' ' + inf.dn,
+            sub: 'Same time, ' + this.clock(t.start) + '–' + this.clock((t.start + t.dur) % 1440) + '. ' + inf.wd + ' is the lightest day left this week, ' + this.fmt(tg.free) + ' free. ' + info.wd + ' would drop to ' + this.fmt(after) + '.',
+            busy: s.saving[t.id] ? 'true' : 'false',
+            on: () => this.moveTo(t, tg.d2),
+          };
+        }
+        return null;
+      })();
+      const unbooked = this.fmt(Math.max(0, info.minutes - b));
+      const levelMsg = { heavy: 'No margin for anything running late.', strained: 'Extremely heavy day. ' + unbooked + ' unbooked.', unsustainable: 'Unsustainable. ' + unbooked + ' unbooked.' }[lv];
+      return {
+        canNew: s.offset === 0 && !info.past, onNew: () => this.openCreate(d), hCell, hTab: f.d === d && f.i === 0 ? 0 : -1, innerTab: f.d === d && f.i === 0 ? 0 : -1,
+        onFocus: () => this.setFocus(d, 0),
+        aria: info.wdLong + ' ' + info.date + (info.today ? ', today' : info.past ? ', past' : ''),
+        wdLong: info.wdLong, date: info.date, today: info.today, nameColor: info.past ? 'var(--ink-2)' : 'var(--ink)',
+        bookedText: this.fmt(b), freeText: this.fmt(Math.max(0, this.BUDGET - b)),
+        over: over > 0, notOver: over <= 0, overText: this.fmt(over),
+        trackW: pct(info.minutes), barW: pct(Math.min(b, info.minutes)), budgetL: 'calc(' + pct(this.BUDGET) + ' - 1px)', endL: 'calc(' + pct(info.minutes) + ' - 2px)',
+        trailLabel: info.minutes / 60 + '-hour day, ' + this.fmt(b) + ' booked against a 16h budget',
+        levelAlert: lv !== 'fine', levelNeutral: false, levelText: levelMsg || '',
+        hasOffer: !!offerObj, offer: offerObj || { label: '', sub: '', busy: 'false', on: () => {} },
+        bg: over > 0 ? 'var(--alert-surface)' : 'var(--surface)', edge: over > 0 ? 'none' : 'inset 0 0 0 1px var(--line)',
+        hoverVar: over > 0 ? 'var(--alert-hover)' : 'var(--hover)', pressedVar: over > 0 ? 'var(--alert-pressed)' : 'var(--pressed)', openVar: over > 0 ? 'var(--alert-open)' : 'var(--open)',
+        empty: own.length === 0 && carried.length === 0, bands, rows,
+      };
+    });
+
+    const ot = openId ? s.tasks.find((t) => t.id === openId) : null;
+    let ed = { dayOptions: [], sugs: [] };
+    if (ot && panel === 'edit' && s.draft) {
+      const dr = s.draft; const er = this.edErrors(dr);
+      const show = dr.tried;
+      const wasStarted = this.started(ot);
+      const winAbs = this.NOW - 1440;
+      const q = dr.tag.trim().toLowerCase();
+      const exact = s.tags.indexOf(dr.tag.trim()) >= 0;
+      const sugList = s.tags.filter((x) => (!q || x.toLowerCase().indexOf(q) >= 0) && x !== dr.tag.trim());
+      const isNew = !!q && !exact;
+      let closest = null;
+      if (isNew) { let bd = 3; s.tags.forEach((x) => { const dd = this.lev(q, x.toLowerCase()); if (dd < bd) { bd = dd; closest = x; } }); }
+      const ring = (bad) => (show && bad ? 'inset 0 0 0 2px var(--alert)' : 'inset 0 0 0 1px var(--line-strong)');
+      const endAbs = er.start != null && er.durM ? +dr.day * 1440 + er.start + er.durM : null;
+      const listOpen = s.tagUi.open && sugList.length > 0;
+      ed = {
+        title: dr.title, titleCount: dr.title.length + '/200', titleErr: show ? er.title : null, titleInvalid: show && er.title ? 'true' : 'false', titleRing: ring(er.title),
+        day: dr.day, dayOptions: infos.map((inf, d2) => ({ v: String(d2), label: inf.wd + ' ' + inf.dn + ' ' + this.MON[inf.mo] })),
+        time: dr.time, timeErr: show ? er.time : null, timeInvalid: show && er.time ? 'true' : 'false', timeRing: ring(er.time),
+        timeHint: wasStarted ? 'Started ' + this.clock(ot.start) + ' ' + this.rel(ot.day) + '. The start can go back to ' + this.clock(winAbs % 1440) + ' ' + this.rel(Math.floor(winAbs / 1440)) + ', not earlier.' : 'Not before now: ' + this.clock(this.NOW % 1440) + ' today.',
+        dur: dr.dur, durErr: show ? er.dur : null, durInvalid: show && er.dur ? 'true' : 'false', durRing: ring(er.dur),
+        endsText: endAbs == null ? '—' : this.WD[Math.min(6, Math.floor(endAbs / 1440))] + ' ' + this.clock(endAbs % 1440),
+        tag: dr.tag, listOpen, listOpenStr: listOpen ? 'true' : 'false', activeId: listOpen && s.tagUi.active >= 0 ? 'tag-opt-' + s.tagUi.active : '',
+        sugs: sugList.map((x, i) => ({ id: 'tag-opt-' + i, label: x, sel: i === s.tagUi.active ? 'true' : 'false', bg: i === s.tagUi.active ? 'var(--tag)' : 'transparent', pick: (e) => { e.preventDefault(); this.setState({ draft: Object.assign({}, s.draft, { tag: x }), tagUi: { open: false, active: -1 } }); } })),
+        newTag: isNew, newTagText: '“' + dr.tag.trim() + '” isn’t one of your tags yet. Saving creates it.' + (closest ? ' Did you mean “' + closest + '”?' : ''),
+        hasClosest: !!closest, closest: closest || '', useClosest: () => this.setState({ draft: Object.assign({}, s.draft, { tag: closest }), tagUi: { open: false, active: -1 } }),
+        saveLabel: isNew ? 'save and create tag “' + dr.tag.trim() + '”' : 'save',
+        onSave: (e) => this.saveEdit(e),
+        onTitle: (e) => this.setState({ draft: Object.assign({}, this.state.draft, { title: e.target.value }) }),
+        onDay: (e) => this.setState({ draft: Object.assign({}, this.state.draft, { day: e.target.value }) }),
+        onTime: (e) => this.setState({ draft: Object.assign({}, this.state.draft, { time: e.target.value }) }),
+        onDur: (e) => this.setState({ draft: Object.assign({}, this.state.draft, { dur: e.target.value }) }),
+        onTag: (e) => this.setState({ draft: Object.assign({}, this.state.draft, { tag: e.target.value }), tagUi: { open: true, active: -1 } }),
+        onTagFocus: () => this.setState({ tagUi: { open: true, active: -1 } }),
+        onTagBlur: () => setTimeout(() => this.setState({ tagUi: { open: false, active: -1 } }), 120),
+        onTagKey: (e) => {
+          const n = sugList.length; const a = this.state.tagUi.active;
+          if (e.key === 'ArrowDown' && n) { e.preventDefault(); this.setState({ tagUi: { open: true, active: (a + 1) % n } }); }
+          else if (e.key === 'ArrowUp' && n) { e.preventDefault(); this.setState({ tagUi: { open: true, active: a <= 0 ? n - 1 : a - 1 } }); }
+          else if (e.key === 'Enter' && listOpen && a >= 0) { e.preventDefault(); this.setState({ draft: Object.assign({}, this.state.draft, { tag: sugList[a] }), tagUi: { open: false, active: -1 } }); }
+          else if (e.key === 'Escape' && listOpen) { e.stopPropagation(); this.setState({ tagUi: { open: false, active: -1 } }); }
+        },
+      };
+    }
+
+    let ls = { items: [] };
+    if (ot && panel === 'list') {
+      const n = ot.checklist.length;
+      ls = {
+        items: ot.checklist.map((c, i) => ({
+          id: c.id, label: c.label, done: c.done, notDone: !c.done, checked: c.done ? 'true' : 'false',
+          renaming: s.ren === c.id, notRenaming: s.ren !== c.id,
+          color: c.done ? 'var(--ink-2)' : 'var(--ink)', deco: c.done ? 'line-through' : 'none',
+          bg: s.drag && s.drag.over === i && s.drag.from !== i ? 'var(--tag)' : 'transparent',
+          handleLabel: 'Reorder “' + c.label + '”, ' + (i + 1) + ' of ' + n,
+          checkLabel: (c.done ? 'Untick ' : 'Tick ') + c.label, renameLabel: 'Rename “' + c.label + '”', removeLabel: 'Remove “' + c.label + '”',
+          onToggle: () => this.listOp(ot, (x) => { x.checklist = x.checklist.map((y) => (y.id === c.id ? Object.assign(y, { done: !y.done }) : y)); return x; }),
+          startRename: () => { this.wantSel = '#ren-input'; this.setState({ ren: c.id, renText: c.label }); },
+          onRemove: () => { this.listOp(ot, (x) => { x.checklist = x.checklist.filter((y) => y.id !== c.id); return x; }, 'Removed “' + c.label + '”.'); this.wantSel = '#ls-add'; },
+          onHandleKey: (e) => { if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); e.stopPropagation(); this.reorder(ot, i, e.key === 'ArrowUp' ? i - 1 : i + 1); } },
+          onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', c.id); } catch (x) {} this.setState({ drag: { from: i, over: i } }); },
+          onDragOver: (e) => { e.preventDefault(); if (this.state.drag && this.state.drag.over !== i) this.setState({ drag: Object.assign({}, this.state.drag, { over: i }) }); },
+          onDrop: (e) => { e.preventDefault(); const dg = this.state.drag; this.setState({ drag: null }); if (dg) this.reorder(ot, dg.from, i); },
+          onDragEnd: () => this.setState({ drag: null }),
+        })),
+      };
+    }
+
+    const scenarios = [['Move', 'move'], ['Delete · undo', 'undo'], ['Delete · item ticked', 'confirmTicked'], ['Delete · started', 'confirmStarted'], ['Edit · correction window', 'edit'], ['Tag field', 'tag'], ['Note', 'note'], ['Checklist', 'list'], ['Saving', 'saving'], ['Server refusal', 'refusal'], ['Late completion', 'late'], ['Focus model', 'focus'], ['New task', 'new'], ['New · field errors', 'newErr'], ['New · past (422)', 'new422'], ['New · taken (409)', 'new409'], ['New · saving', 'newSaving']].map(([label, key]) => ({ label, pressed: s.scen === key ? 'true' : 'false', bg: s.scen === key ? 'var(--tag)' : 'transparent', on: () => this.scen(key) }));
+    const tg = (label, on, active) => ({ label, pressed: active ? 'true' : 'false', bg: active ? 'var(--tag)' : 'transparent', on });
+    const toggles = [
+      tg('Light', () => this.setState({ theme: 'light' }), s.theme === 'light'),
+      tg('Dark', () => this.setState({ theme: 'dark' }), s.theme === 'dark'),
+      tg('Reduced motion', () => this.setState({ rm: !s.rm }), s.rm),
+      tg('Server refuses the next write', () => this.setState({ refuseNext: !s.refuseNext }), s.refuseNext),
+      tg('Reset', () => this.scen(null), false),
+    ];
+    const au = s.audit;
+    const auditText = au && au.worst ? 'Text audit, ' + au.theme + ': ' + au.n + ' elements, worst ' + au.worst.r.toFixed(2) + ':1 (“' + au.worst.txt + '”). ' + (au.count ? au.count + ' below the minimum:' : 'None below 4.5:1, none under 12px.') : 'Measuring text contrast…';
+
+    const first = infos[0], last = infos[6];
+    const rangeText = first.mo === last.mo ? first.dn + ' – ' + last.dn + ' ' + this.MON[last.mo] + ' ' + last.y : first.date + ' – ' + last.date + ' ' + last.y;
+    const toast = s.toast;
+    const c = s.cr;
+    let crv = { dayOptions: [], sugs: [], items: [] };
+    if (c) {
+      const er = this.edErrors(c), show = c.tried;
+      const ring = (bad) => (bad ? 'inset 0 0 0 2px var(--alert)' : 'inset 0 0 0 1px var(--line-strong)');
+      const q = c.tag.trim().toLowerCase(), exact = s.tags.indexOf(c.tag.trim()) >= 0;
+      const sugList = s.tags.filter((x) => (!q || x.toLowerCase().indexOf(q) >= 0) && x !== c.tag.trim());
+      const listOpen = s.crUi.open && sugList.length > 0;
+      const isNew = !!q && !exact;
+      let closest = null; if (isNew) { let bd = 3; s.tags.forEach((x) => { const dd = this.lev(q, x.toLowerCase()); if (dd < bd) { bd = dd; closest = x; } }); }
+      const endAbs = er.start != null && er.durM ? +c.day * 1440 + er.start + er.durM : null;
+      const timeErr = c.server || (show ? er.time : null);
+      const pick = (x) => this.setState((st) => ({ cr: Object.assign({}, st.cr, { tag: x }), crUi: { open: false, active: -1 } }));
+      const addItem = () => { const v = (this.state.cr.newItem || '').trim(); if (v) this.setCr({ list: this.state.cr.list.concat([v]), newItem: '' }); };
+      crv = {
+        busy: c.saving ? 'true' : 'false', saveLabel: c.saving ? 'saving…' : isNew ? 'save and create tag “' + c.tag.trim() + '”' : 'save',
+        title: c.title, titleCount: c.title.length + '/200', titleErr: show ? er.title || '' : '', titleInvalid: show && er.title ? 'true' : 'false', titleRing: ring(show && er.title),
+        day: c.day, dayOptions: infos.map((inf, d2) => ({ v: String(d2), sel: String(d2) === c.day, label: inf.wd + ' ' + inf.dn + ' ' + this.MON[inf.mo] + (inf.past ? ' (past)' : inf.today ? ' (today)' : '') })),
+        time: c.time, timeErr: timeErr || '', errRole: c.server ? 'alert' : 'none', timeInvalid: timeErr ? 'true' : 'false', timeRing: ring(!!timeErr),
+        timeHint: +c.day < 3 ? 'This day has passed. A task can start at 14:20 today or later.' : +c.day === 3 ? 'Not before 14:20 today. 24-hour time, Europe/Lisbon.' : '24-hour time, Europe/Lisbon.',
+        dur: c.dur, durErr: show ? er.dur || '' : '', durInvalid: show && er.dur ? 'true' : 'false', durRing: ring(show && er.dur),
+        durHint: endAbs == null ? '1m to 24h, like 45m or 2h30.' : 'Ends ' + this.WD[Math.min(6, Math.floor(endAbs / 1440))] + ' ' + this.clock(endAbs % 1440) + '.',
+        tag: c.tag, listOpen, listOpenStr: listOpen ? 'true' : 'false', activeId: listOpen && s.crUi.active >= 0 ? 'cr-opt-' + s.crUi.active : '',
+        sugs: sugList.map((x, i) => ({ id: 'cr-opt-' + i, label: x, sel: i === s.crUi.active ? 'true' : 'false', bg: i === s.crUi.active ? 'var(--tag)' : 'transparent', pick: (e) => { e.preventDefault(); pick(x); } })),
+        newTag: isNew && !listOpen, newTagText: '“' + c.tag.trim() + '” isn’t one of your tags yet. Saving creates it.' + (closest ? ' Did you mean “' + closest + '”?' : ''),
+        hasClosest: !!closest, closest: closest || '', useClosest: () => pick(closest),
+        items: c.list.map((l, i) => ({ label: l, removeAria: 'Remove “' + l + '”', remove: () => this.setCr({ list: this.state.cr.list.filter((_, k) => k !== i) }) })),
+        newItem: c.newItem, onItem: (e) => this.setCr({ newItem: e.target.value }), onItemKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }, addItem,
+        onTitle: (e) => this.setCr({ title: e.target.value }), onDay: (e) => this.setCr({ day: e.target.value, server: null }), onTime: (e) => this.setCr({ time: e.target.value, server: null }), onDur: (e) => this.setCr({ dur: e.target.value }),
+        onTag: (e) => this.setState((st) => ({ cr: Object.assign({}, st.cr, { tag: e.target.value }), crUi: { open: true, active: -1 } })),
+        onTagBlur: () => this.setState({ crUi: { open: false, active: -1 } }),
+        onTagKey: (e) => {
+          const n = sugList.length, a = s.crUi.active;
+          if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ crUi: { open: true, active: n ? (a + 1) % n : -1 } }); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ crUi: { open: true, active: n ? (a - 1 + n) % n : -1 } }); }
+          else if (e.key === 'Enter' && listOpen && a >= 0) { e.preventDefault(); pick(sugList[a]); }
+          else if (e.key === 'Escape' && listOpen) { e.stopPropagation(); this.setState({ crUi: { open: false, active: -1 } }); }
+        },
+        onSave: (e) => this.saveCreate(e), onCancel: () => this.closeCreate(),
+        onKey: (e) => {
+          if (e.key === 'Escape') { e.preventDefault(); this.closeCreate(); return; }
+          if (e.key !== 'Tab') return;
+          const els = Array.from(e.currentTarget.querySelectorAll('input, select, button, textarea')).filter((x) => !x.disabled && x.getClientRects().length);
+          if (!els.length) return;
+          const first = els[0], last = els[els.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        },
+      };
+    }
+    const legend = [[['←', '→', '↑', '↓'], 'move between days and rows'], [['Home', 'End'], 'first or last in a day'], [['Enter'], 'open or close a row'], [['Space'], 'mark done'], [['E'], 'edit'], [['M'], 'move'], [['O'], 'note'], [['C'], 'checklist'], [['⌫'], 'delete'], [['N'], 'new task on the focused day'], [['Alt', '↑', '↓'], 'reorder a checklist item'], [['[', ']'], 'previous or next week'], [['T'], 'back to this week'], [['Ctrl', 'Z'], 'undo a delete'], [['Esc'], 'close']].map(([keys, label]) => ({ keys, label }));
+    return {
+      crOpen: !!c, cr: crv, legend, showLegend: !s.coarse, showKeys: !s.coarse, legendOpen: s.legendOpen, legendOpenStr: s.legendOpen ? 'true' : 'false', legendCaret: s.legendOpen ? '▾' : '▸', toggleLegend: () => this.setState({ legendOpen: !s.legendOpen }),
+      rootRef: this.rootRef, minusOne: -1, scenarios, toggles, auditText, auditFails: au ? au.fails : [],
+      rangeText, gridLabel: 'Week of ' + rangeText, isThisWeek: s.offset === 0, notThisWeek: s.offset !== 0,
+      prevWeek: () => this.setState({ offset: s.offset - 1, open: null }),
+      nextWeek: () => this.setState({ offset: s.offset + 1, open: null }),
+      thisWeek: () => this.setState({ offset: 0, open: null }),
+      dateOpen: s.dateOpen, dateOpenStr: s.dateOpen ? 'true' : 'false', dateVal: s.dateVal,
+      toggleDate: () => { this.setState({ dateOpen: !s.dateOpen }); if (!s.dateOpen) this.wantSel = '#goto-date'; },
+      onDate: (e) => this.setState({ dateVal: e.target.value }),
+      goDate: (e) => {
+        e.preventDefault();
+        const m = String(s.dateVal).match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!m) return;
+        const days = Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - this.BASE) / 864e5);
+        const off = Math.floor(days / 7), dow = ((days % 7) + 7) % 7;
+        this.wantSel = '[data-cell="' + dow + ':0"]';
+        this.setState({ offset: off, dateOpen: false, open: null, focus: { d: dow, i: 0 } });
+      },
+      days, ed, ls, onGridKey: this.onGridKey,
+      noteDraft: s.noteDraft, noteCount: s.noteDraft.length + '/4000', onNote: (e) => this.setState({ noteDraft: e.target.value }),
+      renText: s.renText, onRenText: (e) => this.setState({ renText: e.target.value }), commitRename: this.commitRename,
+      onRenKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.commitRename(); } else if (e.key === 'Escape') { e.stopPropagation(); this.setState({ ren: null }); } },
+      addText: s.addText, onAddText: (e) => this.setState({ addText: e.target.value }),
+      onAddItem: (e) => { e.preventDefault(); const label = s.addText.trim(); if (!label || !ot) return; const id = 'c' + Date.now(); this.setState({ addText: '' }); this.listOp(ot, (x) => { x.checklist = x.checklist.concat([{ id, label, done: false }]); return x; }, 'Added “' + label + '”.'); this.wantSel = '#ls-add'; },
+      listMsg: s.listMsg,
+      hasToast: !!toast, toastText: toast ? toast.text : '', hasUndo: !!(toast && toast.undo), toastBusy: toast && toast.busy ? 'true' : 'false', undo: this.undo,
+    };
+  }
+}
+</script>
+</body>
+</html>
