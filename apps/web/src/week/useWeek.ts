@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, api } from "../api/client";
-import type { DayCapacity, Me, NewTask, Page, Task, TaskChanges } from "../api/types";
+import { everyPage } from "../api/pages";
+import type { DayCapacity, Me, NewTask, Task, TaskChanges } from "../api/types";
 import { daysFrom, mondayOf, toLocalDate, zonedDay } from "../lib/time";
 import { type Carried, carriedInto } from "./carried";
 
@@ -64,8 +65,6 @@ export interface Week {
   creating: boolean;
 }
 
-const PAGE = 100;
-
 export function useWeek(): Week {
   const [offset, setOffset] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -101,9 +100,11 @@ export function useWeek(): Week {
       // `/me` first and alone: everything after it needs the zone, and asking for a window
       // before knowing which zone reads it would be asking about the wrong days.
       const me = await api.get<Me>("/me");
-      const [days, page] = await Promise.all([
+      // Every page of the window, not the first: the capacity counts every task, and a week
+      // that stopped at one page would show fewer than its own figures say it holds.
+      const [days, tasks] = await Promise.all([
         api.get<DayCapacity[]>(`/capacity?first_day=${firstDay}&last_day=${lastDay}`),
-        api.get<Page<Task>>(`/tasks?first_day=${eve}&last_day=${lastDay}&limit=${String(PAGE)}`),
+        everyPage<Task>(`/tasks?first_day=${eve}&last_day=${lastDay}`),
       ]);
 
       if (cancelled) return;
@@ -112,7 +113,7 @@ export function useWeek(): Week {
         sequence: (previous?.sequence ?? 0) + 1,
         me,
         days,
-        tasks: page.items,
+        tasks,
       }));
     }
 
