@@ -39,7 +39,7 @@ redesign.
 | 11 | Dependabot nos lockfiles do Python | **Um check no CI** que regenera o lockfile com o `uv` e falha se diferir | job de CI | sim |
 | 12 | Horário útil | **Uma janela por pessoa** (início e fim). Simples para a maioria; nem todo mundo vai configurar dia a dia, e nem todo dia segue o mesmo plano | ✅ ADR-0029, migration e `PATCH /me`; falta a tela de configurações | sim |
 | 14 | Arrumação | `.gitignore` dos arquivos pessoais commitado; branches antigas apagadas | feito | — |
-| 15 | O front-end até o redesign voltar | **Congelado.** As PRs 6, 7 e 8 do item 2 estão pausadas, e nenhum componente, teste de UI ou CSS novo é escrito sobre um design system que vai ser refeito. O trabalho segue no que é base | — | — |
+| 15 | O front-end até o redesign voltar | **Congelado.** As PRs 6, 7 e 8 do item 2 estão pausadas, e nenhum componente, teste de UI ou CSS novo é escrito sobre um design system que vai ser refeito. O trabalho segue no que é base. ✅ **Encerrado em 2026-10-27** (ADR-0052): a rodada voltou, e a implementação segue a ordem do ADR | — | — |
 
 ### A 13, decidida em seguida
 
@@ -386,8 +386,8 @@ logo depois do celular**, porque é o que destrava o S8 mais cedo. A ordem passa
    campo recebe foco ao carregar.
 
 **A rodada está completa.** As seis telas voltaram e foram conferidas fora da ferramenta. O
-front-end continua congelado até a decisão de abrir a implementação, que é a que traz o ADR
-que supera o ADR-0024 nos cinco pontos em que ele remendou o design.
+front-end abriu em 2026-10-27 com o ADR-0052, que supera o ADR-0024 e põe as cinco telas em
+`docs/design/` como especificação.
 
 Dois defeitos menores ficaram para a implementação, porque são de quebra de linha e não pedem
 outra volta de design. Os dois só aparecem com o texto a 200%:
@@ -485,13 +485,14 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
 
 ## Rodada 4 — telas que não existem
 
-- **Configurações.** Desenhada em `docs/design/settings.html`. O fuso aparece no cabeçalho e
-  não pode ser mudado. ~~Carrega junto os itens 7–9 do ADR-0023: a coluna
+- **Configurações.** Desenhada em `docs/design/settings.dc.html`, na terceira rodada. O fuso
+  aparece e não pode ser mudado. ~~Carrega junto os itens 7–9 do ADR-0023: a coluna
   `users.usable_minutes`…~~ O ADR-0029 trocou esses itens por uma janela: o `PATCH /me` e o
-  `GET /me` já existem para ela, e falta só a tela que a altera, desenhada no passo 4 da
+  `GET /me` já existem para ela, e falta só a tela que a altera, desenhada no passo 5 da
   terceira rodada.
-- **Confirmar endereço.** Desenhada em `docs/design/confirm-address.html`, em três estados.
-  O comportamento já existe dentro do `AuthScreen`; falta a tela. **É a PR 7 do item 2.**
+- **Confirmar endereço.** Desenhada em `docs/design/sign-in.dc.html`, na terceira rodada, com
+  um estado só para o link que não serve mais. O comportamento já existe dentro do
+  `AuthScreen`; falta a tela. Entra com entrar, no último passo da ordem do ADR-0052.
 
   **Leva junto o último `jsx-a11y/no-autofocus` da base.** A PR 3 ligou o plugin e achou três,
   todos no `autoFocus`. Dois seguem ação explícita — formulário aberto com `N`, campo que
@@ -505,7 +506,7 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
   sessão e encerra as outras; o reset encerra todas e não abre nenhuma; os dois avisam por
   e-mail. A troca é desenhada nas configurações (passo 5 da terceira rodada), e a recuperação
   junto com entrar (passo 6). O motivo de pedir um ADR antes da rota apareceu ao ler o design:
-  a seção 03 da `docs/design/settings.html` diz que trocar a senha **não** desloga o
+  a seção 03 das configurações da segunda rodada diz que trocar a senha **não** desloga o
   navegador, enquanto o `reset-password` revoga todas as sessões. A diferença é defensável:
   quem faz reset por link pode não ser o dono da conta, e quem digita a senha atual provou que
   é.
