@@ -163,6 +163,8 @@ class TaskRead(BaseModel):
     completed_at: datetime | None
     tag: TagRead | None
     items: list[ChecklistItemRead]
+    #: The plan the task was committed from, which counts it (ADR-0030, ADR-0050).
+    plan_id: uuid.UUID | None
 
 
 class Page(BaseModel):

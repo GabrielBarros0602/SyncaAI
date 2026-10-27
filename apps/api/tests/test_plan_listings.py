@@ -9,7 +9,7 @@ where the state it needs is one a clock or a worker would reach.
 import json
 import uuid
 from collections.abc import Iterator
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -20,7 +20,7 @@ from sqlalchemy import delete, func, update
 
 from syncaai.api.dependencies import get_current_user_id
 from syncaai.db import get_session_factory
-from syncaai.models import AiJob, AiUsage, PlanDraft, User
+from syncaai.models import AiJob, AiUsage, PlanDraft, Task, User
 from syncaai.planning.generator import FakeGenerator
 from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
 from syncaai.services.plan_jobs import run_plan_job
@@ -30,7 +30,8 @@ pytestmark = pytest.mark.integration
 JOBS = "/api/v1/ai/plans"
 PLANS = "/api/v1/plans"
 REQUEST = "Organizar a mudança de apartamento"
-WEDNESDAY_NOON = datetime(2031, 6, 4, 12, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))
+SAO_PAULO = ZoneInfo("America/Sao_Paulo")
+WEDNESDAY_NOON = datetime(2031, 6, 4, 12, 0, tzinfo=SAO_PAULO)
 ANSWER = json.dumps(
     {
         "items": [
@@ -319,3 +320,115 @@ def test_a_plan_listing_outside_its_bounds_is_refused(
     _as(app, people[0])
 
     assert client.get(PLANS, params=params).status_code == 422
+
+
+# --- Progress ------------------------------------------------------------------------------
+
+
+def _committed(client: TestClient) -> tuple[str, list[str]]:
+    """A plan by hand with two steps at explicit times, two days ahead so the test does not
+    depend on the clock it runs at, committed into its tasks."""
+    plan = _write(client, "Mudança de apartamento")
+    day = datetime.now(SAO_PAULO).date() + timedelta(days=2)
+    for title, hour in (("Comprar caixas", 9), ("Encaixotar a cozinha", 10)):
+        step = client.post(f"{PLANS}/{plan}/items", json={"title": title, "minutes": 30}).json()
+        start = datetime(day.year, day.month, day.day, hour, tzinfo=SAO_PAULO)
+        moved = client.patch(
+            f"{PLANS}/{plan}/items/{step['id']}", json={"start_at": start.isoformat()}
+        )
+        assert moved.status_code == 200, moved.text
+    committed = client.post(f"{PLANS}/{plan}/commit", headers={"Idempotency-Key": "k-1"})
+    assert committed.status_code == 200, committed.text
+    return plan, list(committed.json()["task_ids"])
+
+
+def _complete(task_id: str) -> None:
+    with get_session_factory()() as session:
+        session.execute(
+            update(Task).where(Task.id == uuid.UUID(task_id)).values(completed_at=func.now())
+        )
+        session.commit()
+
+
+def test_a_pending_plan_has_no_progress(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    plan = _write(client, "Arrumar o quarto")
+
+    assert client.get(f"{PLANS}/{plan}").json()["progress"] is None
+
+
+def test_an_approved_plan_counts_its_tasks_as_they_are_done_and_deleted(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Counted as it is read, over the tasks that exist (ADR-0030 §5, ADR-0050)."""
+    _as(app, people[0])
+    plan, (first, second) = _committed(client)
+
+    assert client.get(f"{PLANS}/{plan}").json()["progress"] == {"done": 0, "total": 2}
+    _complete(first)
+    assert client.get(f"{PLANS}/{plan}").json()["progress"] == {"done": 1, "total": 2}
+    assert client.delete(f"/api/v1/tasks/{second}").status_code == 204
+    read = client.get(f"{PLANS}/{plan}").json()
+
+    assert read["progress"] == {"done": 1, "total": 1}
+    assert client.get(PLANS, params={"status": "approved"}).json()["items"] == [read]
+
+
+def test_an_approved_plan_with_every_task_deleted_counts_none(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    plan, tasks = _committed(client)
+    for task in tasks:
+        assert client.delete(f"/api/v1/tasks/{task}").status_code == 204
+
+    assert client.get(f"{PLANS}/{plan}").json()["progress"] == {"done": 0, "total": 0}
+
+
+def test_only_the_owner_s_tasks_count_towards_a_plan(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """No route sets a task's plan, so this row is written by hand: the count is held to the
+    owner by the query, not only by the routes (ADR-0016)."""
+    _as(app, people[0])
+    plan, _ = _committed(client)
+    with get_session_factory()() as session:
+        session.add(
+            Task(
+                user_id=people[1],
+                title="Not theirs to count",
+                start_at=datetime(2031, 6, 4, 15, 0, tzinfo=timezone.utc),
+                duration_minutes=30,
+                plan_id=uuid.UUID(plan),
+            )
+        )
+        session.commit()
+
+    assert client.get(f"{PLANS}/{plan}").json()["progress"] == {"done": 0, "total": 2}
+
+
+def test_a_task_names_the_plan_it_was_committed_from(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    plan, tasks = _committed(client)
+    start = datetime.now(SAO_PAULO) + timedelta(days=3)
+    by_hand = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Ligar para a mudança",
+            "start_at": start.isoformat(),
+            "duration_minutes": 15,
+        },
+    )
+    assert by_hand.status_code == 201, by_hand.text
+
+    listed = client.get("/api/v1/tasks").json()["items"]
+
+    assert {task["id"]: task["plan_id"] for task in listed} == {
+        tasks[0]: plan,
+        tasks[1]: plan,
+        by_hand.json()["id"]: None,
+    }

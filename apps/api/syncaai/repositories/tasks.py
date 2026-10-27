@@ -5,7 +5,7 @@ base takes a join rather than assuming a column.
 """
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import (
@@ -55,6 +55,18 @@ class TaskRepository(OwnedRepository[Task]):
             .options(selectinload(Task.items), selectinload(Task.tag))
         )
         return self._session.scalar(statement)
+
+    def progress_by_plan(self, plan_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, tuple[int, int]]:
+        """For each of these plans, how many of the owner's tasks from it are done, and how
+        many there are (ADR-0050). A plan with no task left is absent."""
+        rows = self._session.execute(
+            self._scoped()
+            .with_only_columns(Task.plan_id, func.count(Task.completed_at), func.count())
+            .where(Task.plan_id.in_(plan_ids))
+            .group_by(Task.plan_id)
+        )
+        # Nullable in the model, for a task made by hand; every row here was found by its plan.
+        return {plan: (done, total) for plan, done, total in rows if plan is not None}
 
     def list_with_items(
         self,
