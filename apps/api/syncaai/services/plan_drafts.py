@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from syncaai.models import PlanDraft, User
 
 
-def expire_drafts(session: Session) -> list[UUID]:
+def expire_drafts(session: Session, *, owner: UUID | None = None) -> list[UUID]:
     """Mark ``expired`` every pending draft whose horizon's last day has ended, and return
-    their ids. The caller commits.
+    their ids; only ``owner``'s when one is given. The caller commits.
 
     "Ended" is in the owner's zone: a draft whose last day is Sunday is still alive on Sunday
     evening in São Paulo, when it is already Monday in UTC. Once expired, nothing is left to
@@ -28,4 +28,6 @@ def expire_drafts(session: Session) -> list[UUID]:
         .returning(PlanDraft.id)
         .execution_options(synchronize_session=False)
     )
+    if owner is not None:
+        statement = statement.where(PlanDraft.user_id == owner)
     return list(session.scalars(statement).all())

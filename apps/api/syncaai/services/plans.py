@@ -53,6 +53,7 @@ from syncaai.services.ai_breaker import refuse_while_open
 from syncaai.services.ai_queue import enqueue_plan
 from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, refuse_past_the_ceilings
 from syncaai.services.plan_context import plannable_days
+from syncaai.services.plan_drafts import expire_drafts
 from syncaai.services.plan_jobs import ONE_PENDING_DRAFT, PLACED
 from syncaai.services.tasks import MAX_PAGE_SIZE, OVERLAP_CONSTRAINT
 
@@ -95,11 +96,20 @@ class PlanService:
         sentence.
         """
         self._refuse_past_the_rate_limit()
+        self._let_an_ended_plan_go()
         if self._jobs.any_in_progress() or self._drafts.any_pending():
             raise PlanInProgressError
         refuse_past_the_ceilings(self._session, self._jobs.owner_id, self._ceilings)
         refuse_while_open(self._session, self._provider)
         return enqueue_plan(self._session, self._jobs.owner_id, request, horizon_days=horizon_days)
+
+    def _let_an_ended_plan_go(self) -> None:
+        """Record as expired a plan of this person's whose last day has ended, before asking
+        whether one is pending. Reading already calls it expired (ADR-0033), but the check
+        below and the unique index read the stored status, so until the sweep recorded it
+        the plan held the place: for a tick with a worker, for ever without one, and a plan
+        by hand needs none (ADR-0047, ADR-0050)."""
+        expire_drafts(self._session, owner=self._jobs.owner_id)
 
     def _refuse_past_the_rate_limit(self) -> None:
         full = []
@@ -119,6 +129,7 @@ class PlanService:
         by the same index on drafts if two arrive at once. Not a job, so neither the rate
         limit, the ceilings nor the breaker read it: there is no model to protect.
         """
+        self._let_an_ended_plan_go()
         if self._jobs.any_in_progress() or self._drafts.any_pending():
             raise PlanInProgressError
         today = self._today(now)
