@@ -138,10 +138,9 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
 
 ### Média, abertos
 
-1. **Um plano cujo último dia terminou segura a vaga até a varredura.** A leitura já diz
-   `expired`, mas `any_pending` e `ux_plan_drafts_one_pending` leem o status gravado: pedir
-   outro plano recusa, e descartar também (`_pending`). Com o worker de pé, dura um tick; sem
-   ele, um plano escrito à mão (ADR-0047), que não precisa de worker, nunca libera.
+1. ~~**Um plano cujo último dia terminou segura a vaga até a varredura.**~~ ✅ Feito em
+   2026-10-26: pedir um plano, ao modelo ou à mão, grava antes como expirados os planos da
+   própria pessoa que já terminaram. Os dos outros continuam com a varredura.
 2. **Duas tarefas criadas ao mesmo tempo com a mesma etiqueta nova dão 500.**
    `get_or_create` lê e depois insere, sem tratar a violação de `(user_id, name)`. O índice
    mantém a integridade; quem perde a corrida recebe erro de servidor em vez da etiqueta.
