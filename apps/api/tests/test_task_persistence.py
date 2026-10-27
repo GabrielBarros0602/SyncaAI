@@ -23,7 +23,7 @@ from syncaai.repositories.tags import TagRepository
 from syncaai.repositories.tasks import TaskRepository
 from syncaai.schemas.tasks import TaskUpdate
 from syncaai.services.checklist import ChecklistService
-from syncaai.services.tasks import TaskService
+from syncaai.services.tasks import OVERLAP_CONSTRAINT, TaskService
 
 A_FIXED_FUTURE = datetime(2030, 1, 1, 10, 0, tzinfo=timezone.utc)
 
@@ -90,9 +90,13 @@ def test_a_user_cannot_have_two_overlapping_tasks() -> None:
             )
         )
 
-        with pytest.raises(IntegrityError):
+        with pytest.raises(IntegrityError) as refused:
             session.flush()
 
+        # The exclusion constraint by name: any other integrity error would also be raised
+        # here, and would pass a test that only asked for the exception's type.
+        diagnostics = getattr(refused.value.orig, "diag", None)
+        assert getattr(diagnostics, "constraint_name", None) == OVERLAP_CONSTRAINT
         session.rollback()
 
 
