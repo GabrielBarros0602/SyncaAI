@@ -1,5 +1,7 @@
 """Access to tags."""
 
+from sqlalchemy.dialects.postgresql import insert
+
 from syncaai.models import Tag
 from syncaai.repositories.base import OwnedRepository
 
@@ -28,6 +30,13 @@ class TagRepository(OwnedRepository[Tag]):
         if existing is not None:
             return existing
 
-        tag = Tag(user_id=self._owner_id, name=name)
-        self.add(tag)
-        return tag
+        # Two tasks naming the same new tag at once both find nothing above. The second
+        # insert then waits for the first and, once it commits, does nothing, where a plain
+        # insert would fail on the unique constraint and answer 500. The read after it sees
+        # the row either way, since each statement reads what was committed before it.
+        self._session.execute(
+            insert(Tag)
+            .values(user_id=self._owner_id, name=name)
+            .on_conflict_do_nothing(index_elements=[Tag.user_id, Tag.name])
+        )
+        return self._session.scalars(self._scoped().where(Tag.name == name)).one()
