@@ -379,7 +379,8 @@ logo depois do celular**, porque é o que destrava o S8 mais cedo. A ordem passa
 4. **As telas do plano, para o S8.**
 5. Configurações, que ganharam dois campos depois do inventário: dias de folga e duração
    preferida de bloco (ADR-0032), além do tema e da janela do dia útil.
-6. Entrar e confirmar endereço.
+6. Entrar, recuperar a senha e confirmar endereço. A recuperação entrou em 2026-10-27, com o
+   ADR-0051; entrar com o Google ficou fora da rodada.
 
 ---
 
@@ -467,17 +468,18 @@ Barato, visível, e tudo já resolvido em `docs/design/week.html`.
   página de entrada começa é assunto de uma mudança sobre ela. **A PR 7 é essa mudança**, então
   ou o `disable` cai junto ou a justificativa passa a valer por escolha e não por adiamento.
   Fechada essa, a base não tem `disable` de acessibilidade pendente.
-- **Trocar e recuperar senha.** Gatilho registrado: S8, ou antes de publicar. **Precisa de ADR
-  antes do endpoint**, e o motivo apareceu ao ler o design: a seção 03 da
-  `docs/design/settings.html` diz explicitamente que trocar a senha **não** desloga o
-  navegador, enquanto o `reset-password` que já existe revoga todas as sessões — e o ADR-0019
-  registra isso como parte do que um reset é. São dois comportamentos opostos para a mesma
-  coluna, e a diferença é defensável: quem faz reset por link pode não ser o dono da conta, e
-  quem digita a senha atual provou que é. Mas isso é decisão, não detalhe de implementação, e
-  o ADR tem que vir antes de escrever a rota.
+- **Trocar e recuperar senha.** ✅ Decidido em 2026-10-27 (ADR-0051): a troca mantém esta
+  sessão e encerra as outras; o reset encerra todas e não abre nenhuma; os dois avisam por
+  e-mail. A troca é desenhada nas configurações (passo 5 da terceira rodada), e a recuperação
+  junto com entrar (passo 6). O motivo de pedir um ADR antes da rota apareceu ao ler o design:
+  a seção 03 da `docs/design/settings.html` diz que trocar a senha **não** desloga o
+  navegador, enquanto o `reset-password` revoga todas as sessões. A diferença é defensável:
+  quem faz reset por link pode não ser o dono da conta, e quem digita a senha atual provou que
+  é.
 - **Entrar com o Google.** Gatilho registrado: antes de demonstrar ou publicar. Precisa de ADR
   próprio para vinculação de conta — o que acontece quando o endereço do Google já tem conta
-  com senha.
+  com senha. Fora da terceira rodada de design, por decisão de 2026-10-27: desenhar o botão sem
+  a regra por trás seria desenhá-lo duas vezes.
 
 ---
 
