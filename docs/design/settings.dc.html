@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SyncaAI — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500;700&family=Atkinson+Hyperlegible+Next:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens/syncaai-a-papel.css">
+<style>
+html, body { margin: 0; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+a { color: var(--ink); text-underline-offset: 3px; }
+a:hover { color: var(--ink); text-decoration-color: var(--ink); }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: var(--sunken); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); display: flex; flex-direction: column;">
+
+  <div data-screen-label="Review controls" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-6); background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4);">
+      <strong style="font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Step 5 · settings</strong>
+      <div role="group" aria-label="Frame" style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+        <sc-for list="{{ widths }}" as="w" hint-placeholder-count="5">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ w.bg }}; color: {{ w.ink }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+      <div role="group" aria-label="Display" style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+        <sc-for list="{{ toggles }}" as="w" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ w.bg }}; color: {{ w.ink }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{ runAudit }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">Audit contrast and targets</button>
+      <span role="status" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ auditText }}</span>
+    </div>
+    <sc-for list="{{ presetGroups }}" as="g" hint-placeholder-count="4">
+      <div role="group" aria-label="{{ g.label }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1);">
+        <span style="min-width: 72px; font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ g.label }}</span>
+        <sc-for list="{{ g.items }}" as="p" hint-placeholder-count="5">
+          <button type="button" onClick="{{ p.run }}" aria-pressed="{{ p.on }}" style="min-height: 28px; padding: 0 var(--space-2); border-radius: var(--radius-1); border: 1px solid {{ p.border }}; background: {{ p.bg }}; color: {{ p.ink }}; font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); cursor: pointer;">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-6) var(--space-4); overflow-x: auto;">
+    <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ frameCaption }}</span>
+    <div ref="{{ frameRef }}" data-screen-label="App" style="position: relative; flex: none; width: {{ fw }}px; height: {{ fh }}px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-4); overflow: hidden; box-shadow: var(--shadow-raised);">
+      <div ref="{{ scrollRef }}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column;">
+
+        <header style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border-bottom: 1px solid var(--line);">
+          <span style="flex: 1 1 auto; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); letter-spacing: var(--tracking-tight);">SyncaAI</span>
+          <sc-if value="{{ notNarrow }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Europe/Lisbon · Thu 22, 14:20</span></sc-if>
+          <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ true }}">
+            <button type="button" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Plan</button>
+            <button type="button" id="menu-btn" onClick="{{ openMenu }}" aria-haspopup="dialog" aria-expanded="{{ menuOpenStr }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid {{ menuBtnLine }}; background: {{ menuBtnBg }}; color: {{ menuBtnInk }}; font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="transform: scale(var(--press-scale));">Menu</button>
+          </sc-if>
+        </header>
+
+        <sc-if value="{{ signedOut }}" hint-placeholder-val="{{ false }}">
+          <main style="flex: 1 0 auto; display: flex; flex-direction: column; gap: var(--space-4); width: 100%; max-width: 560px; margin: 0 auto; padding: var(--space-8) var(--space-4);">
+            <h1 id="out-h" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">You’re signed out of this browser</h1>
+            <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">Nothing was deleted. Your week, your plans and your settings are where you left them, and your other devices are still signed in.</p>
+            <button type="button" onClick="{{ signBackIn }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">Sign in</button>
+          </main>
+        </sc-if>
+
+        <sc-if value="{{ showWeek }}" hint-placeholder-val="{{ false }}">
+          <main aria-labelledby="wk-h" style="flex: 1 0 auto; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-3) var(--space-6);">
+            <h1 id="wk-h" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">{{ weekTitle }}</h1>
+            <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">The week as approved in steps 2 and 3; shown here in short so the way back from settings has somewhere to land.</p>
+            <ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: var(--space-2);">
+              <sc-for list="{{ weekCells }}" as="c" hint-placeholder-count="7">
+                <li style="display: flex; flex-direction: column; gap: 2px; padding: var(--space-3); border-radius: var(--radius-3); border: 1px solid var(--line); background: {{ c.bg }};">
+                  <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">{{ c.label }}</span>
+                  <span style="font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans); letter-spacing: var(--tracking-figure); color: {{ c.figInk }};">{{ c.fig }}</span>
+                  <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ c.free }}</span>
+                  <sc-if value="{{ c.hasLv }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ c.lvText }}</span></sc-if>
+                </li>
+              </sc-for>
+            </ol>
+          </main>
+        </sc-if>
+
+        <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ true }}">
+          <main aria-labelledby="set-h" style="flex: 1 0 auto; width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6); padding: var(--space-3) var(--space-3) var(--space-8);">
+            <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+              <button type="button" onClick="{{ backToWeek }}" style="align-self: flex-start; min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">‹ Back to the week</button>
+              <h1 id="set-h" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">Settings</h1>
+            </div>
+
+            <section aria-labelledby="acc-h" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+              <h2 id="acc-h" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">Account</h2>
+              <dl style="margin: 0; display: flex; flex-direction: column; gap: var(--space-3);">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Address</dt>
+                  <dd style="margin: 0; overflow-wrap: anywhere;">gabriel@example.com</dd>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Time zone</dt>
+                  <dd style="margin: 0;">Europe/Lisbon</dd>
+                  <dd style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">Every task falls on a day by this zone: a task at 23:30 here is on that day, wherever you are. It was set when you signed up.</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section aria-labelledby="dev-h" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+              <h2 id="dev-h" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">This device</h2>
+              <fieldset style="margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                <legend style="padding: 0; margin-bottom: var(--space-1); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Theme</legend>
+                <div role="radiogroup" aria-label="Theme" onKeyDown="{{ onThemeKey }}" style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                  <sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3">
+                    <button type="button" role="radio" id="{{ o.id }}" aria-checked="{{ o.on }}" tabIndex="{{ o.tab }}" onClick="{{ o.pick }}" style="flex: 1 1 96px; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: {{ o.edge }}; background: {{ o.bg }}; color: {{ o.ink }}; font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="transform: scale(var(--press-scale));">{{ o.label }}</button>
+                  </sc-for>
+                </div>
+                <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ themeLine }}</p>
+              </fieldset>
+            </section>
+
+            <section aria-labelledby="pl-h" style="display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-3); border: {{ plEdge }}; background: var(--surface);">
+              <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                <h2 id="pl-h" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">Your day and your plans</h2>
+                <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">These three save together, with one Save. If one is refused, none of them is saved, and what you typed stays here to fix.</p>
+              </div>
+              <form id="pl-form" onSubmit="{{ savePlanning }}" aria-busy="{{ plBusy }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-5);">
+                <fieldset style="margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                  <legend style="padding: 0; margin-bottom: var(--space-1); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Usable day</legend>
+                  <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) var(--space-3);">
+                    <div style="flex: 1 1 120px; display: flex; flex-direction: column; gap: 2px;">
+                      <label for="w-start" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Starts</label>
+                      <input id="w-start" type="time" step="60" value="{{ d.start }}" onChange="{{ setStart }}" disabled="{{ plLocked }}" aria-invalid="{{ winInvalid }}" aria-describedby="w-len w-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ winRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono);">
+                    </div>
+                    <div style="flex: 1 1 120px; display: flex; flex-direction: column; gap: 2px;">
+                      <label for="w-end" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Ends</label>
+                      <input id="w-end" type="time" step="60" value="{{ d.end }}" onChange="{{ setEnd }}" disabled="{{ plLocked }}" aria-invalid="{{ winInvalid }}" aria-describedby="w-len w-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ winRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono);">
+                    </div>
+                  </div>
+                  <p id="w-len" style="margin: 0; text-wrap: pretty;"><strong>{{ lenText }}</strong> <span style="color: var(--ink-2);">{{ lenSub }}</span></p>
+                  <p id="w-err" role="{{ winErrRole }}" style="margin: 0; font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ winErr }}</p>
+                  <div role="group" aria-labelledby="eff-h" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-2); background: var(--sunken);">
+                    <span id="eff-h" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">{{ effHead }}</span>
+                    <ul style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-1) var(--space-3);">
+                      <sc-for list="{{ effect }}" as="e" hint-placeholder-count="7">
+                        <li style="display: flex; flex-direction: column; padding: var(--space-1) 0; border-bottom: 1px solid var(--line);">
+                          <span style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--space-2);"><span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">{{ e.label }}</span><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ e.booked }}</span></span>
+                          <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ e.free }}</span>
+                          <sc-if value="{{ e.hasLv }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: {{ e.lvInk }}; text-wrap: pretty;">{{ e.lv }}</span></sc-if>
+                        </li>
+                      </sc-for>
+                    </ul>
+                  </div>
+                </fieldset>
+
+                <fieldset aria-describedby="off-help off-err" style="margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                  <legend style="padding: 0; margin-bottom: var(--space-1); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Days off</legend>
+                  <p id="off-help" style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">A plan puts no steps on these days. They keep their usable day and their load; only plans skip them.</p>
+                  <ul style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(var(--target-touch), calc(var(--text-2) * 4.2)), 1fr)); gap: var(--space-1);">
+                    <sc-for list="{{ offDays }}" as="o" hint-placeholder-count="7">
+                      <li style="display: flex;">
+                        <button type="button" aria-pressed="{{ o.on }}" aria-label="{{ o.aria }}" onClick="{{ o.toggle }}" disabled="{{ plLocked }}" style="flex: 1; min-width: 0; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: var(--space-1) 2px; border-radius: var(--radius-2); border: {{ o.edge }}; background: {{ o.bg }}; color: {{ o.ink }}; cursor: pointer;" style-active="transform: scale(var(--press-scale));">
+                          <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">{{ o.short }}</span>
+                          <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans);">{{ o.word }}</span>
+                        </button>
+                      </li>
+                    </sc-for>
+                  </ul>
+                  <p id="off-err" role="{{ offErrRole }}" style="margin: 0; font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ offErr }}</p>
+                </fieldset>
+
+                <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                  <label for="blk" style="font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Longest step a plan proposes</label>
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);">
+                    <button type="button" onClick="{{ blkDown }}" aria-label="15 minutes less" disabled="{{ plLocked }}" style="width: var(--target-touch); height: var(--target-touch); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-strong) var(--text-4)/1 var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">−</button>
+                    <input id="blk" inputMode="numeric" value="{{ d.block }}" onChange="{{ setBlock }}" disabled="{{ plLocked }}" aria-invalid="{{ blkInvalid }}" aria-describedby="blk-help blk-err" style="width: 96px; min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ blkRing }}; background: var(--field); color: var(--ink); text-align: center; font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono);">
+                    <button type="button" onClick="{{ blkUp }}" aria-label="15 minutes more" disabled="{{ plLocked }}" style="width: var(--target-touch); height: var(--target-touch); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-strong) var(--text-4)/1 var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">+</button>
+                    <span style="color: var(--ink-2);">minutes{{ blkHuman }}</span>
+                  </div>
+                  <p id="blk-help" style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">From 15 minutes to 4 hours; 60 if you never change it. A plan splits anything longer into steps of this size or less.</p>
+                  <p id="blk-err" role="{{ blkErrRole }}" style="margin: 0; font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ blkErr }}</p>
+                </div>
+
+                <sc-if value="{{ hasPlSummary }}" hint-placeholder-val="{{ false }}">
+                  <p role="alert" style="margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--alert); background: var(--alert-surface); color: var(--ink); text-wrap: pretty;">{{ plSummary }}</p>
+                </sc-if>
+
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3);">
+                  <button type="submit" aria-busy="{{ plBusy }}" aria-disabled="{{ plCleanStr }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid {{ saveLine }}; background: {{ saveBg }}; color: {{ saveInk }}; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ saveLabel }}</button>
+                  <sc-if value="{{ plDirty }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ resetPlanning }}" disabled="{{ plLocked }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Put back what’s saved</button>
+                  </sc-if>
+                  <span style="flex: 1 1 100%; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ plState }}</span>
+                </div>
+              </form>
+            </section>
+
+            <section aria-labelledby="pw-h" style="display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+              <h2 id="pw-h" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">Password</h2>
+              <sc-if value="{{ pwDone }}" hint-placeholder-val="{{ false }}">
+                <div role="status" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-2); background: var(--sunken);">
+                  <strong>Password changed.</strong>
+                  <span style="text-wrap: pretty;">You’re still signed in here. Every other device was signed out, and an email about the change went to gabriel@example.com.</span>
+                  <button type="button" onClick="{{ pwAgain }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Change it again</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pwForm }}" hint-placeholder-val="{{ true }}">
+                <form onSubmit="{{ savePw }}" aria-busy="{{ pwBusy }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <label for="pw-cur" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Current password</label>
+                    <input id="pw-cur" type="{{ pwType }}" autoComplete="current-password" value="{{ pw.cur }}" onChange="{{ setCur }}" disabled="{{ pwLocked }}" aria-invalid="{{ curInvalid }}" aria-describedby="pw-cur-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ curRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                    <span id="pw-cur-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ curErr }}</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <label for="pw-new" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">New password</label>
+                    <input id="pw-new" type="{{ pwType }}" autoComplete="new-password" value="{{ pw.nu }}" onChange="{{ setNew }}" maxLength="128" disabled="{{ pwLocked }}" aria-invalid="{{ newInvalid }}" aria-describedby="pw-new-help pw-new-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ newRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                    <span id="pw-new-help" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);"><span>8 to 128 characters.</span><span style="font-family: var(--font-mono);">{{ newCount }}</span></span>
+                    <span id="pw-new-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ newErr }}</span>
+                  </div>
+                  <button type="button" aria-pressed="{{ pwShowStr }}" onClick="{{ togglePwShow }}" style="align-self: flex-start; min-height: var(--target-touch); margin-top: calc(var(--space-3) * -1); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: {{ pwShowBg }}; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">{{ pwShowLabel }}</button>
+                  <div style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: var(--radius-2); background: var(--sunken);">
+                    <strong style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">When you change it</strong>
+                    <ul style="margin: 0; padding-left: var(--space-5); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink);">
+                      <li>this device stays signed in;</li>
+                      <li>every other device is signed out;</li>
+                      <li>an email tells gabriel@example.com it changed.</li>
+                    </ul>
+                  </div>
+                  <sc-if value="{{ pwLimited }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" style="display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--alert); background: var(--alert-surface);">
+                      <strong style="color: var(--alert-ink);">Too many attempts. Try again later.</strong>
+                      <span style="text-wrap: pretty;">{{ pwRetry }}</span>
+                    </div>
+                  </sc-if>
+                  <button type="submit" aria-busy="{{ pwBusy }}" aria-disabled="{{ pwLimitedStr }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid {{ pwBtnLine }}; background: {{ pwBtnBg }}; color: {{ pwBtnInk }}; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ pwLabel }}</button>
+                </form>
+              </sc-if>
+            </section>
+
+            <section aria-labelledby="so-h" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+              <h2 id="so-h" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">Sign out</h2>
+              <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">Only this browser. Nothing is deleted, and your other devices stay signed in.</p>
+              <button type="button" onClick="{{ signOut }}" aria-busy="{{ soBusy }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">{{ soLabel }}</button>
+            </section>
+          </main>
+        </sc-if>
+
+        <div style="position: sticky; bottom: 0; z-index: 2; pointer-events: none;">
+          <div role="status" aria-live="polite" aria-atomic="true" onPointerEnter="{{ pauseNotice }}" onPointerLeave="{{ resumeNotice }}" onFocus="{{ pauseNotice }}" onBlur="{{ resumeNotice }}" style="display: flex; justify-content: center; padding: 0 var(--space-3) var(--space-3);">
+            <sc-if value="{{ hasNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="pointer-events: auto; width: 100%; max-width: 480px; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4); border-radius: var(--radius-3); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-raised);">
+                <span style="flex: 1 1 150px; padding: var(--space-2) 0; text-wrap: pretty;">{{ noticeText }}</span>
+                <button type="button" onClick="{{ dismissNotice }}" aria-label="Dismiss" style="margin-left: auto; width: var(--target-touch); height: var(--target-touch); border-radius: var(--radius-2); border: 0; background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/1 var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed);">✕</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeMenu }}" style="position: absolute; inset: 0; z-index: 4; background: transparent;"></div>
+        <div role="dialog" aria-modal="true" aria-labelledby="menu-h" onKeyDown="{{ onMenuKey }}" style="position: absolute; z-index: 5; {{ menuPos }} display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--raised); border: 1px solid var(--line-strong); box-shadow: var(--shadow-raised);">
+          <div style="display: flex; align-items: center; gap: var(--space-2);">
+            <h2 id="menu-h" style="flex: 1; margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">Menu</h2>
+            <button type="button" id="menu-close" onClick="{{ closeMenu }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Close</button>
+          </div>
+          <dl style="margin: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+            <div><dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Signed in as</dt><dd style="margin: 0; overflow-wrap: anywhere;">gabriel@example.com</dd></div>
+            <div><dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Time zone</dt><dd style="margin: 0;">Europe/Lisbon</dd></div>
+          </dl>
+          <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+            <button type="button" id="menu-settings" onClick="{{ goSettings }}" aria-current="{{ settingsCur }}" style="min-height: var(--target-touch); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-align: left; cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));"><span>Settings</span><span aria-hidden="true">›</span></button>
+            <button type="button" onClick="{{ signOut }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-align: left; cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Sign out of this browser</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <section data-screen-label="Decisions" style="max-width: 760px; width: 100%; margin: 0 auto; padding: 0 var(--space-5) var(--space-10); display: flex; flex-direction: column; gap: var(--space-3);">
+    <h2 style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans);">What this screen decides</h2>
+    <ul style="margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); color: var(--ink-2);">
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Where it lives</strong>: Menu → Settings, at every width. The Menu is a bottom sheet below 640px and a panel under the button from 640 up, the same as the approved screens. Settings is a page of its own, one column of at most 720px, that replaces the week. “‹ Back to the week” at the top and Esc both go back, and focus returns to the day you left.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Saving by section</strong>: the server checks the usable day, days off and block as one request and writes none of it if any part is wrong (users.change_settings). So those three share one form and one Save. When one is refused, its sentence goes under that field, a line above Save says nothing was saved, and the other two keep what you typed. Theme isn’t on the server: it applies on tap, with nothing to save. The password is its own form, and Sign out is its own action. Three ways of saving, each one where the server draws its line.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Choosing the hours</strong>: two native time fields, start and end, to the minute. On touch they open the platform’s wheel or clock, and on desktop you type “07:00”. Neither lets you type a non-time. The length sits under them as a sentence, “16h usable · your budget each day”, and below that the week: each day’s booked figure, free “of Xh”, and its load, now and after. A change that moves a day up the ladder is named on that day. The server’s three refusals are left to the server, word for word. The form doesn’t pre-block them, so the sentence the person sees is the one the API sends.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Days off with 44px targets</strong>: seven toggle buttons, each at least 44 × 56, in a grid that wraps (7 across at 375, 4 and 3 at 320 or 200% text). Each says its state in a word, “off” or “plans”, not only by fill. Off is the filled primary, like Today, so the accent stays for the refusal when all seven are off.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The block</strong>: a minutes field with −/+ buttons of 15 minutes, so a thumb never has to type, and the hours are spelled beside it (“90 minutes · 1h30”). The field can still go out of range by typing, and the server answers that.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Password</strong>: what happens is stated before the button, as three short lines. The wrong current password goes under its field. “Too many attempts” says the clock time from Retry-After (“at 14:35”) and holds the button until then. Afterwards the form makes way for the confirmation, which says the other devices were signed out.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Tokens</strong>: none new. Every ground is already a pair in contrast-pairs.json.</li>
+    </ul>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  WD = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  WS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  NOW = 3 * 1440 + 860;
+  P = { inverted: 'The usable day has to end after it starts, on the same day.', short: 'The usable day has to be at least 1 hour long.', long: 'The usable day can be at most 18 hours long.', noDay: 'There has to be at least one day to plan in.', block: 'A block lasts from 15 minutes to 4 hours.', wrongPw: 'That is not your current password.' };
+  FRAMES = { '320': [320, 640, '320 × 640'], '375': [375, 760, '375 × 760'], land: [667, 375, '667 × 375 landscape'], '768': [768, 1024, '768 × 1024'], desk: [1280, 820, '1280 × 820 desktop'] };
+  frameRef = React.createRef(); scrollRef = React.createRef();
+  SAVED = { start: '07:00', end: '23:00', off: [5, 6], block: '60' };
+
+  tasks() {
+    return [[0, 540, 180], [0, 840, 150], [0, 1140, 120], [1, 480, 600], [1, 1140, 90], [2, 420, 780], [2, 1230, 135], [2, 1380, 180], [3, 480, 120], [3, 630, 90], [3, 810, 180], [3, 1020, 60], [3, 1110, 240], [4, 30, 60], [4, 300, 720], [4, 1050, 150], [4, 1230, 60], [4, 1320, 105], [5, 600, 120], [6, 660, 180]];
+  }
+  dayAbs(k) { return k * 1440; }
+  wall(k, w) { return this.dayAbs(k) + ((k === 6 && w >= 120) ? w + 60 : w); }
+  len(k) { return k === 6 ? 1500 : 1440; }
+  booked(k) { const ds = this.dayAbs(k), de = ds + this.len(k); return this.tasks().reduce((a, t) => { const s = this.wall(t[0], t[1]), e = s + t[2]; return a + Math.max(0, Math.min(e, de) - Math.max(s, ds)); }, 0); }
+  lv(b, budget) { return b > 1200 ? 'unsustainable' : b > 1080 ? 'strained' : b > budget ? 'heavy' : 'fine'; }
+  lvText(lv, k, b) { const u = this.fmt(Math.max(0, this.len(k) - b)); return { heavy: 'No margin for anything running late.', strained: 'Extremely heavy day. ' + u + ' unbooked.', unsustainable: 'Unsustainable. ' + u + ' unbooked.' }[lv] || ''; }
+  fmt(m) { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; if (m === 0) return '0h'; if (h === 0) return r + 'm'; return h + 'h' + (r ? String(r).padStart(2, '0') : ''); }
+  mins(t) { const m = /^(\d{2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; }
+  winLen(d) { const a = this.mins(d.start), b = this.mins(d.end); return a == null || b == null ? null : b - a; }
+
+  base() { return { view: 'settings', menuOpen: false, saved: JSON.parse(JSON.stringify(this.SAVED)), draft: JSON.parse(JSON.stringify(this.SAVED)), plErr: null, busy: null, pw: { cur: '', nu: '', tried: false }, pwErr: null, pwLimitedUntil: null, pwDone: false, pwShow: false, notice: null, preset: 'rest', freeze: false, signedOut: false }; }
+  state = Object.assign(this.base(), { frame: '375', theme: 'system', reduced: false, zoom: false, audit: '' });
+
+  componentDidMount() { this.prev = Object.assign({}, this.state); this.applyEnv(); this.mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null; this.onMq = () => this.applyEnv(); if (this.mq && this.mq.addEventListener) this.mq.addEventListener('change', this.onMq); }
+  componentWillUnmount() { clearTimeout(this.wT); clearTimeout(this.nT); if (this.mq && this.mq.removeEventListener) this.mq.removeEventListener('change', this.onMq); }
+  componentDidUpdate() {
+    const s = this.state, ps = this.prev || s; this.prev = Object.assign({}, s);
+    if (ps.theme !== s.theme || ps.reduced !== s.reduced || ps.zoom !== s.zoom || ps.frame !== s.frame) this.applyEnv();
+    if (this.wantSel) { const sel = this.wantSel; this.wantSel = null; setTimeout(() => { const el = this.frameRef.current && this.frameRef.current.querySelector(sel); if (el) el.focus(); }, 40); }
+    if (ps.view !== s.view && this.scrollRef.current) this.scrollRef.current.scrollTop = 0;
+  }
+  applyEnv() {
+    const s = this.state, f = this.frameRef.current;
+    const dark = s.theme === 'dark' || (s.theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (s.theme === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', s.theme);
+    this.resolvedDark = dark;
+    if (!f) return;
+    [[12, 16], [13, 18], [15, 22], [18, 24], [22, 28], [28, 32], [36, 40], [48, 52]].forEach((p, i) => {
+      if (s.zoom) { f.style.setProperty('--text-' + (i + 1), p[0] * 2 + 'px'); f.style.setProperty('--leading-' + (i + 1), p[1] * 2 + 'px'); }
+      else { f.style.removeProperty('--text-' + (i + 1)); f.style.removeProperty('--leading-' + (i + 1)); }
+    });
+    ['--dur-1', '--dur-2', '--dur-3'].forEach(k => s.reduced ? f.style.setProperty(k, '1ms') : f.style.removeProperty(k));
+    s.reduced ? f.style.setProperty('--press-scale', '1') : f.style.removeProperty('--press-scale');
+  }
+  notify(text) { clearTimeout(this.nT); this.setState({ notice: text }); this.arm(); }
+  arm() { clearTimeout(this.nT); if (this.state.freeze) return; this.nT = setTimeout(() => this.setState({ notice: null }), 9000); }
+  setDraft(p) { this.setState(s => ({ draft: Object.assign({}, s.draft, p) })); }
+  dirty() { const s = this.state; return JSON.stringify(s.draft) !== JSON.stringify(s.saved); }
+
+  check(d) {
+    const a = this.mins(d.start), b = this.mins(d.end);
+    if (a == null || b == null || b <= a) return { field: 'win', msg: this.P.inverted };
+    if (b - a < 60) return { field: 'win', msg: this.P.short };
+    if (b - a > 1080) return { field: 'win', msg: this.P.long };
+    if (d.off.length >= 7) return { field: 'off', msg: this.P.noDay };
+    const n = Number(d.block);
+    if (!/^\d+$/.test(String(d.block).trim()) || n < 15 || n > 240) return { field: 'block', msg: this.P.block };
+    return null;
+  }
+  savePlanning() {
+    const s = this.state; if (s.busy === 'pl' || !this.dirty()) return;
+    this.setState({ busy: 'pl', plErr: null });
+    if (s.freeze) return;
+    clearTimeout(this.wT);
+    this.wT = setTimeout(() => {
+      const x = this.state, err = this.check(x.draft);
+      if (err) { this.setState({ busy: null, plErr: err }); this.wantSel = err.field === 'win' ? '#w-start' : err.field === 'off' ? '#off-help' : '#blk'; return; }
+      this.setState({ busy: null, saved: JSON.parse(JSON.stringify(x.draft)) });
+      this.notify('Saved. Each day now has ' + this.fmt(this.winLen(x.draft)) + ' to give.');
+    }, 800);
+  }
+  savePw() {
+    const s = this.state, pw = s.pw;
+    if (s.busy === 'pw') return;
+    if (s.pwLimitedUntil && s.pwLimitedUntil > this.NOW) return;
+    if (!pw.cur || pw.nu.length < 8) { this.setState({ pw: Object.assign({}, pw, { tried: true }) }); this.wantSel = !pw.cur ? '#pw-cur' : '#pw-new'; return; }
+    this.setState({ busy: 'pw', pwErr: null });
+    if (s.freeze) return;
+    clearTimeout(this.wT);
+    this.wT = setTimeout(() => {
+      const x = this.state;
+      if (x.pw.cur !== 'correct horse') {
+        const fails = (this.fails || 0) + 1; this.fails = fails;
+        if (fails >= 5) { this.setState({ busy: null, pwLimitedUntil: this.NOW + 15, pwErr: null }); return; }
+        this.setState({ busy: null, pwErr: this.P.wrongPw }); this.wantSel = '#pw-cur'; return;
+      }
+      this.fails = 0;
+      this.setState({ busy: null, pwDone: true, pw: { cur: '', nu: '', tried: false } });
+    }, 900);
+  }
+  signOut() {
+    this.setState({ busy: 'so', menuOpen: false });
+    if (this.state.freeze) return;
+    clearTimeout(this.wT); this.wT = setTimeout(() => { this.setState({ busy: null, signedOut: true, view: 'out' }); this.wantSel = '#out-h'; }, 600);
+  }
+
+  preset(id) {
+    clearTimeout(this.wT); clearTimeout(this.nT); this.fails = 0;
+    const b = this.base(); b.preset = id; const D = (p) => Object.assign(b.draft, p);
+    switch (id) {
+      case 'menu': b.view = 'week'; b.menuOpen = true; this.wantSel = '#menu-settings'; break;
+      case 'week': b.view = 'week'; this.wantSel = '#wk-h'; break;
+      case 'edited': D({ start: '08:00', end: '20:00' }); break;
+      case 'longer': D({ start: '06:00', end: '24:00'.replace('24:00', '23:59') }); D({ start: '06:00', end: '23:30' }); break;
+      case 'inverted': D({ start: '22:00', end: '07:00', block: '90' }); b.plErr = { field: 'win', msg: this.P.inverted }; break;
+      case 'short': D({ start: '09:00', end: '09:40', off: [5] }); b.plErr = { field: 'win', msg: this.P.short }; break;
+      case 'long': D({ start: '05:00', end: '23:30' }); b.plErr = { field: 'win', msg: this.P.long }; break;
+      case 'allOff': D({ off: [0, 1, 2, 3, 4, 5, 6], start: '08:00' }); b.plErr = { field: 'off', msg: this.P.noDay }; break;
+      case 'block': D({ block: '300', start: '08:00', end: '22:00' }); b.plErr = { field: 'block', msg: this.P.block }; break;
+      case 'saving': D({ start: '08:00', end: '22:00', off: [6], block: '90' }); b.busy = 'pl'; b.freeze = true; break;
+      case 'saved': b.saved = { start: '08:00', end: '22:00', off: [6], block: '90' }; b.draft = JSON.parse(JSON.stringify(b.saved)); b.notice = 'Saved. Each day now has 14h to give.'; b.freeze = true; break;
+      case 'pwFilled': b.pw = { cur: '••••••••••', nu: 'a new long one', tried: false }; break;
+      case 'pwWrong': b.pw = { cur: 'wrong guess', nu: 'a new long one', tried: true }; b.pwErr = this.P.wrongPw; this.wantSel = '#pw-cur'; break;
+      case 'pwShort': b.pw = { cur: 'correct horse', nu: 'short', tried: true }; break;
+      case 'pwSaving': b.pw = { cur: 'correct horse', nu: 'a new long one', tried: false }; b.busy = 'pw'; b.freeze = true; break;
+      case 'pwLimit': b.pw = { cur: 'another guess', nu: 'a new long one', tried: true }; b.pwLimitedUntil = this.NOW + 15; break;
+      case 'pwDone': b.pwDone = true; break;
+      case 'signingOut': b.busy = 'so'; b.freeze = true; break;
+      case 'signedOut': b.signedOut = true; b.view = 'out'; this.wantSel = '#out-h'; break;
+    }
+    this.setState(b, () => { if (b.notice) this.arm(); });
+  }
+
+  renderVals() {
+    const s = this.state, [fw, fh, cap] = this.FRAMES[s.frame], narrow = fw < 640;
+    const btn = (on) => ({ on: on ? 'true' : 'false', bg: on ? 'var(--primary)' : 'var(--surface)', ink: on ? 'var(--on-primary)' : 'var(--ink)' });
+    const d = s.draft, sv = s.saved, dirty = this.dirty(), err = s.plErr, locked = s.busy === 'pl';
+    const ring = (bad) => bad ? '2px solid var(--alert-ink)' : '1px solid var(--line-strong)';
+    const L = this.winLen(d), Ls = this.winLen(sv), Lok = L != null && L > 0 && L <= 1080;
+    const budgetNew = Lok ? L : Ls;
+    const effect = [0, 1, 2, 3, 4, 5, 6].map(k => {
+      const bk = this.booked(k), a = this.lv(bk, Ls), b2 = this.lv(bk, budgetNew), changed = a !== b2;
+      const fa = this.fmt(Math.max(0, Ls - bk)), fb = this.fmt(Math.max(0, budgetNew - bk));
+      const lvWord = { fine: 'fine', heavy: 'heavy', strained: 'strained', unsustainable: 'unsustainable' };
+      return {
+        label: this.WS[k] + ' ' + (19 + k) + (k === 3 ? ' · today' : ''), booked: this.fmt(bk) + ' booked',
+        free: (Ls === budgetNew ? fa + ' free of ' + this.fmt(Ls) : fa + ' free of ' + this.fmt(Ls) + ' → ' + fb + ' of ' + this.fmt(budgetNew)),
+        hasLv: b2 !== 'fine' || changed, lv: changed ? 'Becomes ' + lvWord[b2] + (b2 !== 'fine' ? ': ' + this.lvText(b2, k, bk) : '') : this.lvText(b2, k, bk),
+        lvInk: b2 === 'fine' ? 'var(--ink-2)' : 'var(--alert-ink)'
+      };
+    });
+    const offSet = new Set(d.off);
+    const offDays = this.WD.map((w, k) => { const on = offSet.has(k); return { short: this.WS[k], word: on ? 'off' : 'plans', on: on ? 'true' : 'false', aria: w + ', ' + (on ? 'day off' : 'plans can use it'), bg: on ? 'var(--primary)' : 'var(--surface)', ink: on ? 'var(--on-primary)' : 'var(--ink)', edge: err && err.field === 'off' ? '2px solid var(--alert-ink)' : on ? '1px solid var(--primary)' : '1px solid var(--line-strong)', toggle: () => { if (locked) return; const nx = new Set(this.state.draft.off); nx.has(k) ? nx.delete(k) : nx.add(k); this.setDraft({ off: Array.from(nx).sort() }); } }; });
+    const blkN = Number(d.block), blkValid = /^\d+$/.test(String(d.block).trim());
+    const step = (dlt) => { const n = Number(this.state.draft.block) || 0; this.setDraft({ block: String(Math.min(240, Math.max(15, Math.round((n + dlt) / 15) * 15))) }); };
+    const changes = [];
+    if (d.start !== sv.start || d.end !== sv.end) changes.push('usable day');
+    if (JSON.stringify(d.off) !== JSON.stringify(sv.off)) changes.push('days off');
+    if (d.block !== sv.block) changes.push('block');
+    const plState = locked ? 'Saving ' + changes.join(', ') + '…' : err ? 'Not saved. Still changed: ' + changes.join(', ') + '.' : dirty ? 'Changed, not saved yet: ' + changes.join(', ') + '.' : 'Everything here is saved.';
+
+    const pw = s.pw, pwLimited = !!(s.pwLimitedUntil && s.pwLimitedUntil > this.NOW);
+    const newBad = pw.tried && pw.nu.length < 8, curBad = !!s.pwErr || (pw.tried && !pw.cur);
+    const themeOpts = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => { const on = s.theme === v; return { id: 'th-' + v, label: l, on: on ? 'true' : 'false', tab: on ? 0 : -1, bg: on ? 'var(--primary)' : 'var(--surface)', ink: on ? 'var(--on-primary)' : 'var(--ink)', edge: on ? '1px solid var(--primary)' : '1px solid var(--line-strong)', pick: () => this.setState({ theme: v }) }; });
+    const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const groups = [
+      ['Where', [['rest', 'Settings'], ['menu', 'Menu open'], ['week', 'Back on the week']]],
+      ['Your day', [['edited', '12h, edited'], ['longer', '17h30, edited'], ['inverted', 'Refused: ends first'], ['short', 'Refused: under 1h'], ['long', 'Refused: over 18h'], ['allOff', 'Refused: all days off'], ['block', 'Refused: block'], ['saving', 'Saving'], ['saved', 'Saved']]],
+      ['Password', [['pwFilled', 'Filled'], ['pwWrong', 'Wrong current'], ['pwShort', 'New too short'], ['pwSaving', 'Changing'], ['pwLimit', 'Too many attempts'], ['pwDone', 'Changed']]],
+      ['Sign out', [['signingOut', 'Signing out'], ['signedOut', 'Signed out']]]
+    ].map(([label, items]) => ({ label, items: items.map(([id, l]) => ({ label: l, on: s.preset === id ? 'true' : 'false', bg: s.preset === id ? 'var(--primary)' : 'var(--surface)', ink: s.preset === id ? 'var(--on-primary)' : 'var(--ink)', border: s.preset === id ? 'var(--primary)' : 'var(--line-strong)', run: () => this.preset(id) })) }));
+
+    return {
+      frameRef: this.frameRef, scrollRef: this.scrollRef,
+      widths: Object.keys(this.FRAMES).map(k => Object.assign({ label: k === 'land' ? '667 landscape' : k === 'desk' ? '1280 desktop' : k, pick: () => this.setState({ frame: k }) }, btn(s.frame === k))),
+      toggles: [
+        Object.assign({ label: 'Theme: ' + s.theme, pick: () => this.setState({ theme: s.theme === 'system' ? 'light' : s.theme === 'light' ? 'dark' : 'system' }) }, btn(s.theme !== 'system')),
+        Object.assign({ label: 'Reduced motion', pick: () => this.setState({ reduced: !s.reduced }) }, btn(s.reduced)),
+        Object.assign({ label: 'Text 200%', pick: () => this.setState({ zoom: !s.zoom }) }, btn(s.zoom))
+      ],
+      presetGroups: groups, runAudit: () => this.audit(), auditText: s.audit,
+      fw, fh, frameCaption: cap + (s.zoom ? ' · text 200%' : ''), notNarrow: !narrow,
+      signedIn: !s.signedOut, signedOut: s.signedOut, showWeek: !s.signedOut && s.view === 'week', showSettings: !s.signedOut && s.view === 'settings',
+      menuOpen: s.menuOpen, menuOpenStr: s.menuOpen ? 'true' : 'false',
+      menuBtnBg: s.menuOpen ? 'var(--primary)' : 'var(--surface)', menuBtnInk: s.menuOpen ? 'var(--on-primary)' : 'var(--ink)', menuBtnLine: s.menuOpen ? 'var(--primary)' : 'var(--line-strong)',
+      menuPos: narrow ? 'left: 0; right: 0; bottom: 0; max-height: 100%; overflow-y: auto; border-radius: var(--radius-4) var(--radius-4) 0 0;' : 'right: var(--space-3); top: 64px; width: 320px; max-height: calc(100% - 72px); overflow-y: auto; border-radius: var(--radius-3);',
+      openMenu: () => { this.setState({ menuOpen: !s.menuOpen }); this.wantSel = '#menu-settings'; },
+      closeMenu: () => { this.setState({ menuOpen: false }); this.wantSel = '#menu-btn'; },
+      onMenuKey: (e) => { if (e.key === 'Escape') { this.setState({ menuOpen: false }); this.wantSel = '#menu-btn'; } },
+      goSettings: () => { this.setState({ menuOpen: false, view: 'settings' }); this.wantSel = '#set-h'; }, settingsCur: s.view === 'settings' ? 'page' : 'false',
+      backToWeek: () => { this.setState({ view: 'week' }); this.wantSel = '#wk-h'; },
+      weekTitle: 'Thursday 22 October · the week of Oct 19 – 25',
+      weekCells: [0, 1, 2, 3, 4, 5, 6].map(k => { const bk = this.booked(k), l = this.lv(bk, Ls); return { label: this.WS[k] + ' ' + (19 + k) + (k === 3 ? ' · today' : ''), fig: this.fmt(bk), figInk: l === 'fine' ? 'var(--ink)' : 'var(--alert-ink)', free: this.fmt(Math.max(0, Ls - bk)) + ' free of ' + this.fmt(Ls), hasLv: l !== 'fine', lvText: this.lvText(l, k, bk), bg: l === 'fine' ? 'var(--surface)' : 'var(--alert-surface)' }; }),
+      themeOpts, themeLine: (s.theme === 'system' ? 'Follows this device, which is ' + (sysDark ? 'dark' : 'light') + ' right now. ' : '') + 'Only this device, and it applies as you tap.',
+      onThemeKey: (e) => { const order = ['system', 'light', 'dark'], i = order.indexOf(s.theme); let n = null; if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = order[(i + 1) % 3]; if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = order[(i + 2) % 3]; if (n) { e.preventDefault(); this.setState({ theme: n }); this.wantSel = '#th-' + n; } },
+      d, plEdge: err ? '1px solid var(--alert)' : '1px solid var(--line)', plLocked: locked, plBusy: locked ? 'true' : 'false',
+      setStart: (e) => this.setDraft({ start: e.target.value }), setEnd: (e) => this.setDraft({ end: e.target.value }),
+      winInvalid: err && err.field === 'win' ? 'true' : 'false', winRing: ring(err && err.field === 'win'), winErr: err && err.field === 'win' ? err.msg : '', winErrRole: err && err.field === 'win' ? 'alert' : 'none',
+      lenText: L == null ? '—' : L <= 0 ? 'Ends before it starts' : this.fmt(L) + ' usable', lenSub: L != null && L > 0 ? '· your budget each day, the “of ' + this.fmt(L) + '” in “free of”.' : '',
+      effHead: Ls === budgetNew ? 'This week, with ' + this.fmt(Ls) : 'This week, ' + this.fmt(Ls) + ' → ' + this.fmt(budgetNew) + ' (not saved yet)', effect,
+      offDays, offErr: err && err.field === 'off' ? err.msg : '', offErrRole: err && err.field === 'off' ? 'alert' : 'none',
+      setBlock: (e) => this.setDraft({ block: e.target.value }), blkDown: () => step(-15), blkUp: () => step(15),
+      blkHuman: blkValid && blkN >= 60 ? ' · ' + this.fmt(blkN) : '', blkInvalid: err && err.field === 'block' ? 'true' : 'false', blkRing: ring(err && err.field === 'block'), blkErr: err && err.field === 'block' ? err.msg : '', blkErrRole: err && err.field === 'block' ? 'alert' : 'none',
+      hasPlSummary: !!err && !locked, plSummary: 'Nothing was saved. Fix the ' + (err ? { win: 'usable day', off: 'days off', block: 'block' }[err.field] : '') + ' and save again; your other changes are still here.',
+      plDirty: dirty, plCleanStr: dirty ? 'false' : 'true', plState,
+      saveLabel: locked ? 'Saving…' : 'Save', saveBg: dirty ? 'var(--primary)' : 'var(--surface)', saveInk: dirty ? 'var(--on-primary)' : 'var(--ink-2)', saveLine: dirty ? 'var(--primary)' : 'var(--line-strong)',
+      savePlanning: (e) => { e.preventDefault(); this.savePlanning(); },
+      resetPlanning: () => this.setState({ draft: JSON.parse(JSON.stringify(sv)), plErr: null }),
+      pw, pwType: s.pwShow ? 'text' : 'password', pwShowStr: s.pwShow ? 'true' : 'false', pwShowLabel: s.pwShow ? 'Hide passwords' : 'Show passwords', pwShowBg: s.pwShow ? 'var(--pressed)' : 'var(--surface)', togglePwShow: () => this.setState({ pwShow: !s.pwShow }),
+      setCur: (e) => this.setState({ pw: Object.assign({}, this.state.pw, { cur: e.target.value }), pwErr: null }), setNew: (e) => this.setState({ pw: Object.assign({}, this.state.pw, { nu: e.target.value }) }),
+      curInvalid: curBad ? 'true' : 'false', curRing: ring(curBad), curErr: s.pwErr || (pw.tried && !pw.cur ? 'Type your current password.' : ''),
+      newInvalid: newBad ? 'true' : 'false', newRing: ring(newBad), newErr: newBad ? 'At least 8 characters.' : '', newCount: pw.nu.length + ' / 128',
+      pwLocked: s.busy === 'pw', pwBusy: s.busy === 'pw' ? 'true' : 'false', pwLimited, pwLimitedStr: pwLimited ? 'true' : 'false',
+      pwRetry: pwLimited ? 'You can try again at 14:35, in 15 minutes.' : '',
+      pwLabel: s.busy === 'pw' ? 'Changing…' : 'Change password', pwBtnBg: pwLimited ? 'var(--surface)' : 'var(--primary)', pwBtnInk: pwLimited ? 'var(--ink-2)' : 'var(--on-primary)', pwBtnLine: pwLimited ? 'var(--line-strong)' : 'var(--primary)',
+      savePw: (e) => { e.preventDefault(); this.savePw(); }, pwDone: s.pwDone, pwForm: !s.pwDone, pwAgain: () => this.setState({ pwDone: false }),
+      signOut: () => this.signOut(), soBusy: s.busy === 'so' ? 'true' : 'false', soLabel: s.busy === 'so' ? 'Signing out…' : 'Sign out of this browser',
+      signBackIn: () => { this.setState({ signedOut: false, view: 'week' }); this.wantSel = '#wk-h'; },
+      hasNotice: !!s.notice, noticeText: s.notice || '', dismissNotice: () => { clearTimeout(this.nT); this.setState({ notice: null }); }, pauseNotice: () => clearTimeout(this.nT), resumeNotice: () => { if (this.state.notice) this.arm(); }
+    };
+  }
+
+  audit() {
+    const f = this.frameRef.current; if (!f) return;
+    const parse = (c) => { const m = c.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0, 0]; };
+    const L = (rgb) => { const a = rgb.slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; };
+    const bgOf = (el) => { while (el) { const c = parse(getComputedStyle(el).backgroundColor); if (c.length === 3 || (c.length >= 4 && c[3] > 0.5)) return c; el = el.parentElement; } return [255, 255, 255]; };
+    let n = 0, worst = 99, wt = '', below = 0, small = 0, tiny = 0, over = 0;
+    f.querySelectorAll('*').forEach(el => {
+      const txt = Array.from(el.childNodes).filter(x => x.nodeType === 3 && x.textContent.trim()).map(x => x.textContent.trim()).join(' ');
+      if (!txt) return; const r = el.getBoundingClientRect(); if (!r.width || !r.height) return; if (el.closest('[aria-hidden="true"]')) return;
+      const cs = getComputedStyle(el), a = L(parse(cs.color)), b = L(bgOf(el)), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      n++; if (ratio < worst) { worst = ratio; wt = txt.slice(0, 24); } if (ratio < 4.5) below++; if (parseFloat(cs.fontSize) < 12) small++;
+    });
+    const fr = f.getBoundingClientRect();
+    f.querySelectorAll('button, input, select, textarea').forEach(el => { const r = el.getBoundingClientRect(); if (!r.width) return; if (r.height < 43.5 || r.width < 43.5) tiny++; if (r.right > fr.right + 1) over++; });
+    this.setState({ audit: n + ' text · worst ' + worst.toFixed(2) + ':1 (“' + wt + '”) · below 4.5: ' + below + ' · under 12px: ' + small + ' · targets under 44px: ' + tiny + ' · past the edge: ' + over });
+  }
+}
+</script>
+</body>
+</html>

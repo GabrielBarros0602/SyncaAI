@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SyncaAI — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500;700&family=Atkinson+Hyperlegible+Next:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens/syncaai-a-papel.css">
+<style>
+html, body { margin: 0; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+a { color: var(--ink); text-underline-offset: 3px; }
+a:hover { color: var(--ink); text-decoration-color: var(--ink); }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: var(--sunken); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); display: flex; flex-direction: column;">
+
+  <div data-screen-label="Review controls" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-6); background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4);">
+      <strong style="font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Step 6 · signing in</strong>
+      <div role="group" aria-label="Frame" style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+        <sc-for list="{{ widths }}" as="w" hint-placeholder-count="5">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ w.bg }}; color: {{ w.ink }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+      <div role="group" aria-label="Display" style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+        <sc-for list="{{ toggles }}" as="w" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ w.bg }}; color: {{ w.ink }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{ runAudit }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">Audit contrast and targets</button>
+      <span role="status" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ auditText }}</span>
+    </div>
+    <sc-for list="{{ presetGroups }}" as="g" hint-placeholder-count="5">
+      <div role="group" aria-label="{{ g.label }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1);">
+        <span style="min-width: 88px; font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ g.label }}</span>
+        <sc-for list="{{ g.items }}" as="p" hint-placeholder-count="4">
+          <button type="button" onClick="{{ p.run }}" aria-pressed="{{ p.on }}" style="min-height: 28px; padding: 0 var(--space-2); border-radius: var(--radius-1); border: 1px solid {{ p.border }}; background: {{ p.bg }}; color: {{ p.ink }}; font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); cursor: pointer;">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-6) var(--space-4); overflow-x: auto;">
+    <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ frameCaption }}</span>
+    <div ref="{{ frameRef }}" data-screen-label="Auth" style="position: relative; flex: none; width: {{ fw }}px; height: {{ fh }}px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-4); overflow: hidden; box-shadow: var(--shadow-raised);">
+      <div ref="{{ scrollRef }}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; display: grid; grid-template-columns: {{ cols }}; align-items: stretch;">
+
+        <main style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-6); width: 100%; max-width: 480px; justify-self: center; padding: var(--space-5) var(--space-4) var(--space-8);">
+          <span style="font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); letter-spacing: var(--tracking-tight);">SyncaAI</span>
+
+          <sc-if value="{{ sSignin }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">Sign in</h1>
+              <form onSubmit="{{ submitSignin }}" aria-busy="{{ busyStr }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="si-email" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Email address</label>
+                  <input id="si-email" type="email" autoComplete="username" inputMode="email" value="{{ f.email }}" onChange="{{ setEmail }}" disabled="{{ locked }}" aria-invalid="{{ emailInvalid }}" aria-describedby="si-email-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ emailRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                  <span id="si-email-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ emailErr }}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-3);">
+                    <label for="si-pw" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Password</label>
+                    <button type="button" onClick="{{ goForgot }}" style="min-height: var(--target-touch); margin-right: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">Forgot your password?</button>
+                  </div>
+                  <input id="si-pw" type="{{ pwType }}" autoComplete="current-password" value="{{ f.pw }}" onChange="{{ setPw }}" maxLength="128" disabled="{{ locked }}" aria-invalid="{{ pwInvalid }}" aria-describedby="si-pw-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ pwRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                  <span id="si-pw-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ pwErr }}</span>
+                </div>
+                <button type="button" aria-pressed="{{ showStr }}" onClick="{{ toggleShow }}" style="align-self: flex-start; min-height: var(--target-touch); margin-top: calc(var(--space-3) * -1); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: {{ showBg }}; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">{{ showLabel }}</button>
+
+                <sc-if value="{{ hasRefusal }}" hint-placeholder-val="{{ false }}">
+                  <div role="alert" tabIndex="-1" id="refusal" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--alert); background: var(--alert-surface);">
+                    <strong style="color: var(--alert-ink); text-wrap: pretty;">{{ refusal }}</strong>
+                    <sc-if value="{{ hasRefusalSub }}" hint-placeholder-val="{{ false }}"><span style="text-wrap: pretty;">{{ refusalSub }}</span></sc-if>
+                    <sc-if value="{{ refusalUnverified }}" hint-placeholder-val="{{ false }}">
+                      <button type="button" onClick="{{ goResendFromSignin }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--alert-surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--alert-pressed); transform: scale(var(--press-scale));">Send the confirmation link again</button>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <button type="submit" aria-busy="{{ busyStr }}" aria-disabled="{{ limitedStr }}" style="min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid {{ primLine }}; background: {{ primBg }}; color: {{ primInk }}; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ signinLabel }}</button>
+              </form>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); color: var(--ink-2);">
+                <span>New here?</span>
+                <button type="button" onClick="{{ goRegister }}" style="min-height: var(--target-touch); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">Create an account</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sRegister }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">Create an account</h1>
+              <form onSubmit="{{ submitRegister }}" aria-busy="{{ busyStr }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="re-email" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Email address</label>
+                  <input id="re-email" type="email" autoComplete="email" inputMode="email" value="{{ f.email }}" onChange="{{ setEmail }}" disabled="{{ locked }}" aria-invalid="{{ emailInvalid }}" aria-describedby="re-email-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ emailRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                  <span id="re-email-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ emailErr }}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="re-pw" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Password</label>
+                  <input id="re-pw" type="{{ pwType }}" autoComplete="new-password" value="{{ f.pw }}" onChange="{{ setPw }}" maxLength="128" disabled="{{ locked }}" aria-invalid="{{ pwInvalid }}" aria-describedby="re-pw-help re-pw-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ pwRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                  <span id="re-pw-help" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);"><span>8 to 128 characters.</span><span style="font-family: var(--font-mono);">{{ pwCount }}</span></span>
+                  <span id="re-pw-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ pwErr }}</span>
+                </div>
+                <button type="button" aria-pressed="{{ showStr }}" onClick="{{ toggleShow }}" style="align-self: flex-start; min-height: var(--target-touch); margin-top: calc(var(--space-3) * -1); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: {{ showBg }}; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">{{ showLabel }}</button>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="re-tz" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Time zone</label>
+                  <select id="re-tz" value="{{ f.tz }}" onChange="{{ setTz }}" disabled="{{ locked }}" aria-describedby="re-tz-help re-tz-now" style="min-height: var(--target-touch); width: 100%; padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                    <sc-for list="{{ tzOptions }}" as="o" hint-placeholder-count="20"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+                  </select>
+                  <span id="re-tz-now" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ tzNow }}</span>
+                  <p id="re-tz-help" style="margin: var(--space-1) 0 0; padding: var(--space-3); border-radius: var(--radius-2); background: var(--sunken); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink); text-wrap: pretty;">This decides which day each task falls on. It can’t be changed after you sign up, so pick the zone you live your days in.</p>
+                </div>
+                <button type="submit" aria-busy="{{ busyStr }}" style="min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ registerLabel }}</button>
+              </form>
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); color: var(--ink-2);">
+                <span>Have an account?</span>
+                <button type="button" onClick="{{ goSignin }}" style="min-height: var(--target-touch); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">Sign in</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sEmailForm }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">{{ emailFormTitle }}</h1>
+              <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">{{ emailFormLead }}</p>
+              <form onSubmit="{{ submitEmailForm }}" aria-busy="{{ busyStr }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="ef-email" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Email address</label>
+                  <input id="ef-email" type="email" autoComplete="email" inputMode="email" value="{{ f.email }}" onChange="{{ setEmail }}" disabled="{{ locked }}" aria-invalid="{{ emailInvalid }}" aria-describedby="ef-email-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ emailRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                  <span id="ef-email-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ emailErr }}</span>
+                </div>
+                <button type="submit" aria-busy="{{ busyStr }}" style="min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ emailFormLabel }}</button>
+              </form>
+              <button type="button" onClick="{{ goSignin }}" style="align-self: flex-start; min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">‹ Back to sign in</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sAccepted }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">Check your inbox</h1>
+              <p role="status" style="margin: 0; padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface); text-wrap: pretty;">{{ acceptedText }}</p>
+              <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ acceptedTo }}</p>
+              <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                <sc-for list="{{ acceptedLinks }}" as="l" hint-placeholder-count="2">
+                  <button type="button" onClick="{{ l.fn }}" style="align-self: flex-start; min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; text-align: left; cursor: pointer;" style-active="background: var(--pressed);">{{ l.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sCode }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">Confirm with a code</h1>
+              <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">Opened the email on another device? The email also has a code under the link. Copy it here.</p>
+              <form onSubmit="{{ submitCode }}" aria-busy="{{ busyStr }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="cd" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Code from the email</label>
+                  <input id="cd" autoComplete="one-time-code" autoCapitalize="none" spellCheck="false" value="{{ f.code }}" onChange="{{ setCode }}" disabled="{{ locked }}" aria-invalid="{{ codeInvalid }}" aria-describedby="cd-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ codeRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono); overflow-wrap: anywhere;">
+                  <span id="cd-err" role="{{ codeErrRole }}" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ codeErr }}</span>
+                </div>
+                <button type="submit" aria-busy="{{ busyStr }}" style="min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ codeLabel }}</button>
+              </form>
+              <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                <button type="button" onClick="{{ goResend }}" style="align-self: flex-start; min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">Send the link again</button>
+                <button type="button" onClick="{{ goSignin }}" style="align-self: flex-start; min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">‹ Back to sign in</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sOutcome }}" hint-placeholder-val="{{ false }}">
+            <div aria-busy="{{ outBusy }}" style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight); color: {{ outInk }};">{{ outTitle }}</h1>
+              <p role="{{ outRole }}" style="margin: 0; text-wrap: pretty;">{{ outText }}</p>
+              <sc-if value="{{ hasOutAction }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ outAction }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ outActionLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ hasOutSecond }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ outSecond }}" style="align-self: flex-start; min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); text-decoration: underline; cursor: pointer;" style-active="background: var(--pressed);">{{ outSecondLabel }}</button>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sReset }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+              <h1 id="h-main" tabIndex="-1" style="margin: 0; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight);">Set a new password</h1>
+              <form onSubmit="{{ submitReset }}" aria-busy="{{ busyStr }}" noValidate="{{ true }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <input type="email" autoComplete="username" value="gabriel@example.com" readOnly="{{ true }}" aria-hidden="true" tabIndex="-1" style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <label for="rs-pw" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">New password</label>
+                  <input id="rs-pw" type="{{ pwType }}" autoComplete="new-password" value="{{ f.pw }}" onChange="{{ setPw }}" maxLength="128" disabled="{{ locked }}" aria-invalid="{{ pwInvalid }}" aria-describedby="rs-pw-help rs-pw-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ pwRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                  <span id="rs-pw-help" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);"><span>8 to 128 characters.</span><span style="font-family: var(--font-mono);">{{ pwCount }}</span></span>
+                  <span id="rs-pw-err" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink);">{{ pwErr }}</span>
+                </div>
+                <button type="button" aria-pressed="{{ showStr }}" onClick="{{ toggleShow }}" style="align-self: flex-start; min-height: var(--target-touch); margin-top: calc(var(--space-3) * -1); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: {{ showBg }}; color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">{{ showLabel1 }}</button>
+                <p style="margin: 0; padding: var(--space-3); border-radius: var(--radius-2); background: var(--sunken); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); text-wrap: pretty;">Every device signed in to this account is signed out, this one included. You then sign in with the new password.</p>
+                <button type="submit" aria-busy="{{ busyStr }}" style="min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ resetLabel }}</button>
+              </form>
+            </div>
+          </sc-if>
+        </main>
+
+        <sc-if value="{{ wide }}" hint-placeholder-val="{{ false }}">
+          <aside aria-label="About SyncaAI" style="min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: var(--space-5); padding: var(--space-8) var(--space-8); background: var(--surface); border-left: 1px solid var(--line);">
+            <p style="margin: 0; max-width: 28ch; font: var(--weight-strong) var(--text-6)/var(--leading-6) var(--font-sans); letter-spacing: var(--tracking-tight); text-wrap: pretty;">A week that says how much of each day is already spoken for.</p>
+            <ul style="margin: 0; padding-left: var(--space-5); max-width: 44ch; display: flex; flex-direction: column; gap: var(--space-3); color: var(--ink-2); text-wrap: pretty;">
+              <li>Each day shows what’s reserved first, and what’s free of your usable day under it.</li>
+              <li>A day over budget says so, in words, before it happens.</li>
+              <li>Ask for a plan and its steps go into your free time. You approve each one; the model sees how full your days are, never what your tasks are.</li>
+            </ul>
+          </aside>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <section data-screen-label="Decisions" style="max-width: 760px; width: 100%; margin: 0 auto; padding: 0 var(--space-5) var(--space-10); display: flex; flex-direction: column; gap: var(--space-3);">
+    <h2 style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans);">What these screens decide</h2>
+    <ul style="margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); color: var(--ink-2);">
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The same answer looks the same</strong>: sign up, resend and recovery each end on one “Check your inbox” view, built from one template. The server’s sentence sits in a neutral box, the address you typed is repeated under it, and two ways on follow. Nothing in it depends on the answer: no icon, no colour, no tone, no timing. The review bar has the pairs (“new address” / “address with an account”) so you can see they render the same. Each flow keeps its own sentence, as auth.py asks, so recovery never tells anyone to finish signing up.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Where the page starts</strong>: no field gets focus on load. The page starts at the top, the heading is the first thing a screen reader meets, and the first Tab reaches the email field. Auto-focus would skip the heading, open the keyboard on a phone before you’ve chosen sign in over create, and on the set-a-new-password link it would start in a field you haven’t read about. Focus only moves when you act: to the heading of the next view, or to the field the server refused.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The desktop’s right side</strong> stays from 1100 up, as three plain lines about what the app does. Nothing in it is a figure: no example day, no free minutes, no screenshot. It’s the same at every step, so it never competes with the form. Below 1100 it goes, and the form sits alone in one column of at most 480px.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The time zone</strong> is a native select over the zone list, “Region / City (UTC±h)”, with this browser’s zone chosen and marked “this browser”. Under it is the current time there, read from the clock, plus one plain sentence on why it matters and that it can’t change later.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Refusals</strong> go where you acted. A sign-in refusal sits above the button, with the server’s sentence. “Confirm your address” carries the resend action. “Too many attempts” gives the clock time from Retry-After and holds the button until then. Field errors (an empty field, a password under 8) are caught before sending and go under the field.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">A link that no longer works</strong> is one state, whether used or expired, with the server’s sentence and the way to ask for another. A confirmed address and a set password lead to Sign in, and neither opens a session by itself.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Fixed from #28</strong>: no invented figures, no development text, no jargon in the heading. Tokens: none new.</li>
+    </ul>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  T = {
+    incorrect: 'Incorrect email or password.', unverified: 'Confirm your address before signing in.', limited: 'Too many attempts. Try again later.',
+    registered: 'If that address is new, a confirmation link is on its way. Check your inbox to finish signing up.',
+    resent: 'If that address still needs confirming, a new link is on its way.',
+    recovery: 'If that address has an account, a link to set a new password is on its way.',
+    badLink: 'That confirmation link is not valid. Request a new one.',
+    badReset: 'That link to set a new password is not valid. Request a new one.'
+  };
+  FRAMES = { '320': [320, 640, '320 × 640'], '375': [375, 760, '375 × 760'], land: [667, 375, '667 × 375 landscape'], '768': [768, 1024, '768 × 1024'], desk: [1280, 820, '1280 × 820 desktop'] };
+  frameRef = React.createRef(); scrollRef = React.createRef();
+  browserTz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Lisbon'; } catch (e) { return 'Europe/Lisbon'; } }
+  zones() {
+    if (this._z) return this._z;
+    let z = []; try { z = Intl.supportedValuesOf('timeZone'); } catch (e) {}
+    if (!z.length) z = ['America/New_York', 'America/Sao_Paulo', 'Europe/Lisbon', 'Europe/London', 'Europe/Madrid', 'Asia/Tokyo', 'UTC'];
+    const bt = this.browserTz(); if (!z.includes(bt)) z = [bt].concat(z);
+    this._z = z; return z;
+  }
+  offset(tz) { try { const p = new Intl.DateTimeFormat('en-GB', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find(x => x.type === 'timeZoneName'); return p ? p.value.replace('GMT', 'UTC') : ''; } catch (e) { return ''; } }
+  nowIn(tz) { try { return new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date()); } catch (e) { return ''; } }
+  clockPlus(sec) { const d = new Date(Date.now() + sec * 1000); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+
+  base() { return { screen: 'signin', f: { email: '', pw: '', tz: this.browserTz(), code: '' }, tried: false, refusal: null, retryAt: null, busy: false, show: false, accepted: null, outcome: null, codeErr: null, preset: 'signin', freeze: false }; }
+  state = Object.assign(this.base(), { frame: '375', theme: 'light', reduced: false, zoom: false, audit: '' });
+
+  componentDidMount() { this.prev = Object.assign({}, this.state); this.applyEnv(); }
+  componentWillUnmount() { clearTimeout(this.wT); }
+  componentDidUpdate() {
+    const s = this.state, ps = this.prev || s; this.prev = Object.assign({}, s);
+    if (ps.theme !== s.theme || ps.reduced !== s.reduced || ps.zoom !== s.zoom || ps.frame !== s.frame) this.applyEnv();
+    if ((ps.screen !== s.screen || ps.outcome !== s.outcome || ps.accepted !== s.accepted) && this.scrollRef.current) this.scrollRef.current.scrollTop = 0;
+    if (this.wantSel) { const sel = this.wantSel; this.wantSel = null; setTimeout(() => { const el = this.frameRef.current && this.frameRef.current.querySelector(sel); if (el) el.focus(); }, 40); }
+  }
+  applyEnv() {
+    const s = this.state, f = this.frameRef.current;
+    document.documentElement.setAttribute('data-theme', s.theme);
+    if (!f) return;
+    [[12, 16], [13, 18], [15, 22], [18, 24], [22, 28], [28, 32], [36, 40], [48, 52]].forEach((p, i) => {
+      if (s.zoom) { f.style.setProperty('--text-' + (i + 1), p[0] * 2 + 'px'); f.style.setProperty('--leading-' + (i + 1), p[1] * 2 + 'px'); }
+      else { f.style.removeProperty('--text-' + (i + 1)); f.style.removeProperty('--leading-' + (i + 1)); }
+    });
+    ['--dur-1', '--dur-2', '--dur-3'].forEach(k => s.reduced ? f.style.setProperty(k, '1ms') : f.style.removeProperty(k));
+    s.reduced ? f.style.setProperty('--press-scale', '1') : f.style.removeProperty('--press-scale');
+  }
+  go(screen, extra) { this.setState(Object.assign({ screen, tried: false, refusal: null, busy: false, accepted: null, outcome: null, codeErr: null }, extra || {})); this.wantSel = '#h-main'; }
+  setF(p) { this.setState(s => ({ f: Object.assign({}, s.f, p) })); }
+  emailOk(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e || '').trim()); }
+  later(fn, ms) { if (this.state.freeze) return; clearTimeout(this.wT); this.wT = setTimeout(fn, ms || 800); }
+
+  submitSignin() {
+    const s = this.state, f = s.f; if (s.busy) return;
+    if (s.retryAt && s.retryAt > Date.now()) return;
+    if (!this.emailOk(f.email) || !f.pw) { this.setState({ tried: true }); this.wantSel = !this.emailOk(f.email) ? '#si-email' : '#si-pw'; return; }
+    this.setState({ busy: true, refusal: null });
+    this.later(() => {
+      const e = this.state.f.email.trim().toLowerCase(), pw = this.state.f.pw;
+      let r = null;
+      if (e === 'new@example.com') r = 'unverified';
+      else if (e !== 'gabriel@example.com' || pw !== 'correct horse') { this.fails = (this.fails || 0) + 1; r = this.fails >= 5 ? 'limited' : 'incorrect'; }
+      if (r) { this.setState({ busy: false, refusal: r, retryAt: r === 'limited' ? Date.now() + 900000 : null }); this.wantSel = '#refusal'; return; }
+      this.fails = 0;
+      this.setState({ busy: false, outcome: 'signedIn', screen: 'outcome' }); this.wantSel = '#h-main';
+    });
+  }
+  submitRegister() {
+    const s = this.state, f = s.f; if (s.busy) return;
+    if (!this.emailOk(f.email) || f.pw.length < 8) { this.setState({ tried: true }); this.wantSel = !this.emailOk(f.email) ? '#re-email' : '#re-pw'; return; }
+    this.setState({ busy: true });
+    this.later(() => this.go('accepted', { accepted: 'registered' }));
+  }
+  submitEmailForm() {
+    const s = this.state; if (s.busy) return;
+    if (!this.emailOk(s.f.email)) { this.setState({ tried: true }); this.wantSel = '#ef-email'; return; }
+    this.setState({ busy: true });
+    const kind = s.screen === 'resend' ? 'resent' : 'recovery';
+    this.later(() => this.go('accepted', { accepted: kind }));
+  }
+  submitCode() {
+    const s = this.state; if (s.busy) return;
+    if (!s.f.code.trim()) { this.setState({ tried: true, codeErr: null }); this.wantSel = '#cd'; return; }
+    this.setState({ busy: true, codeErr: null });
+    this.later(() => { if (s.f.code.trim().length < 20) { this.setState({ busy: false, codeErr: this.T.badLink }); this.wantSel = '#cd'; } else this.go('outcome', { outcome: 'confirmed' }); });
+  }
+  submitReset() {
+    const s = this.state; if (s.busy) return;
+    if (s.f.pw.length < 8) { this.setState({ tried: true }); this.wantSel = '#rs-pw'; return; }
+    this.setState({ busy: true });
+    this.later(() => this.go('outcome', { outcome: 'resetDone' }));
+  }
+
+  preset(id) {
+    clearTimeout(this.wT); this.fails = 0;
+    const b = this.base(); b.preset = id; const F = (p) => Object.assign(b.f, p);
+    switch (id) {
+      case 'siFilled': F({ email: 'gabriel@example.com', pw: 'correct horse' }); break;
+      case 'siEmpty': b.tried = true; break;
+      case 'siIncorrect': F({ email: 'gabriel@example.com', pw: 'wrong one' }); b.refusal = 'incorrect'; break;
+      case 'siNoAccount': F({ email: 'nobody@example.com', pw: 'any password' }); b.refusal = 'incorrect'; break;
+      case 'siUnverified': F({ email: 'new@example.com', pw: 'a good password' }); b.refusal = 'unverified'; break;
+      case 'siLimited': F({ email: 'gabriel@example.com', pw: 'another guess' }); b.refusal = 'limited'; b.retryAt = Date.now() + 900000; break;
+      case 'siBusy': F({ email: 'gabriel@example.com', pw: 'correct horse' }); b.busy = true; b.freeze = true; break;
+      case 'reEmpty': b.screen = 'register'; break;
+      case 'reErr': b.screen = 'register'; F({ email: 'gabriel@', pw: 'short' }); b.tried = true; break;
+      case 'reBusy': b.screen = 'register'; F({ email: 'someone@example.com', pw: 'a long password' }); b.busy = true; b.freeze = true; break;
+      case 'reNew': b.screen = 'accepted'; b.accepted = 'registered'; F({ email: 'someone@example.com' }); break;
+      case 'reTaken': b.screen = 'accepted'; b.accepted = 'registered'; F({ email: 'gabriel@example.com' }); break;
+      case 'code': b.screen = 'code'; break;
+      case 'codeBad': b.screen = 'code'; F({ code: 'k3J9-used-before' }); b.codeErr = this.T.badLink; break;
+      case 'resend': b.screen = 'resend'; F({ email: 'new@example.com' }); break;
+      case 'resentA': b.screen = 'accepted'; b.accepted = 'resent'; F({ email: 'new@example.com' }); break;
+      case 'resentB': b.screen = 'accepted'; b.accepted = 'resent'; F({ email: 'nobody@example.com' }); break;
+      case 'linkBusy': b.screen = 'outcome'; b.outcome = 'confirming'; b.freeze = true; break;
+      case 'linkOk': b.screen = 'outcome'; b.outcome = 'confirmed'; break;
+      case 'linkUsed': case 'linkExpired': b.screen = 'outcome'; b.outcome = 'badLink'; break;
+      case 'forgot': b.screen = 'forgot'; break;
+      case 'forgotA': b.screen = 'accepted'; b.accepted = 'recovery'; F({ email: 'gabriel@example.com' }); break;
+      case 'forgotB': b.screen = 'accepted'; b.accepted = 'recovery'; F({ email: 'nobody@example.com' }); break;
+      case 'reset': b.screen = 'reset'; break;
+      case 'resetErr': b.screen = 'reset'; F({ pw: 'short' }); b.tried = true; break;
+      case 'resetBusy': b.screen = 'reset'; F({ pw: 'a brand new one' }); b.busy = true; b.freeze = true; break;
+      case 'resetDone': b.screen = 'outcome'; b.outcome = 'resetDone'; break;
+      case 'resetBad': b.screen = 'outcome'; b.outcome = 'badReset'; break;
+    }
+    this.setState(b);
+  }
+
+  renderVals() {
+    const s = this.state, [fw, fh, cap] = this.FRAMES[s.frame], wide = fw >= 1100, f = s.f;
+    const btn = (on) => ({ on: on ? 'true' : 'false', bg: on ? 'var(--primary)' : 'var(--surface)', ink: on ? 'var(--on-primary)' : 'var(--ink)' });
+    const ring = (bad) => bad ? '2px solid var(--alert-ink)' : '1px solid var(--line-strong)';
+    const scr = s.screen, isReg = scr === 'register', isReset = scr === 'reset';
+    const emailBad = s.tried && !this.emailOk(f.email);
+    const pwBad = s.tried && (isReg || isReset ? f.pw.length < 8 : !f.pw);
+    const limited = s.refusal === 'limited' && s.retryAt && s.retryAt > Date.now();
+    const bt = this.browserTz();
+    const tzOptions = this.zones().map(z => ({ v: z, sel: z === f.tz, label: z.replace(/_/g, ' ') + ' (' + this.offset(z) + ')' + (z === bt ? ' · this browser' : '') }));
+    const acc = s.accepted;
+    const accText = acc ? this.T[acc] : '';
+    const accLinks = acc === 'registered' ? [{ label: 'I have a code', fn: () => this.go('code') }, { label: 'Send the link again', fn: () => this.go('resend') }, { label: 'Back to sign in', fn: () => this.go('signin') }]
+      : acc === 'resent' ? [{ label: 'I have a code', fn: () => this.go('code') }, { label: 'Back to sign in', fn: () => this.go('signin') }]
+      : [{ label: 'Back to sign in', fn: () => this.go('signin') }];
+    const O = {
+      confirming: { title: 'Confirming your address…', text: 'This takes a moment.', role: 'status', busy: true },
+      confirmed: { title: 'Your address is confirmed', text: 'Sign in with the address and password you chose.', role: 'status', act: ['Sign in', () => this.go('signin')] },
+      badLink: { title: 'This link doesn’t work', text: this.T.badLink, role: 'alert', alert: true, act: ['Send the link again', () => this.go('resend')], second: ['I have a code', () => this.go('code')] },
+      resetDone: { title: 'Your new password is set', text: 'Every device was signed out, this one too. Sign in with the new password.', role: 'status', act: ['Sign in', () => this.go('signin', { f: Object.assign({}, f, { pw: '' }) })] },
+      badReset: { title: 'This link doesn’t work', text: this.T.badReset, role: 'alert', alert: true, act: ['Ask for a new link', () => this.go('forgot')], second: ['Back to sign in', () => this.go('signin')] },
+      signedIn: { title: 'Signed in', text: 'This is where the week opens, on today.', role: 'status', act: ['Sign out', () => this.go('signin')] }
+    }[s.outcome] || {};
+    const groups = [
+      ['Sign in', [['signin', 'Empty'], ['siFilled', 'Filled'], ['siEmpty', 'Field errors'], ['siIncorrect', 'Wrong password'], ['siNoAccount', 'No such account'], ['siUnverified', 'Not confirmed'], ['siLimited', 'Too many'], ['siBusy', 'Signing in']]],
+      ['Create', [['reEmpty', 'Empty'], ['reErr', 'Field errors'], ['reBusy', 'Creating'], ['reNew', 'Sent: new address'], ['reTaken', 'Sent: has an account']]],
+      ['Confirm', [['code', 'I have a code'], ['codeBad', 'Code refused'], ['resend', 'Resend'], ['resentA', 'Resent: unconfirmed'], ['resentB', 'Resent: unknown'], ['linkBusy', 'Link: confirming'], ['linkOk', 'Link: confirmed'], ['linkUsed', 'Link: used'], ['linkExpired', 'Link: expired']]],
+      ['Password', [['forgot', 'Forgot'], ['forgotA', 'Sent: has account'], ['forgotB', 'Sent: no account'], ['reset', 'Set new'], ['resetErr', 'Too short'], ['resetBusy', 'Setting'], ['resetDone', 'Set'], ['resetBad', 'Link not valid']]]
+    ].map(([label, items]) => ({ label, items: items.map(([id, l]) => ({ label: l, on: s.preset === id ? 'true' : 'false', bg: s.preset === id ? 'var(--primary)' : 'var(--surface)', ink: s.preset === id ? 'var(--on-primary)' : 'var(--ink)', border: s.preset === id ? 'var(--primary)' : 'var(--line-strong)', run: () => this.preset(id) })) }));
+
+    return {
+      frameRef: this.frameRef, scrollRef: this.scrollRef,
+      widths: Object.keys(this.FRAMES).map(k => Object.assign({ label: k === 'land' ? '667 landscape' : k === 'desk' ? '1280 desktop' : k, pick: () => this.setState({ frame: k }) }, btn(s.frame === k))),
+      toggles: [Object.assign({ label: s.theme === 'light' ? 'Light theme' : 'Dark theme', pick: () => this.setState({ theme: s.theme === 'light' ? 'dark' : 'light' }) }, btn(s.theme === 'dark')), Object.assign({ label: 'Reduced motion', pick: () => this.setState({ reduced: !s.reduced }) }, btn(s.reduced)), Object.assign({ label: 'Text 200%', pick: () => this.setState({ zoom: !s.zoom }) }, btn(s.zoom))],
+      presetGroups: groups, runAudit: () => this.audit(), auditText: s.audit,
+      fw, fh, frameCaption: cap + (s.zoom ? ' · text 200%' : ''), wide, cols: wide ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
+      sSignin: scr === 'signin', sRegister: isReg, sEmailForm: scr === 'resend' || scr === 'forgot', sAccepted: scr === 'accepted', sCode: scr === 'code', sOutcome: scr === 'outcome', sReset: isReset,
+      f, locked: s.busy, busyStr: s.busy ? 'true' : 'false',
+      setEmail: (e) => this.setF({ email: e.target.value }), setPw: (e) => this.setF({ pw: e.target.value }), setTz: (e) => this.setF({ tz: e.target.value }), setCode: (e) => { this.setF({ code: e.target.value }); this.setState({ codeErr: null }); },
+      emailInvalid: emailBad ? 'true' : 'false', emailRing: ring(emailBad), emailErr: emailBad ? (f.email.trim() ? 'That doesn’t look like an email address.' : 'Type your email address.') : '',
+      pwInvalid: pwBad ? 'true' : 'false', pwRing: ring(pwBad), pwErr: pwBad ? (isReg || isReset ? (f.pw ? 'At least 8 characters.' : 'Choose a password.') : 'Type your password.') : '', pwCount: f.pw.length + ' / 128',
+      pwType: s.show ? 'text' : 'password', showStr: s.show ? 'true' : 'false', showBg: s.show ? 'var(--pressed)' : 'var(--surface)', showLabel: s.show ? 'Hide password' : 'Show password', showLabel1: s.show ? 'Hide password' : 'Show password', toggleShow: () => this.setState({ show: !s.show }),
+      hasRefusal: !!s.refusal, refusal: s.refusal ? this.T[s.refusal] : '', refusalUnverified: s.refusal === 'unverified',
+      hasRefusalSub: s.refusal === 'limited' || s.refusal === 'unverified', refusalSub: s.refusal === 'limited' ? 'You can try again at ' + this.clockPlus(900) + ', in 15 minutes.' : s.refusal === 'unverified' ? 'The link is in the email we sent when you signed up.' : '',
+      goResendFromSignin: () => this.go('resend'), limitedStr: limited ? 'true' : 'false',
+      primBg: limited ? 'var(--surface)' : 'var(--primary)', primInk: limited ? 'var(--ink-2)' : 'var(--on-primary)', primLine: limited ? 'var(--line-strong)' : 'var(--primary)',
+      signinLabel: s.busy ? 'Signing in…' : 'Sign in', submitSignin: (e) => { e.preventDefault(); this.submitSignin(); },
+      goForgot: () => this.go('forgot'), goRegister: () => this.go('register'), goSignin: () => this.go('signin'), goResend: () => this.go('resend'),
+      tzOptions, tzNow: 'There it’s ' + this.nowIn(f.tz) + ' now.',
+      registerLabel: s.busy ? 'Creating your account…' : 'Create account', submitRegister: (e) => { e.preventDefault(); this.submitRegister(); },
+      emailFormTitle: scr === 'resend' ? 'Send the confirmation link again' : 'Forgot your password?',
+      emailFormLead: scr === 'resend' ? 'The address you signed up with.' : 'The address you sign in with. We’ll send a link to set a new password.',
+      emailFormLabel: s.busy ? 'Sending…' : 'Send the link', submitEmailForm: (e) => { e.preventDefault(); this.submitEmailForm(); },
+      acceptedText: accText, acceptedTo: 'You typed ' + (f.email.trim() || 'an address') + '. If that’s not it, go back and try again.', acceptedLinks: accLinks,
+      codeInvalid: s.codeErr || (s.tried && !f.code.trim()) ? 'true' : 'false', codeRing: ring(s.codeErr || (s.tried && !f.code.trim())), codeErr: s.codeErr || (s.tried && !f.code.trim() ? 'Paste the code from the email.' : ''), codeErrRole: s.codeErr ? 'alert' : 'none',
+      codeLabel: s.busy ? 'Confirming…' : 'Confirm', submitCode: (e) => { e.preventDefault(); this.submitCode(); },
+      outTitle: O.title || '', outText: O.text || '', outRole: O.role || 'status', outBusy: O.busy ? 'true' : 'false', outInk: O.alert ? 'var(--alert-ink)' : 'var(--ink)',
+      hasOutAction: !!O.act, outActionLabel: O.act ? O.act[0] : '', outAction: O.act ? O.act[1] : () => {},
+      hasOutSecond: !!O.second, outSecondLabel: O.second ? O.second[0] : '', outSecond: O.second ? O.second[1] : () => {},
+      resetLabel: s.busy ? 'Setting it…' : 'Set the new password', submitReset: (e) => { e.preventDefault(); this.submitReset(); }
+    };
+  }
+
+  audit() {
+    const f = this.frameRef.current; if (!f) return;
+    const parse = (c) => { const m = c.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0, 0]; };
+    const L = (rgb) => { const a = rgb.slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; };
+    const bgOf = (el) => { while (el) { const c = parse(getComputedStyle(el).backgroundColor); if (c.length === 3 || (c.length >= 4 && c[3] > 0.5)) return c; el = el.parentElement; } return [255, 255, 255]; };
+    let n = 0, worst = 99, wt = '', below = 0, small = 0, tiny = 0, over = 0;
+    f.querySelectorAll('*').forEach(el => {
+      const txt = Array.from(el.childNodes).filter(x => x.nodeType === 3 && x.textContent.trim()).map(x => x.textContent.trim()).join(' ');
+      if (!txt || el.tagName === 'OPTION') return; const r = el.getBoundingClientRect(); if (!r.width || !r.height) return; if (el.closest('[aria-hidden="true"]')) return;
+      const cs = getComputedStyle(el), a = L(parse(cs.color)), b = L(bgOf(el)), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      n++; if (ratio < worst) { worst = ratio; wt = txt.slice(0, 24); } if (ratio < 4.5) below++; if (parseFloat(cs.fontSize) < 12) small++;
+    });
+    const fr = f.getBoundingClientRect();
+    f.querySelectorAll('button, input:not([aria-hidden="true"]), select').forEach(el => { const r = el.getBoundingClientRect(); if (!r.width) return; if (r.height < 43.5 || r.width < 43.5) tiny++; if (r.right > fr.right + 1) over++; });
+    this.setState({ audit: n + ' text · worst ' + worst.toFixed(2) + ':1 (“' + wt + '”) · below 4.5: ' + below + ' · under 12px: ' + small + ' · targets under 44px: ' + tiny + ' · past the edge: ' + over });
+  }
+}
+</script>
+</body>
+</html>

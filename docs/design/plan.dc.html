@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SyncaAI — Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500;700&family=Atkinson+Hyperlegible+Next:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens/syncaai-a-papel.css">
+<style>
+html, body { margin: 0; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
+a { color: var(--ink); text-underline-offset: 3px; }
+a:hover { color: var(--ink); text-decoration-color: var(--ink); }
+</style>
+</helmet>
+<div style="min-height: 100vh; background: var(--sunken); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); display: flex; flex-direction: column;">
+
+  <div data-screen-label="Review controls" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-6); background: var(--surface); border-bottom: 1px solid var(--line);">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4);">
+      <strong style="font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">Step 4 · the plan</strong>
+      <div role="group" aria-label="Frame" style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+        <sc-for list="{{ widths }}" as="w" hint-placeholder-count="5">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ w.bg }}; color: {{ w.ink }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+      <div role="group" aria-label="Display" style="display: flex; flex-wrap: wrap; gap: var(--space-1);">
+        <sc-for list="{{ toggles }}" as="w" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: {{ w.bg }}; color: {{ w.ink }}; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{ runAudit }}" style="min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-full); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;">Audit contrast and targets</button>
+      <span role="status" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ auditText }}</span>
+    </div>
+    <sc-for list="{{ presetGroups }}" as="g" hint-placeholder-count="5">
+      <div role="group" aria-label="{{ g.label }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1);">
+        <span style="min-width: 64px; font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ g.label }}</span>
+        <sc-for list="{{ g.items }}" as="p" hint-placeholder-count="5">
+          <button type="button" onClick="{{ p.run }}" aria-pressed="{{ p.on }}" style="min-height: 28px; padding: 0 var(--space-2); border-radius: var(--radius-1); border: 1px solid {{ p.border }}; background: {{ p.bg }}; color: {{ p.ink }}; font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); cursor: pointer;">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-6) var(--space-4); overflow-x: auto;">
+    <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ frameCaption }}</span>
+    <div ref="{{ frameRef }}" data-screen-label="App" style="position: relative; flex: none; width: {{ fw }}px; height: {{ fh }}px; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--radius-4); overflow: hidden; box-shadow: var(--shadow-raised);">
+      <div ref="{{ scrollRef }}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column;">
+
+        <header style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border-bottom: 1px solid var(--line);">
+          <span style="flex: 1 1 auto; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); letter-spacing: var(--tracking-tight);">SyncaAI</span>
+          <sc-if value="{{ notNarrow }}" hint-placeholder-val="{{ false }}">
+            <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Europe/Lisbon · Thu 22, {{ nowClock }}</span>
+          </sc-if>
+          <button type="button" onClick="{{ togglePlan }}" aria-expanded="{{ planOpenStr }}" aria-label="{{ planBtnAria }}" style="min-height: var(--target-touch); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid {{ planBtnLine }}; background: {{ planBtnBg }}; color: {{ planBtnInk }}; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer; transition: transform var(--dur-1) var(--ease-out);" style-active="transform: scale(var(--press-scale)); filter: none;">
+            <span>Plan</span>
+            <sc-if value="{{ hasPlanSub }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans);">· {{ planSub }}</span></sc-if>
+          </button>
+          <button type="button" onClick="{{ openMenu }}" aria-haspopup="dialog" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Menu</button>
+        </header>
+
+        <div style="flex: 1 0 auto; display: grid; grid-template-columns: {{ bodyCols }}; align-items: start;">
+
+          <sc-if value="{{ showGlance }}" hint-placeholder-val="{{ false }}">
+            <aside aria-label="Week at a glance" style="padding: var(--space-3); border-right: 1px solid var(--line); background: var(--surface); align-self: stretch;">
+              <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1);">
+                <sc-for list="{{ glance }}" as="c" hint-placeholder-count="7">
+                  <li><button type="button" onClick="{{ c.go }}" aria-current="{{ c.cur }}" style="width: 100%; min-height: var(--target-touch); display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); border: 2px solid {{ c.border }}; background: {{ c.bg }}; color: var(--ink); text-align: left; cursor: pointer;" style-active="background: var(--pressed);">
+                    <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">{{ c.short }}</span>
+                    <span style="margin-left: auto; font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-mono); color: {{ c.figInk }};">{{ c.fig }}</span>
+                    <sc-if value="{{ c.hasLv }}" hint-placeholder-val="{{ false }}"><span style="flex: 1 1 100%; font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ c.lvWord }}</span></sc-if>
+                    <sc-if value="{{ c.hasDelta }}" hint-placeholder-val="{{ false }}"><span style="flex: 1 1 100%; font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ c.delta }}</span></sc-if>
+                  </button></li>
+                </sc-for>
+              </ol>
+            </aside>
+          </sc-if>
+
+          <sc-if value="{{ showWeek }}" hint-placeholder-val="{{ false }}">
+            <section aria-label="Week of Oct 19 – 25" style="min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-3);">
+              <sc-for list="{{ weekCols }}" as="col" hint-placeholder-count="7">
+                <div style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); border-radius: var(--radius-3); background: {{ col.bg }}; border: 1px solid {{ col.line }};">
+                  <div style="display: flex; flex-direction: column; gap: 0; padding: var(--space-1); border-radius: var(--radius-2); background: {{ col.headBg }};">
+                    <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">{{ col.label }}</span>
+                    <span style="font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-mono); letter-spacing: var(--tracking-figure); color: {{ col.figInk }};">{{ col.fig }}</span>
+                    <sc-if value="{{ col.hasLv }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ col.lvText }}</span></sc-if>
+                    <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ col.sub }}</span>
+                    <sc-if value="{{ col.hasDelta }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--ink-2);">{{ col.delta }}</span></sc-if>
+                  </div>
+                  <sc-for list="{{ col.rows }}" as="r" hint-placeholder-count="2">
+                    <div style="display: flex; align-items: flex-start; gap: 2px; padding: var(--space-1); border-radius: var(--radius-2); border: {{ r.edge }}; background: {{ r.bg }};">
+                      <sc-if value="{{ r.isTask }}" hint-placeholder-val="{{ true }}">
+                        <button type="button" role="checkbox" aria-checked="{{ r.doneStr }}" aria-label="{{ r.checkAria }}" onClick="{{ r.toggle }}" style="flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: var(--radius-1); background: transparent; cursor: pointer;" style-active="background: var(--pressed);"><span aria-hidden="true" style="width: 16px; height: 16px; display: grid; place-items: center; border-radius: 4px; border: 2px solid {{ r.boxLine }}; background: {{ r.boxBg }}; color: var(--on-primary); font: var(--weight-strong) 11px/1 var(--font-sans);">{{ r.tick }}</span></button>
+                      </sc-if>
+                      <span style="min-width: 0; display: flex; flex-direction: column; padding-top: 2px;">
+                        <span style="font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-mono); color: var(--ink-2);">{{ r.time }}</span>
+                        <span lang="{{ r.lang }}" style="font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); color: {{ r.ink }}; overflow-wrap: anywhere;">{{ r.title }}</span>
+                        <sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}">
+                          <button type="button" onClick="{{ r.openPlan }}" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; color: var(--ink-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans); text-decoration: underline; text-align: left; cursor: pointer;">{{ r.tagText }}</button>
+                        </sc-if>
+                      </span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ showDay }}" hint-placeholder-val="{{ true }}">
+            <section aria-labelledby="day-title" style="min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4) var(--space-3) var(--space-5);">
+              <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2);">
+                  <h2 id="day-title" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">{{ dayTitle }}</h2>
+                  <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}"><span style="padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--primary); color: var(--on-primary); font: var(--weight-medium) var(--text-1)/var(--leading-1) var(--font-sans);">Today</span></sc-if>
+                </div>
+                <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2);"><span style="font: var(--weight-strong) var(--text-8)/var(--leading-8) var(--font-sans); letter-spacing: var(--tracking-figure);">{{ bigText }}</span><span style="color: var(--ink-2);">reserved</span></p>
+                <p style="margin: 0; color: var(--ink-2);">{{ freeText }}</p>
+                <sc-if value="{{ hasDayDelta }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; color: var(--ink-2);">{{ dayDelta }}</p></sc-if>
+                <sc-if value="{{ hasLoad }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-weight: var(--weight-strong); color: var(--alert-ink);">{{ loadText }}</p></sc-if>
+              </div>
+              <ul aria-label="{{ listAria }}" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                <sc-for list="{{ dayRows }}" as="r" hint-placeholder-count="4">
+                  <li style="display: flex; align-items: flex-start; border-radius: var(--radius-3); border: {{ r.edge }}; background: {{ r.bg }};">
+                    <sc-if value="{{ r.isTask }}" hint-placeholder-val="{{ true }}">
+                      <button type="button" role="checkbox" aria-checked="{{ r.doneStr }}" aria-label="{{ r.checkAria }}" onClick="{{ r.toggle }}" style="flex: none; width: var(--target-touch); height: var(--target-touch); margin: var(--space-1) 0 0 var(--space-1); display: grid; place-items: center; border: 0; border-radius: var(--radius-2); background: transparent; cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));"><span aria-hidden="true" style="width: 22px; height: 22px; display: grid; place-items: center; border-radius: var(--radius-1); border: 2px solid {{ r.boxLine }}; background: {{ r.boxBg }}; color: var(--on-primary); font: var(--weight-strong) 14px/1 var(--font-sans);">{{ r.tick }}</span></button>
+                    </sc-if>
+                    <sc-if value="{{ r.isStep }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="flex: none; width: var(--space-4);"></span></sc-if>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-3) var(--space-3) var(--space-1);">
+                      <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ r.time }}</span>
+                      <span lang="{{ r.lang }}" style="font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); color: {{ r.ink }}; overflow-wrap: anywhere;">{{ r.title }}</span>
+                      <sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}">
+                        <button type="button" onClick="{{ r.openPlan }}" style="align-self: flex-start; min-height: var(--target-touch); margin: calc(var(--space-2) * -1) 0 calc(var(--space-2) * -1) calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); text-decoration: underline; text-align: left; cursor: pointer;" style-active="background: var(--pressed);">{{ r.tagText }}</button>
+                      </sc-if>
+                    </div>
+                  </li>
+                </sc-for>
+                <sc-if value="{{ dayEmpty }}" hint-placeholder-val="{{ false }}"><li style="padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);">Nothing booked.</li></sc-if>
+              </ul>
+            </section>
+          </sc-if>
+
+          <sc-if value="{{ planOpen }}" hint-placeholder-val="{{ false }}">
+            <section aria-labelledby="plan-h" style="min-width: 0; width: 100%; max-width: {{ planMax }}; justify-self: center; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4) var(--space-3) var(--space-6); border-left: {{ planBorder }}; background: {{ planBg }}; align-self: stretch;">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);">
+                <sc-if value="{{ notWide }}" hint-placeholder-val="{{ true }}">
+                  <button type="button" onClick="{{ closePlan }}" style="min-height: var(--target-touch); margin-left: calc(var(--space-2) * -1); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-2); background: transparent; color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">‹ Week</button>
+                </sc-if>
+                <h2 id="plan-h" style="flex: 1 1 auto; margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans); letter-spacing: var(--tracking-tight);">{{ planHeading }}</h2>
+                <sc-if value="{{ wide }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" onClick="{{ closePlan }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Close</button>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ vAsk }}" hint-placeholder-val="{{ true }}">
+                <form onSubmit="{{ submitAsk }}" aria-busy="{{ askBusy }}" style="display: flex; flex-direction: column; gap: var(--space-4);">
+                  <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                    <label for="p-req" style="font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">What do you want to plan?</label>
+                    <textarea id="p-req" value="{{ askText }}" onChange="{{ setAsk }}" maxLength="500" rows="4" aria-invalid="{{ askInvalid }}" aria-describedby="p-req-help p-req-err" style="min-height: 112px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); border: {{ askRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); resize: vertical;"></textarea>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); font: var(--weight-regular) var(--text-1)/var(--leading-1) var(--font-sans);">
+                      <span id="p-req-err" style="color: var(--alert-ink); font-weight: var(--weight-strong);">{{ askErr }}</span>
+                      <span style="color: var(--ink-2); font-family: var(--font-mono);">{{ askCount }}</span>
+                    </div>
+                    <p id="p-req-help" style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">The steps come back in your words and go into your free time. The model sees how much of each day is free, never what your tasks are.</p>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                    <label for="p-hor" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Days ahead</label>
+                    <select id="p-hor" value="{{ horizonVal }}" onChange="{{ setHorizon }}" aria-describedby="p-hor-help" style="min-height: var(--target-touch); max-width: 320px; padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                      <sc-for list="{{ horizonOptions }}" as="o" hint-placeholder-count="14"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+                    </select>
+                    <p id="p-hor-help" style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ horizonHelp }}</p>
+                  </div>
+                  <sc-if value="{{ hasRefusal }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--alert); background: var(--alert-surface); color: var(--ink);">
+                      <strong style="font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); text-wrap: pretty;">{{ refusalMsg }}</strong>
+                      <sc-if value="{{ hasRetry }}" hint-placeholder-val="{{ false }}"><span style="color: var(--ink-2); text-wrap: pretty;">{{ refusalRetry }}</span></sc-if>
+                      <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                        <sc-for list="{{ refusalActions }}" as="a" hint-placeholder-count="1">
+                          <button type="button" onClick="{{ a.fn }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--alert-surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--alert-pressed); transform: scale(var(--press-scale));">{{ a.label }}</button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                    <button type="submit" aria-busy="{{ askBusy }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ askLabel }}</button>
+                    <button type="button" onClick="{{ startManual }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Write it myself</button>
+                  </div>
+                </form>
+              </sc-if>
+
+              <sc-if value="{{ vWait }}" hint-placeholder-val="{{ false }}">
+                <div aria-busy="true" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+                  <p role="status" style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans);">{{ waitWord }}</p>
+                  <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">{{ waitLine }}</p>
+                  <blockquote lang="pt" style="margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken); color: var(--ink); overflow-wrap: anywhere;">{{ jobRequest }}</blockquote>
+                  <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">You can go back to the week. The request keeps its place here, and the notice at the bottom says when the plan is ready.</p>
+                  <sc-if value="{{ notWide }}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{ closePlan }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Back to the week</button>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ vFailed }}" hint-placeholder-val="{{ false }}">
+                <div role="alert" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--alert); background: var(--alert-surface);">
+                  <strong style="font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ failMsg }}</strong>
+                  <blockquote lang="pt" style="margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--alert-open); color: var(--ink); overflow-wrap: anywhere;">{{ jobRequest }}</blockquote>
+                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                    <button type="button" onClick="{{ askAgain }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">Ask for it again</button>
+                    <button type="button" onClick="{{ startManual }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--alert-surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--alert-pressed); transform: scale(var(--press-scale));">Write it myself</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ vExpired }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                  <p role="alert" style="margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">This plan is no longer open for review.</p>
+                  <p style="margin: 0; color: var(--ink-2); text-wrap: pretty;">{{ expiredLine }}</p>
+                  <blockquote lang="pt" style="margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken); overflow-wrap: anywhere;">{{ planRequest }}</blockquote>
+                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                    <button type="button" onClick="{{ askAgain }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">Ask for a new plan</button>
+                    <button type="button" onClick="{{ startManual }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Write it myself</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ vApproved }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                  <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2);"><span style="font: var(--weight-strong) var(--text-8)/var(--leading-8) var(--font-sans); letter-spacing: var(--tracking-figure);">{{ progFig }}</span><span style="color: var(--ink-2);">preparations done</span></p>
+                  <sc-if value="{{ hasGone }}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ goneText }}</p></sc-if>
+                  <blockquote lang="pt" style="margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken); overflow-wrap: anywhere;">{{ planRequest }}</blockquote>
+                  <ul aria-label="Tasks from this plan" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                    <sc-for list="{{ planTaskRows }}" as="r" hint-placeholder-count="5">
+                      <li style="display: flex; align-items: flex-start; border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+                        <button type="button" role="checkbox" aria-checked="{{ r.doneStr }}" aria-label="{{ r.checkAria }}" onClick="{{ r.toggle }}" style="flex: none; width: var(--target-touch); height: var(--target-touch); margin: var(--space-1) 0 0 var(--space-1); display: grid; place-items: center; border: 0; border-radius: var(--radius-2); background: transparent; cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));"><span aria-hidden="true" style="width: 22px; height: 22px; display: grid; place-items: center; border-radius: var(--radius-1); border: 2px solid {{ r.boxLine }}; background: {{ r.boxBg }}; color: var(--on-primary); font: var(--weight-strong) 14px/1 var(--font-sans);">{{ r.tick }}</span></button>
+                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-3) var(--space-3) var(--space-1);">
+                          <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ r.time }}</span>
+                          <span lang="pt" style="font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); overflow-wrap: anywhere;">{{ r.title }}</span>
+                        </div>
+                      </li>
+                    </sc-for>
+                  </ul>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ vReview }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                  <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                    <sc-if value="{{ isManual }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; flex-direction: column; gap: var(--space-1);">
+                        <label for="p-for" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">What it’s for</label>
+                        <input id="p-for" value="{{ planRequest }}" onChange="{{ setManualFor }}" maxLength="500" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ isModel }}" hint-placeholder-val="{{ true }}">
+                      <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">You asked</span>
+                      <blockquote lang="pt" style="margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken); overflow-wrap: anywhere;">{{ planRequest }}</blockquote>
+                    </sc-if>
+                    <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ coverText }}</p>
+                    <p style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">{{ countText }}</p>
+                  </div>
+
+                  <sc-if value="{{ hasPlanErr }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" tabIndex="-1" ref="{{ planErrRef }}" style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--alert); background: var(--alert-surface);">
+                      <strong style="color: var(--alert-ink); text-wrap: pretty;">{{ planErr }}</strong>
+                      <sc-for list="{{ planErrList }}" as="x" hint-placeholder-count="0"><span lang="pt" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink); text-wrap: pretty;">{{ x }}</span></sc-for>
+                      <sc-if value="{{ isRace }}" hint-placeholder-val="{{ false }}">
+                        <button type="button" onClick="{{ rereadPlan }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--alert-surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--alert-pressed);">Read the plan again</button>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ hasImpact }}" hint-placeholder-val="{{ false }}">
+                    <div role="group" aria-label="What it adds to each day" style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-3); border: 1px solid var(--line); background: var(--surface);">
+                      <span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">What it adds</span>
+                      <sc-for list="{{ impact }}" as="x" hint-placeholder-count="2"><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">{{ x }}</span></sc-for>
+                    </div>
+                  </sc-if>
+
+                  <ol aria-label="Steps" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                    <sc-for list="{{ steps }}" as="p" hint-placeholder-count="6">
+                      <li aria-busy="{{ p.busy }}" style="border-radius: var(--radius-3); border: {{ p.edge }}; background: {{ p.bg }}; box-shadow: {{ p.shadow }};">
+                        <button type="button" id="{{ p.domId }}" aria-expanded="{{ p.openStr }}" onClick="{{ p.toggle }}" style="width: 100%; min-height: var(--target-touch); display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4); border: 0; border-radius: var(--radius-3); background: transparent; color: var(--ink); text-align: left; cursor: pointer;" style-active="background: var(--pressed);">
+                          <span style="display: flex; flex-wrap: wrap; gap: 0 var(--space-2); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);"><span>Step {{ p.no }}</span><span>{{ p.when }}</span><span>{{ p.len }}</span></span>
+                          <span lang="pt" style="font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); overflow-wrap: anywhere; text-wrap: pretty;">{{ p.title }}</span>
+                          <sc-if value="{{ p.hasAfter }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">{{ p.afterText }}</span></sc-if>
+                          <sc-if value="{{ p.hasDesc }}" hint-placeholder-val="{{ false }}"><span lang="pt" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); overflow-wrap: anywhere; text-wrap: pretty;">{{ p.desc }}</span></sc-if>
+                          <sc-if value="{{ p.hasReason }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink); text-wrap: pretty;">{{ p.reason }}</span></sc-if>
+                          <sc-if value="{{ p.hasErr }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ p.err }}</span></sc-if>
+                          <sc-if value="{{ p.saving }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Saving…</span></sc-if>
+                        </button>
+                        <sc-if value="{{ p.hasLinks }}" hint-placeholder-val="{{ false }}">
+                          <ul aria-label="Links" style="list-style: none; margin: 0; padding: 0 var(--space-4) var(--space-2); display: flex; flex-direction: column;">
+                            <sc-for list="{{ p.links }}" as="l" hint-placeholder-count="1"><li><a href="{{ l.url }}" target="_blank" rel="noopener noreferrer" lang="pt" style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-2); min-height: var(--target-touch); font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); overflow-wrap: anywhere;"><span>{{ l.label }}</span><span style="color: var(--ink-2); font-family: var(--font-mono); font-size: var(--text-1);">{{ l.host }}</span></a></li></sc-for>
+                          </ul>
+                        </sc-if>
+                        <sc-if value="{{ p.open }}" hint-placeholder-val="{{ false }}">
+                          <div style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line);">
+                            <sc-if value="{{ p.verbsOn }}" hint-placeholder-val="{{ true }}">
+                              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                                <button type="button" onClick="{{ p.edit }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">{{ p.editLabel }}</button>
+                                <button type="button" onClick="{{ p.remove }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Remove</button>
+                              </div>
+                            </sc-if>
+                            <sc-if value="{{ p.editing }}" hint-placeholder-val="{{ false }}">
+                              <form onSubmit="{{ saveStep }}" aria-busy="{{ p.busy }}" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                  <label for="e-title" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Title</label>
+                                  <input id="e-title" lang="pt" value="{{ ed.title }}" onChange="{{ ed.onTitle }}" maxLength="200" aria-invalid="{{ ed.titleInvalid }}" aria-describedby="e-title-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ ed.titleRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                                  <span id="e-title-err" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ ed.titleErr }}</span>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                  <label for="e-min" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Duration, in minutes</label>
+                                  <input id="e-min" inputMode="numeric" value="{{ ed.min }}" onChange="{{ ed.onMin }}" aria-invalid="{{ ed.minInvalid }}" aria-describedby="e-min-err" style="min-height: var(--target-touch); max-width: 200px; padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ ed.minRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono);">
+                                  <span id="e-min-err" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ ed.minErr }}</span>
+                                </div>
+                                <fieldset style="margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3);">
+                                  <legend style="padding: 0; margin-bottom: var(--space-1); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Start</legend>
+                                  <div style="flex: 1 1 150px; display: flex; flex-direction: column; gap: 2px;">
+                                    <label for="e-day" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Day</label>
+                                    <select id="e-day" value="{{ ed.day }}" onChange="{{ ed.onDay }}" aria-describedby="e-start-hint e-start-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ ed.startRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                                      <sc-for list="{{ ed.dayOptions }}" as="o" hint-placeholder-count="5"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+                                    </select>
+                                  </div>
+                                  <div style="flex: 1 1 110px; display: flex; flex-direction: column; gap: 2px;">
+                                    <label for="e-time" style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Time</label>
+                                    <input id="e-time" type="time" step="300" value="{{ ed.time }}" onChange="{{ ed.onTime }}" aria-invalid="{{ ed.startInvalid }}" aria-describedby="e-start-hint e-start-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ ed.startRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                                  </div>
+                                  <p id="e-start-hint" style="flex: 1 1 100%; margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ ed.hint }}</p>
+                                  <p id="e-start-err" style="flex: 1 1 100%; margin: 0; font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--alert-ink); text-wrap: pretty;">{{ ed.startErr }}</p>
+                                </fieldset>
+                                <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                                  <button type="submit" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ ed.saveLabel }}</button>
+                                  <button type="button" onClick="{{ cancelEdit }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Cancel</button>
+                                </div>
+                              </form>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                      </li>
+                    </sc-for>
+                  </ol>
+
+                  <sc-if value="{{ noSteps }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin: 0; padding: var(--space-4); border-radius: var(--radius-3); border: 1px dashed var(--line-strong); color: var(--ink-2); text-wrap: pretty;">No steps yet. Add the first one; it goes to the first free time.</p>
+                  </sc-if>
+
+                  <sc-if value="{{ hasNtw }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-3); border: 1px solid var(--line-strong); background: var(--surface);">
+                      <span style="text-wrap: pretty;">{{ ntwText }}</span>
+                      <button type="button" onClick="{{ sendNext }}" aria-busy="{{ sendBusy }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); text-wrap: pretty; cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ sendLabel }}</button>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ adding }}" hint-placeholder-val="{{ false }}">
+                    <form onSubmit="{{ submitAdd }}" aria-busy="{{ addBusy }}" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-3); border: 1px solid var(--line-strong); background: var(--open); box-shadow: var(--shadow-raised);">
+                      <strong>New step</strong>
+                      <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <label for="a-title" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Title</label>
+                        <input id="a-title" value="{{ add.title }}" onChange="{{ add.onTitle }}" maxLength="200" aria-invalid="{{ add.titleInvalid }}" aria-describedby="a-title-err" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ add.titleRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans);">
+                        <span id="a-title-err" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ add.titleErr }}</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <label for="a-min" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Duration, in minutes</label>
+                        <input id="a-min" inputMode="numeric" value="{{ add.min }}" onChange="{{ add.onMin }}" aria-invalid="{{ add.minInvalid }}" aria-describedby="a-min-err" style="min-height: var(--target-touch); max-width: 200px; padding: 0 var(--space-3); border-radius: var(--radius-2); border: {{ add.minRing }}; background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-mono);">
+                        <span id="a-min-err" style="font: var(--weight-strong) var(--text-1)/var(--leading-1) var(--font-sans); color: var(--alert-ink);">{{ add.minErr }}</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <label for="a-desc" style="font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans);">Description <span style="font-weight: var(--weight-regular); color: var(--ink-2);">(optional)</span></label>
+                        <textarea id="a-desc" value="{{ add.desc }}" onChange="{{ add.onDesc }}" maxLength="500" rows="2" style="min-height: 64px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--field); color: var(--ink); font: var(--weight-regular) var(--text-3)/var(--leading-3) var(--font-sans); resize: vertical;"></textarea>
+                      </div>
+                      <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">It goes to the first free time; you can move it after.</p>
+                      <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                        <button type="submit" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ addLabel }}</button>
+                        <button type="button" onClick="{{ cancelAdd }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Cancel</button>
+                      </div>
+                    </form>
+                  </sc-if>
+                  <sc-if value="{{ notAdding }}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{ openAdd }}" style="align-self: flex-start; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">+ Add a step</button>
+                  </sc-if>
+
+                  <sc-if value="{{ hasDiscarded }}" hint-placeholder-val="{{ false }}">
+                    <div role="group" aria-labelledby="disc-h" style="display: flex; flex-direction: column; gap: var(--space-2);">
+                      <h3 id="disc-h" style="margin: 0; font: var(--weight-strong) var(--text-3)/var(--leading-3) var(--font-sans);">{{ discHead }}</h3>
+                      <p style="margin: 0; font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">They failed the check and won’t become tasks. Add one yourself if you still want it.</p>
+                      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+                        <sc-for list="{{ discarded }}" as="x" hint-placeholder-count="3">
+                          <li style="display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-2); background: var(--sunken);">
+                            <span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-mono); color: var(--ink-2);">Step {{ x.no }}</span>
+                            <span lang="pt" style="color: var(--ink-2); overflow-wrap: anywhere;">{{ x.title }}</span>
+                            <sc-for list="{{ x.reasons }}" as="y" hint-placeholder-count="1"><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ y }}</span></sc-for>
+                          </li>
+                        </sc-for>
+                      </ul>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </section>
+          </sc-if>
+        </div>
+
+        <div style="position: sticky; bottom: 0; z-index: 2; display: flex; flex-direction: column; pointer-events: none;">
+          <div role="status" aria-live="polite" aria-atomic="true" onFocus="{{ pauseNotice }}" onBlur="{{ resumeNotice }}" onPointerEnter="{{ pauseNotice }}" onPointerLeave="{{ resumeNotice }}" style="display: flex; justify-content: center; padding: 0 var(--space-3) var(--space-2);">
+            <sc-if value="{{ hasNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="pointer-events: auto; width: 100%; max-width: 480px; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4); border-radius: var(--radius-3); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-raised);">
+                <span style="flex: 1 1 150px; padding: var(--space-2) 0; text-wrap: pretty;">{{ noticeText }}</span>
+                <span style="display: flex; flex-wrap: wrap; gap: var(--space-1); margin-left: auto;">
+                  <sc-for list="{{ noticeActions }}" as="a" hint-placeholder-count="1">
+                    <button type="button" onClick="{{ a.fn }}" style="min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--on-primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ a.label }}</button>
+                  </sc-for>
+                  <button type="button" onClick="{{ dismissNotice }}" aria-label="Dismiss" style="width: var(--target-touch); height: var(--target-touch); border-radius: var(--radius-2); border: 0; background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-3)/1 var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed);">✕</button>
+                </span>
+              </div>
+            </sc-if>
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <div style="pointer-events: auto; width: {{ barW }};">
+              <sc-if value="{{ barDay }}" hint-placeholder-val="{{ true }}">
+                <nav aria-label="Days" style="display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-3); background: var(--surface); border-top: 1px solid var(--line);">
+                  <button type="button" onClick="{{ prevDay }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); text-align: left; cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));"><span aria-hidden="true">‹ </span><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Previous day, </span>{{ prevLabel }}</button>
+                  <button type="button" onClick="{{ nextDay }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-3); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); text-align: right; cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Next day, </span>{{ nextLabel }}<span aria-hidden="true"> ›</span></button>
+                </nav>
+              </sc-if>
+              <sc-if value="{{ barReview }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-3); background: var(--surface); border-top: 1px solid var(--line);">
+                  <sc-if value="{{ hasPrecheck }}" hint-placeholder-val="{{ false }}"><span style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2); text-wrap: pretty;">{{ precheck }}</span></sc-if>
+                  <sc-if value="{{ confirmDiscard }}" hint-placeholder-val="{{ false }}">
+                    <div role="group" aria-label="Discard this plan?" style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);">
+                      <span style="flex: 1 1 180px; text-wrap: pretty;">{{ discardQ }}</span>
+                      <button type="button" onClick="{{ doDiscard }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--alert-solid); background: var(--alert-solid); color: var(--on-alert); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--alert-solid-pressed); transform: scale(var(--press-scale));">Discard</button>
+                      <button type="button" onClick="{{ keepPlan }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Keep it</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ notConfirmDiscard }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+                      <button type="button" onClick="{{ askDiscard }}" style="flex: 1 1 auto; min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed); transform: scale(var(--press-scale));">Discard plan</button>
+                      <button type="button" onClick="{{ approve }}" aria-busy="{{ approveBusy }}" style="flex: 2 1 auto; min-height: var(--target-touch); padding: 0 var(--space-5); border-radius: var(--radius-2); border: 1px solid var(--primary); background: var(--primary); color: var(--on-primary); font: var(--weight-strong) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--primary-pressed); transform: scale(var(--press-scale));">{{ approveLabel }}</button>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div role="dialog" aria-modal="true" aria-labelledby="menu-h" onKeyDown="{{ onMenuKey }}" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-5); background: var(--raised); border-top: 1px solid var(--line-strong); border-radius: var(--radius-4) var(--radius-4) 0 0; box-shadow: var(--shadow-raised);">
+          <div style="display: flex; align-items: center; gap: var(--space-2);">
+            <h2 id="menu-h" style="flex: 1; margin: 0; font: var(--weight-strong) var(--text-4)/var(--leading-4) var(--font-sans);">Menu</h2>
+            <button type="button" id="menu-close" onClick="{{ closeMenu }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-2)/var(--leading-2) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Close</button>
+          </div>
+          <dl style="margin: 0; display: flex; flex-direction: column; gap: var(--space-2);">
+            <div><dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Signed in as</dt><dd style="margin: 0; overflow-wrap: anywhere;">gabriel@example.com</dd></div>
+            <div><dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Time zone</dt><dd style="margin: 0;">Europe/Lisbon</dd></div>
+            <div><dt style="font: var(--weight-regular) var(--text-2)/var(--leading-2) var(--font-sans); color: var(--ink-2);">Plans go into</dt><dd style="margin: 0; text-wrap: pretty;">07:00–23:00, Monday to Friday, in blocks of up to 60 minutes</dd></div>
+          </dl>
+          <button type="button" onClick="{{ closeMenu }}" style="min-height: var(--target-touch); padding: 0 var(--space-4); border-radius: var(--radius-2); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: var(--weight-medium) var(--text-3)/var(--leading-3) var(--font-sans); cursor: pointer;" style-active="background: var(--pressed);">Sign out</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <section data-screen-label="Decisions" style="max-width: 760px; width: 100%; margin: 0 auto; padding: 0 var(--space-5) var(--space-10); display: flex; flex-direction: column; gap: var(--space-3);">
+    <h2 style="margin: 0; font: var(--weight-strong) var(--text-5)/var(--leading-5) var(--font-sans);">What this screen decides</h2>
+    <ul style="margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); color: var(--ink-2);">
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Where the request starts</strong>: one “Plan” button in the header, the same place at every width, next to Menu. On the phone, the bottom bar belongs to moving between days and the header is the one thing always on screen, so Plan goes up there. Plan is a destination, not a quick capture, and the button is also where the plan reports back: its label carries the state.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Where the wait shows</strong>: on that button, as a word (“Plan · queued”, “Plan · making…”, “Plan · ready”). Nothing moves, so reduced motion changes nothing. When the plan is ready, the status region says so above the day bar, with Review, and it stays until it’s dismissed or acted on, since a ready plan isn’t something to time out. The request lives on the server, so after a reload the button shows the same state. Here that’s stood in for by local storage.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The review on the phone</strong>: a full view that replaces the day (‹ Week to go back). Steps are rows like tasks: at rest they show the time or the reason they have none, the length, “after step N”, the description and the links, and no verbs. Tapping opens Edit and Remove. Approve and Discard take the place of the day bar while the review is open, and above them a line says how many steps have no time yet, before the server has to. “What it adds” shows each day as booked → booked with the plan, out of the budget.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The review at 1100 and up</strong>: a 440px panel beside the week. Proposed steps sit in their days with a dashed edge, “proposed”, in ink-2, so you can see where they land while you review. From 640 to 1099 it’s the phone’s view at a wider measure (see 768).</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Progress</strong>: on the Plan button (“Plan · 3 of 5”), and as the large figure on the plan’s page, “3 of 5 preparations done”. Each task that came from the plan says so with a link back (“from your plan · step 2”), so you can get to the count from anywhere a step shows. A deleted task leaves the total, and the page says that it did.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">The accent</strong> marks refusals, failed requests, the approve report and a step the server named. Not this week, no room and after another step aren’t errors; they’re a reason and an action, in neutral ink.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Writing by hand</strong> is the same draft, empty, with a “What it’s for” field in place of the request. It’s always next to “Make a plan”, and it’s the action offered when the model is down or planning is paused.</li>
+      <li style="text-wrap: pretty;"><strong style="color: var(--ink);">Numbers</strong>: the usable day is 07:00–23:00, Saturday and Sunday are days off, the budget is 16h and the block is 60 minutes. This week, Thursday has three 30-minute gaps after 14:25 and Friday is already over budget, so three steps fit and three wait for next week, Monday from 07:00. No new tokens: every ground here is already a pair in contrast-pairs.json.</li>
+    </ul>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  WD = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  WS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  MONL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  NOW0 = 3 * 1440 + 860; WIN = [420, 1380]; BUDGET = 960; BLOCK = 60; KEY = 'syncaai.plan.v1';
+  REQ = 'Estudar para a prova de cálculo de quarta, 28: limites, derivadas e integrais';
+  P = {
+    past: 'A step cannot start in the past.', task: 'That time is already taken by a task.', step: 'That time is taken by another step of this plan.',
+    commit: 'The plan cannot become tasks as it stands. Nothing was written.', empty: 'The plan has no steps to commit. Add one, or discard the plan.',
+    race: 'A task was booked on one of these times just now. Nothing was written; read the plan again.',
+    noTime: 'It has no time yet. Give it one, or remove it.', passed: 'Its start has passed. Move it, or remove it.', booked: 'A task was booked on its time since. Move it, or remove it.',
+    afterUnplaced: 'A step it depends on has no time yet. Place that first.', ntwRoom: 'It does not fit before Sunday. It can go next week.', ntwDep: 'A step it depends on goes next week, so this one does too.',
+    waited: 'The plan waited too long to start. Ask for it again.', tries: 'The plan could not be made in 3 tries. Ask for it again.', none: 'No usable step came back, even after one correction. Try again.'
+  };
+  noRoom(m) { return 'No free time in the plan’s days holds ' + m + ' minutes in one piece.'; }
+  REF = {
+    r409: { msg: 'Review or discard the plan you have first.', open: true },
+    r429h: { msg: 'At most 10 plans an hour. Try again later.', retry: 23 },
+    r429d: { msg: 'At most 30 plans in 24 hours. Try again later.', retry: 18 * 60 + 52 },
+    r429m: { msg: "This month's plans are used up. They renew on the first of next month.", until: 'They come back on Sunday 1 November.', manual: true },
+    r503p: { msg: 'Planning is paused until next month.', manual: true },
+    r503d: { msg: 'Planning is unavailable right now. Try again in a minute.', retry: 1, manual: true }
+  };
+  MODEL = [
+    ['Separar listas e formulário', 'Juntar as listas 3 a 5 e o formulário da professora num lugar só.', 30, [], []],
+    ['Limites: resumo da teoria', 'Definição, limites laterais e no infinito, numa página.', 30, [0], [['Notas de aula — limites', 'https://moodle.example.edu/calculo1/limites']]],
+    ['Limites: exercícios 1 a 15', 'Lista 3. Conferir as respostas no fim.', 60, [1], []],
+    ['Derivadas: regras e regra da cadeia', 'Refazer os exemplos da aula 7 antes da lista 4.', 60, [2], [['Regra da cadeia — Khan Academy', 'https://pt.khanacademy.org/math/calculus-1']]],
+    ['Integrais: substituição e por partes', 'Lista 5, itens ímpares.', 60, [3], []],
+    ['Fórmulas de integral em fichas', 'Uma ficha por técnica, para revisar no caminho.', 30, [], []]
+  ];
+  DISC = [
+    { no: 7, title: 'Simulado completo', reasons: ['It takes 180 minutes, and a step has to take between 15 and 60.'] },
+    { no: 8, title: 'Limites: exercícios 1 a 15', reasons: ['The title repeats an earlier step’s.'] },
+    { no: 9, title: 'Videoaula de revisão', reasons: ['Link 1: the URL is not an absolute http or https address.'] }
+  ];
+  frameRef = React.createRef(); scrollRef = React.createRef(); planErrRef = React.createRef();
+  FRAMES = { '320': [320, 640, '320 × 640'], '375': [375, 760, '375 × 760'], land: [667, 375, '667 × 375 landscape'], '768': [768, 1024, '768 × 1024'], desk: [1280, 820, '1280 × 820 desktop'] };
+
+  seedTasks() {
+    return [[0, 540, 180, 'Aula de estatística', 1], [0, 840, 150, 'Relatório trimestral', 1], [0, 1140, 120, 'Estudo dirigido', 1], [1, 480, 600, 'Turno no laboratório', 1], [1, 1140, 90, 'Leitura — capítulo 3', 1],
+      [2, 420, 780, 'Plantão', 1], [2, 1230, 135, 'Revisão de anotações', 1], [2, 1380, 180, 'Deploy noturno', 1], [3, 480, 120, 'Aula de cálculo', 1], [3, 630, 90, 'Grupo de estudo', 1],
+      [3, 810, 180, 'Trabalho de faculdade', 0], [3, 1020, 60, 'Leitura — capítulo 4', 0], [3, 1110, 240, 'Revisão para prova', 0], [4, 30, 60, 'Leitura — capítulo 5', 0], [4, 300, 720, 'Turno no hospital', 0],
+      [4, 1050, 150, 'Ensaio da banda', 0], [4, 1230, 60, 'Revisão de slides', 0], [4, 1320, 105, 'Preparar apresentação', 0], [5, 600, 120, 'Feira', 0], [6, 660, 180, 'Almoço em família', 0]]
+      .map((r, i) => ({ id: 't' + (i + 1), k: r[0], st: r[1], dur: r[2], title: r[3], done: !!r[4], planId: null, stepNo: null }));
+  }
+  base() { return { tasks: this.seedTasks(), now: this.NOW0, job: null, plan: null, view: 'ask', planOpen: false, day: 3, askText: this.REQ, horizon: 14, askTried: false, refusal: null, busy: null, notice: null, openStep: null, edit: null, adding: null, planErr: null, confirmDiscard: false, raceNext: false, menuOpen: false, preset: 'ask', freeze: false }; }
+  state = Object.assign(this.base(), this.load(), { frame: '375', theme: 'light', reduced: false, zoom: false, audit: '' });
+
+  load() { try { const v = JSON.parse(localStorage.getItem(this.KEY) || 'null'); if (!v) return {}; const t = this.seedTasks().concat(v.planTasks || []).filter(x => !(v.gone || []).includes(x.id)); v.planTasks.forEach(pt => { const x = t.find(y => y.id === pt.id); if (x) x.done = pt.done; }); return { job: v.job, plan: v.plan, tasks: t, view: v.view || 'ask', planOpen: !!v.planOpen, preset: v.preset || 'ask' }; } catch (e) { return {}; } }
+  save() { try { const s = this.state; localStorage.setItem(this.KEY, JSON.stringify({ job: s.job, plan: s.plan, view: s.view, planOpen: s.planOpen, preset: s.preset, planTasks: s.tasks.filter(t => t.planId), gone: (s.plan && s.plan.gone) || [] })); } catch (e) {} }
+
+  componentDidMount() { this.prev = Object.assign({}, this.state); this.applyEnv(); if (this.state.job && (this.state.job.status === 'queued' || this.state.job.status === 'running')) this.runJob(); }
+  componentWillUnmount() { clearTimeout(this.jT); clearTimeout(this.nT); clearTimeout(this.wT); }
+  componentDidUpdate() {
+    const s = this.state, ps = this.prev || s; this.prev = Object.assign({}, s);
+    if (ps === s) return;
+    if (ps.theme !== s.theme || ps.reduced !== s.reduced || ps.zoom !== s.zoom || ps.frame !== s.frame) this.applyEnv();
+    if (ps.job !== s.job || ps.plan !== s.plan || ps.view !== s.view || ps.planOpen !== s.planOpen || ps.tasks !== s.tasks) this.save();
+    if (s.planErr && ps.planErr !== s.planErr && this.planErrRef.current) { this.planErrRef.current.focus(); }
+    if (this.wantSel) { const sel = this.wantSel; this.wantSel = null; setTimeout(() => { const el = this.frameRef.current && this.frameRef.current.querySelector(sel); if (el) el.focus(); }, 40); }
+    if (ps.planOpen !== s.planOpen && this.scrollRef.current) this.scrollRef.current.scrollTop = 0;
+  }
+  applyEnv() {
+    const s = this.state, f = this.frameRef.current;
+    document.documentElement.setAttribute('data-theme', s.theme);
+    if (!f) return;
+    [[12, 16], [13, 18], [15, 22], [18, 24], [22, 28], [28, 32], [36, 40], [48, 52]].forEach((p, i) => {
+      if (s.zoom) { f.style.setProperty('--text-' + (i + 1), p[0] * 2 + 'px'); f.style.setProperty('--leading-' + (i + 1), p[1] * 2 + 'px'); }
+      else { f.style.removeProperty('--text-' + (i + 1)); f.style.removeProperty('--leading-' + (i + 1)); }
+    });
+    ['--dur-1', '--dur-2', '--dur-3'].forEach(k => s.reduced ? f.style.setProperty(k, '1ms') : f.style.removeProperty(k));
+    s.reduced ? f.style.setProperty('--press-scale', '1') : f.style.removeProperty('--press-scale');
+  }
+
+  fmt(m) { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; if (m === 0) return '0h'; if (h === 0) return r + 'm'; return h + 'h' + (r ? String(r).padStart(2, '0') : ''); }
+  clock(m) { m = ((m % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+  info(k) { const dt = new Date(Date.UTC(2026, 9, 19 + k)); return { dn: dt.getUTCDate(), mo: dt.getUTCMonth(), wd: k % 7, len: k === 6 ? 1500 : 1440 }; }
+  short(k) { const i = this.info(k); return this.WS[i.wd] + ' ' + i.dn; }
+  shortM(k) { const i = this.info(k); return this.WS[i.wd] + ' ' + i.dn + ' ' + this.MON[i.mo]; }
+  dayAbs(k) { return k * 1440 + (k > 6 ? 60 : 0); }
+  wall(k, w) { return this.dayAbs(k) + ((k === 6 && w >= 120) ? w + 60 : w); }
+  kOf(abs) { let k = Math.floor(abs / 1440); if (k > 6 && abs < this.dayAbs(k)) k -= 1; return Math.max(0, k); }
+  wallOf(abs) { const k = this.kOf(abs); let w = abs - this.dayAbs(k); if (k === 6 && w >= 180) w -= 60; return w; }
+  dayOff(k) { return k % 7 >= 5; }
+  ceil5(a) { return Math.ceil(a / 5) * 5; }
+  tAbs(t) { return this.wall(t.k, t.st); }
+  booked(k, tasks) { const ds = this.dayAbs(k), de = ds + this.info(k).len; return tasks.reduce((a, t) => { const s = this.tAbs(t), e = s + t.dur; return a + Math.max(0, Math.min(e, de) - Math.max(s, ds)); }, 0); }
+  lvOf(b) { return b > 1200 ? 'unsustainable' : b > 1080 ? 'strained' : b > this.BUDGET ? 'heavy' : 'fine'; }
+  lvText(lv, len, b) { const u = this.fmt(Math.max(0, len - b)); return { heavy: 'No margin for anything running late.', strained: 'Extremely heavy day. ' + u + ' unbooked.', unsustainable: 'Unsustainable. ' + u + ' unbooked.' }[lv] || ''; }
+  taskHit(a, e, tasks) { return tasks.find(t => this.tAbs(t) < e && this.tAbs(t) + t.dur > a) || null; }
+
+  schedule(list, ks, now, tasks, fixed, endsInit) {
+    const e0 = this.ceil5(now + 1);
+    const days = ks.map(k => {
+      let free = [[this.wall(k, this.WIN[0]), this.wall(k, this.WIN[1])]];
+      const busy = tasks.map(t => [this.tAbs(t), this.tAbs(t) + t.dur]).concat(fixed.map(f => [f.start, f.start + f.min]));
+      busy.forEach(([a, b]) => { free = free.flatMap(([x, y]) => (b <= x || a >= y) ? [[x, y]] : [[x, a], [b, y]].filter(p => p[0] < p[1])); });
+      const used = this.booked(k, tasks) + fixed.filter(f => this.kOf(f.start) === k).reduce((n, f) => n + f.min, 0);
+      return { budget: this.dayOff(k) ? 0 : this.BUDGET - used, free };
+    });
+    const ends = Object.assign({}, endsInit), out = {};
+    list.forEach(st => {
+      const pre = st.after.filter(id => id in ends).map(id => ends[id]);
+      if (pre.some(x => x === null)) { ends[st.id] = null; out[st.id] = { start: null, state: 'after_unplaced', reason: this.P.afterUnplaced }; return; }
+      const earliest = Math.max(e0, ...pre); let start = null;
+      for (const d of days) {
+        if (d.budget < st.min) continue;
+        for (let i = 0; i < d.free.length; i++) { const [o, c] = d.free[i], s = this.ceil5(Math.max(o, earliest)); if (s + st.min <= c) { d.free.splice(i, 1, ...[[o, s], [s + st.min, c]].filter(p => p[0] < p[1])); d.budget -= st.min; start = s; break; } }
+        if (start != null) break;
+      }
+      if (start == null) { ends[st.id] = null; out[st.id] = { start: null, state: 'no_room', reason: this.noRoom(st.min) }; }
+      else { ends[st.id] = start + st.min; out[st.id] = { start, state: 'placed', reason: null }; }
+    });
+    return out;
+  }
+  range(a, b) { const r = []; for (let i = a; i <= b; i++) r.push(i); return r; }
+  placeThisWeek(plan, list, tasks, now, fixed) {
+    const ends = {}; fixed.forEach(f => { ends[f.id] = f.start + f.min; });
+    plan.steps.forEach(s => { if (!fixed.includes(s) && !list.includes(s)) ends[s.id] = null; });
+    const res = this.schedule(list, this.range(plan.firstK, Math.min(6, plan.lastK)), now, tasks, fixed, ends);
+    if (plan.lastK > 6) Object.keys(res).forEach(id => { const r = res[id]; if (r.start == null) res[id] = { start: null, state: 'not_this_week', reason: r.state === 'no_room' ? this.P.ntwRoom : this.P.ntwDep }; });
+    return res;
+  }
+  makePlan(request, horizon, byModel, tasks, now) {
+    const plan = { id: 'p' + Date.now(), status: 'pending', request, horizon, firstK: 3, lastK: 3 + horizon - 1, byModel, steps: [], discarded: byModel ? this.DISC.map(d => Object.assign({}, d)) : [], came: byModel ? 9 : 0, gone: [] };
+    if (byModel) {
+      plan.steps = this.MODEL.map((m, i) => ({ id: 's' + (i + 1), title: m[0], desc: m[1], min: m[2], after: m[3].map(x => 's' + (x + 1)), links: m[4].map(l => ({ label: l[0], url: l[1] })), start: null, state: 'no_room', reason: null }));
+      const res = this.placeThisWeek(plan, plan.steps, tasks, now, []);
+      plan.steps.forEach(s => Object.assign(s, res[s.id]));
+    }
+    return plan;
+  }
+  setPlan(fn) { this.setState(s => ({ plan: fn(JSON.parse(JSON.stringify(s.plan))) })); }
+
+  runJob() {
+    const s = this.state; clearTimeout(this.jT); if (s.freeze || !s.job) return;
+    if (s.job.status === 'queued') this.jT = setTimeout(() => { this.setState(x => ({ job: Object.assign({}, x.job, { status: 'running' }) }), () => this.runJob()); }, 2500);
+    else if (s.job.status === 'running') this.jT = setTimeout(() => {
+      const x = this.state, plan = this.makePlan(x.job.request, x.job.horizon, true, x.tasks, x.now);
+      this.setState({ job: Object.assign({}, x.job, { status: 'done' }), plan, view: 'review' });
+      this.notify('Your plan is ready: ' + plan.steps.length + ' steps, ' + plan.discarded.length + ' discarded.', [{ label: 'Review', fn: () => { this.setState({ notice: null, planOpen: true, view: 'review' }); this.wantSel = '#plan-h'; } }], true);
+    }, 3500);
+  }
+  notify(text, actions, sticky) { clearTimeout(this.nT); this.setState({ notice: { text, actions: actions || [], sticky: !!sticky } }); this.arm(sticky); }
+  arm(sticky) { clearTimeout(this.nT); if (sticky || this.state.freeze || (this.state.notice && this.state.notice.sticky)) return; this.nT = setTimeout(() => this.setState({ notice: null }), 9000); }
+  write(target, fn, ms) { this.setState({ busy: target }); if (this.state.freeze) return; clearTimeout(this.wT); this.wT = setTimeout(() => { this.setState({ busy: null }); fn(); }, ms || 800); }
+
+  submitAsk() {
+    const s = this.state, txt = s.askText.trim();
+    if (!txt) { this.setState({ askTried: true }); this.wantSel = '#p-req'; return; }
+    if (s.refusal) return;
+    this.write('ask', () => { this.setState({ job: { status: 'queued', request: txt, horizon: s.horizon, at: s.now }, view: 'wait', askTried: false }, () => this.runJob()); }, 600);
+  }
+  startManual() { const s = this.state; const plan = this.makePlan('', s.horizon, false, s.tasks, s.now); this.setState({ plan, view: 'review', planOpen: true, refusal: null, adding: { title: '', min: '60', desc: '', tried: false }, job: null }); this.wantSel = '#p-for'; }
+  stepErrs(plan) {
+    const s = this.state, out = {};
+    plan.steps.forEach(p => {
+      if (p.start == null) out[p.id] = this.P.noTime;
+      else if (p.start <= s.now) out[p.id] = this.P.passed;
+      else if (this.taskHit(p.start, p.start + p.min, s.tasks)) out[p.id] = this.P.booked;
+    });
+    return out;
+  }
+  approve() {
+    const s = this.state, plan = s.plan;
+    if (s.busy === 'approve') return;
+    this.write('approve', () => {
+      const x = this.state;
+      if (!plan.steps.length) { this.setState({ planErr: { msg: this.P.empty, list: [], steps: {} } }); return; }
+      if (x.raceNext) { this.setState({ raceNext: false, planErr: { msg: this.P.race, list: [], steps: {}, race: true } }); return; }
+      const errs = this.stepErrs(x.plan), ids = Object.keys(errs);
+      if (ids.length) { const no = (id) => x.plan.steps.findIndex(p => p.id === id) + 1; this.setState({ planErr: { msg: this.P.commit, list: ids.map(id => 'Step ' + no(id) + ', ' + x.plan.steps.find(p => p.id === id).title + ': ' + errs[id]), steps: errs } }); return; }
+      const made = x.plan.steps.map((p, i) => ({ id: 'pt' + x.plan.id + i, k: this.kOf(p.start), st: this.wallOf(p.start), dur: p.min, title: p.title, done: false, planId: x.plan.id, stepNo: i + 1 }));
+      this.setState({ tasks: x.tasks.concat(made), plan: Object.assign({}, x.plan, { status: 'approved', taskIds: made.map(t => t.id) }), view: 'approved', planErr: null, openStep: null, edit: null, adding: null });
+      this.notify(made.length + ' tasks added to your week from the plan.', [{ label: 'Show the week', fn: () => this.setState({ notice: null, planOpen: false, day: made[0].k }) }]);
+    }, 900);
+  }
+  sendNext() {
+    const s = this.state, plan = s.plan;
+    this.write('send', () => {
+      const x = this.state, p = JSON.parse(JSON.stringify(x.plan));
+      const list = p.steps.filter(st => st.state === 'not_this_week'), fixed = p.steps.filter(st => st.start != null);
+      const ends = {}; fixed.forEach(f => { ends[f.id] = f.start + f.min; });
+      const res = this.schedule(list, this.range(7, p.lastK), x.now, x.tasks, fixed, ends);
+      list.forEach(st => Object.assign(st, res[st.id]));
+      const placed = list.filter(st => st.start != null);
+      this.setState({ plan: p });
+      this.notify(placed.length + ' steps placed next week, from ' + (placed[0] ? this.short(this.kOf(placed[0].start)) + ' ' + this.clock(this.wallOf(placed[0].start)) : '—') + '.');
+    });
+  }
+  saveStep() {
+    const s = this.state, ed = s.edit, p0 = s.plan.steps.find(p => p.id === ed.id);
+    const er = this.edErrs(ed); if (er.title || er.min || er.start) { this.setState({ edit: Object.assign({}, ed, { tried: true }) }); return; }
+    const [hh, mm] = ed.time.split(':').map(Number), abs = this.wall(Number(ed.day), hh * 60 + mm), min = Number(ed.min);
+    this.write(ed.id, () => {
+      const x = this.state; let err = null;
+      if (abs <= x.now) err = this.P.past;
+      else if (this.taskHit(abs, abs + min, x.tasks)) err = this.P.task;
+      else if (x.plan.steps.some(o => o.id !== ed.id && o.start != null && o.start < abs + min && o.start + o.min > abs)) err = this.P.step;
+      if (err) { this.setState({ edit: Object.assign({}, x.edit, { server: err }) }); this.wantSel = '#e-time'; return; }
+      this.setPlan(p => { const st = p.steps.find(q => q.id === ed.id); Object.assign(st, { title: ed.title.trim(), min, start: abs, state: 'placed', reason: null }); return p; });
+      this.setState(y => ({ edit: null, planErr: y.planErr ? Object.assign({}, y.planErr, { steps: Object.assign({}, y.planErr.steps, { [ed.id]: undefined }) }) : null }));
+      this.wantSel = '#st-' + ed.id;
+    });
+  }
+  edErrs(ed) {
+    const e = {}, n = Number(ed.min);
+    if (!ed.title.trim()) e.title = 'A step needs a title.';
+    if (!/^\d+$/.test(String(ed.min).trim()) || n < 15 || n > this.BLOCK) e.min = 'Between 15 and ' + this.BLOCK + ' minutes, your preferred block.';
+    if (!/^\d{2}:\d{2}$/.test(ed.time || '')) e.start = 'Pick a start time.';
+    return e;
+  }
+  removeStep(id) {
+    const s = this.state, idx = s.plan.steps.findIndex(p => p.id === id), snap = s.plan.steps[idx];
+    this.setPlan(p => { p.steps = p.steps.filter(q => q.id !== id).map(q => Object.assign(q, { after: q.after.filter(a => a !== id) })); return p; });
+    this.setState({ openStep: null, edit: null });
+    this.notify('Removed step ' + (idx + 1) + ', “' + snap.title + '”.', [{ label: 'Undo', fn: () => { this.setPlan(p => { p.steps.splice(idx, 0, snap); return p; }); this.setState({ notice: null }); } }]);
+  }
+  submitAdd() {
+    const s = this.state, a = s.adding, n = Number(a.min);
+    if (!a.title.trim() || !/^\d+$/.test(String(a.min).trim()) || n < 15 || n > this.BLOCK) { this.setState({ adding: Object.assign({}, a, { tried: true }) }); this.wantSel = !a.title.trim() ? '#a-title' : '#a-min'; return; }
+    this.write('add', () => {
+      const x = this.state, p = JSON.parse(JSON.stringify(x.plan));
+      const st = { id: 's' + Date.now(), title: a.title.trim(), desc: a.desc.trim(), min: n, after: [], links: [], start: null, state: 'no_room', reason: null };
+      const fixed = p.steps.filter(q => q.start != null);
+      Object.assign(st, this.placeThisWeek(p, [st], x.tasks, x.now, fixed)[st.id]);
+      if (st.state === 'not_this_week' || st.state === 'no_room') {
+        if (p.lastK > 6) { const r = this.schedule([st], this.range(7, p.lastK), x.now, x.tasks, fixed, {}); if (r[st.id].start != null) Object.assign(st, r[st.id]); }
+      }
+      p.steps.push(st);
+      this.setState({ plan: p, adding: null });
+      this.notify(st.start != null ? 'Added “' + st.title + '” at ' + this.short(this.kOf(st.start)) + ', ' + this.clock(this.wallOf(st.start)) + ', the first free time.' : 'Added “' + st.title + '”. ' + st.reason);
+      this.wantSel = '#st-' + st.id;
+    });
+  }
+
+  preset(id) {
+    clearTimeout(this.jT); clearTimeout(this.nT); clearTimeout(this.wT);
+    const b = this.base(); b.preset = id;
+    const plan = () => this.makePlan(this.REQ, 14, true, b.tasks, b.now);
+    const job = (status) => ({ status, request: this.REQ, horizon: 14, at: this.NOW0 });
+    const R = (k) => { b.planOpen = true; b.view = 'ask'; b.refusal = k; };
+    switch (id) {
+      case 'ask': b.planOpen = true; b.askText = ''; break;
+      case 'askFilled': b.planOpen = true; break;
+      case 'askEmpty': b.planOpen = true; b.askText = ''; b.askTried = true; break;
+      case 'r409': R('r409'); b.plan = plan(); break;
+      case 'r429h': case 'r429d': case 'r429m': case 'r503p': case 'r503d': R(id); break;
+      case 'queued': b.job = job('queued'); b.view = 'wait'; b.planOpen = true; b.freeze = true; break;
+      case 'running': b.job = job('running'); b.view = 'wait'; b.freeze = true; break;
+      case 'ready': b.job = job('done'); b.plan = plan(); b.view = 'review'; b.freeze = true; b.notice = { text: 'Your plan is ready: 6 steps, 3 discarded.', actions: [{ label: 'Review', fn: () => this.setState({ notice: null, planOpen: true }) }], sticky: true }; break;
+      case 'fWait': case 'fTries': case 'fNone': b.job = Object.assign(job('failed'), { reason: { fWait: this.P.waited, fTries: this.P.tries, fNone: this.P.none }[id] }); b.view = 'failed'; b.planOpen = true; break;
+      case 'live': b.planOpen = true; break;
+      case 'review': b.plan = plan(); b.view = 'review'; b.planOpen = true; break;
+      case 'openStep': b.plan = plan(); b.view = 'review'; b.planOpen = true; b.openStep = 's3'; break;
+      case 'edit': case 'e422': case 'e409t': case 'e409s': {
+        b.plan = plan(); b.view = 'review'; b.planOpen = true; b.openStep = 's3';
+        const ed = { id: 's3', title: 'Limites: exercícios 1 a 15', min: '60', day: '7', time: '07:00', tried: false, server: null };
+        if (id === 'e422') Object.assign(ed, { day: '3', time: '12:00', server: this.P.past });
+        if (id === 'e409t') Object.assign(ed, { day: '3', time: '17:00', server: this.P.task });
+        if (id === 'e409s') Object.assign(ed, { day: '3', time: '18:00', server: this.P.step });
+        b.edit = ed; this.wantSel = id === 'edit' ? '#e-day' : '#e-time'; break;
+      }
+      case 'add': b.plan = plan(); b.view = 'review'; b.planOpen = true; b.adding = { title: 'Revisar a prova antiga', min: '45', desc: '', tried: false }; this.wantSel = '#a-title'; break;
+      case 'h4': b.plan = this.makePlan(this.REQ, 4, true, b.tasks, b.now); b.view = 'review'; b.planOpen = true; break;
+      case 'passed': b.now = 3 * 1440 + 1000; b.plan = this.makePlan(this.REQ, 14, true, b.tasks, this.NOW0); b.view = 'review'; b.planOpen = true; break;
+      case 'sent': { const p = plan(); const list = p.steps.filter(st => st.state === 'not_this_week'), fixed = p.steps.filter(st => st.start != null); const ends = {}; fixed.forEach(f => { ends[f.id] = f.start + f.min; }); const r = this.schedule(list, this.range(7, p.lastK), b.now, b.tasks, fixed, ends); list.forEach(st => Object.assign(st, r[st.id])); b.plan = p; b.view = 'review'; b.planOpen = true; break; }
+      case 'discard': b.plan = plan(); b.view = 'review'; b.planOpen = true; b.confirmDiscard = true; break;
+      case 'aFail': { const p = plan(); b.plan = p; b.view = 'review'; b.planOpen = true; b.tasks.push({ id: 'tx', k: 3, st: 1350, dur: 30, title: 'Ligar para a orientadora', done: false, planId: null, stepNo: null }); const errs = {}; p.steps.forEach(st => { if (st.start == null) errs[st.id] = this.P.noTime; else if (st.start === this.wall(3, 1350)) errs[st.id] = this.P.booked; }); b.planErr = { msg: this.P.commit, list: Object.keys(errs).map(k => 'Step ' + (p.steps.findIndex(x => x.id === k) + 1) + ', ' + p.steps.find(x => x.id === k).title + ': ' + errs[k]), steps: errs }; break; }
+      case 'aRace': { const p = plan(); b.plan = p; b.view = 'review'; b.planOpen = true; b.planErr = { msg: this.P.race, list: [], steps: {}, race: true }; break; }
+      case 'approving': { b.plan = plan(); b.view = 'review'; b.planOpen = true; b.busy = 'approve'; b.freeze = true; break; }
+      case 'approved': case 'progress': {
+        const p = plan(); const list = p.steps.filter(st => st.state === 'not_this_week'), fixed = p.steps.filter(st => st.start != null); const ends = {}; fixed.forEach(f => { ends[f.id] = f.start + f.min; }); const r = this.schedule(list, this.range(7, p.lastK), b.now, b.tasks, fixed, ends); list.forEach(st => Object.assign(st, r[st.id]));
+        const made = p.steps.map((st, i) => ({ id: 'pt' + p.id + i, k: this.kOf(st.start), st: this.wallOf(st.start), dur: st.min, title: st.title, done: false, planId: p.id, stepNo: i + 1 }));
+        p.status = 'approved'; p.taskIds = made.map(t => t.id);
+        if (id === 'progress') { made[0].done = true; made[1].done = true; made[5].done = true; p.gone = [made[4].id]; made.splice(4, 1); b.now = 3 * 1440 + 1400; }
+        b.tasks = b.tasks.concat(made); b.plan = p; b.view = 'approved'; b.planOpen = id === 'progress';
+        if (id === 'approved') b.notice = { text: '6 tasks added to your week from the plan.', actions: [{ label: 'Show the week', fn: () => this.setState({ notice: null, planOpen: false }) }] };
+        break;
+      }
+      case 'expired': { const p = plan(); p.status = 'expired'; b.plan = p; b.view = 'expired'; b.planOpen = true; break; }
+      case 'manual': { b.plan = this.makePlan('', 14, false, b.tasks, b.now); b.view = 'review'; b.planOpen = true; b.adding = { title: '', min: '60', desc: '', tried: false }; this.wantSel = '#p-for'; break; }
+      case 'manualFilled': { const p = this.makePlan('Organizar a mudança de quarto', 14, false, b.tasks, b.now); const st = [['Separar caixas e fita', 30], ['Doar as roupas que não uso', 30]].map((x, i) => ({ id: 'm' + i, title: x[0], desc: '', min: x[1], after: i ? ['m0'] : [], links: [], start: null, state: 'no_room', reason: null })); p.steps = st; const r = this.placeThisWeek(p, st, b.tasks, b.now, []); st.forEach(x => Object.assign(x, r[x.id])); b.plan = p; b.view = 'review'; b.planOpen = true; break; }
+    }
+    this.setState(b, () => { if (b.notice && !b.notice.sticky) this.arm(false); this.save(); });
+  }
+
+  renderVals() {
+    const s = this.state, [fw, fh, cap] = this.FRAMES[s.frame];
+    const narrow = fw < 640, wide = fw >= 1100, mid = !narrow && !wide;
+    const plan = s.plan, pending = plan && plan.status === 'pending' && s.view === 'review';
+    const btn = (on) => ({ on: on ? 'true' : 'false', bg: on ? 'var(--primary)' : 'var(--surface)', ink: on ? 'var(--on-primary)' : 'var(--ink)' });
+    const progress = plan && plan.status === 'approved' ? (() => { const ts = s.tasks.filter(t => t.planId === plan.id); return { done: ts.filter(t => t.done).length, total: ts.length, gone: (plan.gone || []).length }; })() : null;
+
+    // header plan button
+    let sub = '', aria = 'Plan';
+    const job = s.job;
+    if (job && job.status === 'queued') sub = 'queued';
+    else if (job && job.status === 'running') sub = 'making…';
+    else if (job && job.status === 'failed') sub = 'didn’t work';
+    else if (plan && plan.status === 'pending') sub = plan.byModel ? 'ready to review' : 'draft';
+    else if (progress) sub = progress.done + ' of ' + progress.total;
+    aria = 'Plan' + (sub ? ', ' + sub : '');
+    const planBtnOn = s.planOpen;
+
+    // rows for a day
+    const stepsProposed = pending ? plan.steps.filter(p => p.start != null) : [];
+    const taskRow = (t, compact) => {
+      const fromPlan = !!t.planId;
+      return { isTask: true, isStep: false, time: this.clock(t.st) + '–' + this.clock(t.st + t.dur), title: t.title, lang: 'pt', ink: 'var(--ink)', doneStr: t.done ? 'true' : 'false', boxBg: t.done ? 'var(--primary)' : 'var(--field)', boxLine: t.done ? 'var(--primary)' : 'var(--line-strong)', tick: t.done ? '✓' : '', checkAria: 'Done: ' + t.title, toggle: () => this.setState(x => ({ tasks: x.tasks.map(y => y.id === t.id ? Object.assign({}, y, { done: !y.done }) : y) })), hasTag: fromPlan, tagText: fromPlan ? 'from your plan · step ' + t.stepNo : '', openPlan: () => this.setState({ planOpen: true, view: plan && plan.status === 'approved' ? 'approved' : s.view }), edge: '1px solid var(--line)', bg: 'var(--surface)', sortKey: this.tAbs(t) };
+    };
+    const stepRow = (p) => { const i = plan.steps.indexOf(p) + 1; return { isTask: false, isStep: true, time: this.clock(this.wallOf(p.start)) + '–' + this.clock(this.wallOf(p.start) + p.min) + ' · proposed', title: p.title, lang: 'pt', ink: 'var(--ink-2)', hasTag: true, tagText: 'step ' + i + ' of your plan', openPlan: () => { this.setState({ planOpen: true, openStep: p.id }); this.wantSel = '#st-' + p.id; }, edge: '1.5px dashed var(--line-strong)', bg: 'transparent', sortKey: p.start }; };
+    const rowsFor = (k) => s.tasks.filter(t => t.k === k).map(t => taskRow(t)).concat(stepsProposed.filter(p => this.kOf(p.start) === k).map(stepRow)).sort((a, b) => a.sortKey - b.sortKey);
+    const delta = (k) => { const add = stepsProposed.filter(p => this.kOf(p.start) === k).reduce((n, p) => n + p.min, 0); return add; };
+
+    const d = s.day, inf = this.info(d), b = this.booked(d, s.tasks), lv = b > 1200 ? 'unsustainable' : b > 1080 ? 'strained' : b > this.BUDGET ? 'heavy' : 'fine';
+    const unb = this.fmt(Math.max(0, inf.len - b));
+    const dayRows = rowsFor(d);
+    const glanceKs = d > 6 ? this.range(7, 13) : this.range(0, 6);
+    const glance = glanceKs.map(k => { const add = delta(k), bk = this.booked(k, s.tasks), over = this.lvOf(bk) !== 'fine'; return { short: this.short(k), fig: this.fmt(bk), figInk: over ? 'var(--alert-ink)' : 'var(--ink-2)', hasLv: over, lvWord: { heavy: 'Heavy', strained: 'Strained', unsustainable: 'Unsustainable' }[this.lvOf(bk)] || '', cur: k === d ? 'true' : 'false', border: k === d ? 'var(--ink)' : 'transparent', bg: over ? 'var(--alert-surface)' : k === d ? 'var(--raised)' : 'transparent', hasDelta: add > 0, delta: '+' + this.fmt(add) + ' proposed', go: () => this.setState({ day: k }) }; });
+    const weekCols = this.range(0, 6).map(k => { const bk = this.booked(k, s.tasks), add = delta(k), today = k === 3, lvk = this.lvOf(bk), over = lvk !== 'fine'; return { hasLv: over, lvText: this.lvText(lvk, this.info(k).len, bk), headBg: over ? 'var(--alert-surface)' : 'transparent', figInk: over ? 'var(--alert-ink)' : 'var(--ink)', label: this.WS[k] + ' ' + this.info(k).dn + (today ? ' · today' : ''), fig: this.fmt(bk), sub: this.dayOff(k) ? 'day off' : this.fmt(Math.max(0, this.BUDGET - bk)) + ' free of 16h', hasDelta: add > 0, delta: '+' + this.fmt(add) + ' proposed → ' + this.fmt(bk + add), rows: rowsFor(k), bg: today ? 'var(--raised)' : 'var(--surface)', line: today ? 'var(--line-strong)' : 'var(--line)' }; });
+
+    // plan view values
+    const vals = {};
+    if (plan) {
+      const errSteps = (s.planErr && s.planErr.steps) || {};
+      const lastI = this.info(plan.lastK);
+      vals.coverText = 'Covers Thu 22 Oct – ' + this.shortM(plan.lastK) + ' (' + plan.horizon + (plan.horizon === 1 ? ' day' : ' days') + '). ' + (plan.lastK > 6 ? 'This week ends Sun 25; what doesn’t fit by then is offered for the days after.' : 'It ends with this week, on ' + this.shortM(plan.lastK) + '.');
+      vals.countText = plan.byModel ? plan.came + ' came back · ' + plan.steps.length + ' kept · ' + plan.discarded.length + ' discarded' : plan.steps.length + (plan.steps.length === 1 ? ' step' : ' steps') + ', written by you';
+      vals.steps = plan.steps.map((p, i) => {
+        const open = s.openStep === p.id, editing = s.edit && s.edit.id === p.id;
+        const passed = p.start != null && p.start <= s.now;
+        const state = passed ? 'passed' : p.state;
+        const label = { placed: '', passed: 'Start passed', no_room: 'No room', not_this_week: 'Not this week', after_unplaced: 'Waits for another step' }[state];
+        const reason = state === 'passed' ? this.P.passed : p.reason;
+        const err = errSteps[p.id];
+        const deps = p.after.map(a => plan.steps.findIndex(q => q.id === a) + 1).filter(n => n > 0);
+        return {
+          no: i + 1, domId: 'st-' + p.id, title: p.title, desc: p.desc, hasDesc: !!p.desc,
+          when: p.start != null ? this.short(this.kOf(p.start)) + ' · ' + this.clock(this.wallOf(p.start)) + '–' + this.clock(this.wallOf(p.start) + p.min) : label, len: this.fmt(p.min),
+          hasAfter: deps.length > 0, afterText: 'after step ' + deps.join(' and '),
+          hasReason: !!reason && !err, reason: reason || '', hasErr: !!err, err: err || '',
+          links: p.links.map(l => ({ label: l.label, url: l.url, host: (l.url.match(/^https?:\/\/([^/]+)/) || [])[1] || '' })), hasLinks: p.links.length > 0,
+          open, openStr: open ? 'true' : 'false', toggle: () => this.setState({ openStep: open ? null : p.id, edit: null }),
+          verbsOn: open && !editing, editing, editLabel: p.start == null || passed ? 'Give it a time' : 'Edit',
+          edit: () => { const k0 = p.start != null && !passed ? this.kOf(p.start) : (plan.lastK > 6 && state === 'not_this_week' ? 7 : 3); this.setState({ edit: { id: p.id, title: p.title, min: String(p.min), day: String(k0), time: p.start != null && !passed ? this.clock(this.wallOf(p.start)) : (k0 === 3 ? '14:25' : '07:00'), tried: false, server: null } }); this.wantSel = '#e-title'; },
+          remove: () => this.removeStep(p.id),
+          edge: err ? '2px solid var(--alert)' : open ? '1px solid var(--line-strong)' : '1px solid var(--line)',
+          bg: err ? 'var(--alert-surface)' : open ? 'var(--open)' : 'var(--surface)', shadow: open ? 'var(--shadow-raised)' : 'none',
+          busy: s.busy === p.id ? 'true' : 'false', saving: s.busy === p.id
+        };
+      });
+      const ntw = plan.steps.filter(p => p.state === 'not_this_week');
+      vals.hasNtw = pending && ntw.length > 0;
+      vals.ntwText = ntw.length + (ntw.length === 1 ? ' step waits' : ' steps wait') + ' for next week: ' + ntw.map(p => 'step ' + (plan.steps.indexOf(p) + 1)).join(', ') + '. They’d go from Mon 26, in order.';
+      vals.sendLabel = s.busy === 'send' ? 'Sending…' : 'Send ' + ntw.length + ' to next week';
+      const noTime = plan.steps.filter(p => p.start == null || p.start <= s.now).length;
+      vals.precheck = noTime ? noTime + (noTime === 1 ? ' step has' : ' steps have') + ' no usable time yet. Approving would be refused until each has one or is removed.' : '';
+      const ks = Array.from(new Set(plan.steps.filter(p => p.start != null && p.start > s.now).map(p => this.kOf(p.start)))).sort((a, c) => a - c);
+      vals.impact = ks.map(k => { const bk = this.booked(k, s.tasks), add = plan.steps.filter(p => p.start != null && this.kOf(p.start) === k).reduce((n, p) => n + p.min, 0); return this.short(k) + '  ' + this.fmt(bk) + ' → ' + this.fmt(bk + add) + ' of 16h'; });
+      vals.discarded = plan.discarded; vals.discHead = 'Discarded (' + plan.discarded.length + ')';
+      vals.planTaskRows = s.tasks.filter(t => t.planId === plan.id).sort((a, c) => this.tAbs(a) - this.tAbs(c)).map(t => Object.assign(taskRow(t), { time: this.short(t.k) + ' · ' + this.clock(t.st) + '–' + this.clock(t.st + t.dur) }));
+      vals.expiredLine = 'It covered Thu 22 Oct – ' + this.shortM(plan.lastK) + ', and the last day passed before it was reviewed. Nothing from it was written.';
+      vals.dayOptions = this.range(plan.firstK, plan.lastK).map(k => ({ v: String(k), sel: s.edit && String(k) === s.edit.day, label: this.shortM(k) + (this.dayOff(k) ? ' (day off)' : '') }));
+    }
+    const ed = s.edit, edE = ed ? this.edErrs(ed) : {}, edShow = ed && ed.tried;
+    const ring = (bad) => bad ? '2px solid var(--alert-ink)' : '1px solid var(--line-strong)';
+    const edv = ed ? {
+      title: ed.title, onTitle: (e) => this.setState({ edit: Object.assign({}, this.state.edit, { title: e.target.value }) }), titleErr: edShow ? edE.title || '' : '', titleInvalid: edShow && edE.title ? 'true' : 'false', titleRing: ring(edShow && edE.title),
+      min: ed.min, onMin: (e) => this.setState({ edit: Object.assign({}, this.state.edit, { min: e.target.value, server: null }) }), minErr: edShow ? edE.min || '' : '', minInvalid: edShow && edE.min ? 'true' : 'false', minRing: ring(edShow && edE.min),
+      day: ed.day, onDay: (e) => this.setState({ edit: Object.assign({}, this.state.edit, { day: e.target.value, server: null }) }), dayOptions: vals.dayOptions || [],
+      time: ed.time, onTime: (e) => this.setState({ edit: Object.assign({}, this.state.edit, { time: e.target.value, server: null }) }),
+      hint: 'After ' + this.clock(this.ceil5(s.now + 1)) + ' today, between 07:00 and 23:00, on a five-minute mark, clear of your tasks and the plan’s other steps.' + (this.dayOff(Number(ed.day)) ? ' ' + this.shortM(Number(ed.day)) + ' is a day off.' : ''),
+      startErr: ed.server || (edShow ? edE.start || '' : ''), startInvalid: ed.server || (edShow && edE.start) ? 'true' : 'false', startRing: ring(ed.server || (edShow && edE.start)),
+      saveLabel: s.busy === ed.id ? 'Saving…' : 'Save'
+    } : { dayOptions: [] };
+    const a = s.adding, aBad = a && a.tried, aMinBad = a && (!/^\d+$/.test(String(a.min).trim()) || Number(a.min) < 15 || Number(a.min) > this.BLOCK);
+    const addv = a ? { title: a.title, onTitle: (e) => this.setState({ adding: Object.assign({}, this.state.adding, { title: e.target.value }) }), titleErr: aBad && !a.title.trim() ? 'A step needs a title.' : '', titleInvalid: aBad && !a.title.trim() ? 'true' : 'false', titleRing: ring(aBad && !a.title.trim()),
+      min: a.min, onMin: (e) => this.setState({ adding: Object.assign({}, this.state.adding, { min: e.target.value }) }), minErr: aBad && aMinBad ? 'Between 15 and ' + this.BLOCK + ' minutes, your preferred block.' : '', minInvalid: aBad && aMinBad ? 'true' : 'false', minRing: ring(aBad && aMinBad),
+      desc: a.desc, onDesc: (e) => this.setState({ adding: Object.assign({}, this.state.adding, { desc: e.target.value }) }) } : {};
+
+    const ref = s.refusal ? this.REF[s.refusal] : null;
+    const refActions = [];
+    if (ref && ref.open) refActions.push({ label: 'Open the plan you have', fn: () => this.setState({ refusal: null, view: 'review' }) });
+    if (ref && ref.manual) refActions.push({ label: 'Write it myself', fn: () => this.startManual() });
+    const retryText = ref && ref.retry ? 'You can ask again at ' + (ref.retry >= 600 ? this.short(this.kOf(s.now + ref.retry)) + ', ' : '') + this.clock(this.wallOf(s.now + ref.retry)) + '.' : ref && ref.until ? ref.until : '';
+
+    const views = { ask: s.view === 'ask', wait: s.view === 'wait', failed: s.view === 'failed', review: s.view === 'review' && !!plan, approved: s.view === 'approved' && !!plan, expired: s.view === 'expired' && !!plan };
+    const heading = views.ask ? 'Ask for a plan' : views.wait ? 'Your plan' : views.failed ? 'The plan didn’t come' : views.review ? (plan.byModel ? 'Review the plan' : 'Your plan') : views.approved ? 'The plan, in your week' : 'The plan';
+    const nd = d + 1 > 13 ? 13 : d + 1, pd = d - 1 < 0 ? 0 : d - 1;
+
+    const groups = [
+      ['Ask', [['ask', 'Empty'], ['askFilled', 'Filled'], ['askEmpty', 'Field error'], ['r409', '409 one at a time'], ['r429h', '429 hour'], ['r429d', '429 day'], ['r429m', '429 month'], ['r503p', '503 paused'], ['r503d', '503 model down']]],
+      ['Wait', [['queued', 'Queued'], ['running', 'Making, on the week'], ['ready', 'Ready notice'], ['fWait', 'Failed: waited'], ['fTries', 'Failed: 3 tries'], ['fNone', 'Failed: no usable step'], ['live', 'Live run']]],
+      ['Review', [['review', 'Review'], ['openStep', 'Step open'], ['edit', 'Give a time'], ['e422', 'Edit 422'], ['e409t', 'Edit 409 task'], ['e409s', 'Edit 409 step'], ['add', 'Add a step'], ['h4', 'Horizon 4 days'], ['passed', 'A start passed'], ['sent', 'Sent to next week'], ['discard', 'Discard']]],
+      ['Approve', [['approving', 'Approving'], ['aFail', 'Refused, per step'], ['aRace', 'Refused, race'], ['approved', 'Approved'], ['progress', '3 of 5 done']]],
+      ['Other', [['manual', 'By hand, empty'], ['manualFilled', 'By hand, 2 steps'], ['expired', 'Expired']]]
+    ].map(([label, items]) => ({ label, items: items.map(([id, l]) => ({ label: l, on: s.preset === id ? 'true' : 'false', bg: s.preset === id ? 'var(--primary)' : 'var(--surface)', ink: s.preset === id ? 'var(--on-primary)' : 'var(--ink)', border: s.preset === id ? 'var(--primary)' : 'var(--line-strong)', run: () => this.preset(id) })) }));
+
+    return Object.assign({
+      frameRef: this.frameRef, scrollRef: this.scrollRef, planErrRef: this.planErrRef,
+      widths: Object.keys(this.FRAMES).map(k => Object.assign({ label: this.FRAMES[k][2].split(' ')[0] === '667' ? '667 landscape' : k === 'desk' ? '1280 desktop' : k, pick: () => this.setState({ frame: k }) }, btn(s.frame === k))),
+      toggles: [Object.assign({ label: s.theme === 'light' ? 'Light theme' : 'Dark theme', pick: () => this.setState({ theme: s.theme === 'light' ? 'dark' : 'light' }) }, btn(s.theme === 'dark')), Object.assign({ label: 'Reduced motion', pick: () => this.setState({ reduced: !s.reduced }) }, btn(s.reduced)), Object.assign({ label: 'Text 200%', pick: () => this.setState({ zoom: !s.zoom }) }, btn(s.zoom))],
+      presetGroups: groups, runAudit: () => this.audit(), auditText: s.audit,
+      fw, fh, frameCaption: cap + (wide ? ' · week + plan panel' : mid ? ' · one day beside the week' : ' · one day') + (s.zoom ? ' · text 200%' : ''),
+      narrow, notNarrow: !narrow, wide, notWide: !wide, nowClock: this.clock(this.wallOf(s.now)),
+      togglePlan: () => { this.setState({ planOpen: !s.planOpen }); if (!s.planOpen) this.wantSel = '#plan-h'; },
+      planOpenStr: s.planOpen ? 'true' : 'false', planBtnAria: aria, hasPlanSub: !!sub, planSub: sub,
+      planBtnBg: planBtnOn ? 'var(--primary)' : 'var(--surface)', planBtnInk: planBtnOn ? 'var(--on-primary)' : 'var(--ink)', planBtnLine: planBtnOn ? 'var(--primary)' : 'var(--line-strong)',
+      openMenu: () => { this.setState({ menuOpen: true }); this.wantSel = '#menu-close'; }, closeMenu: () => this.setState({ menuOpen: false }), menuOpen: s.menuOpen, onMenuKey: (e) => { if (e.key === 'Escape') this.setState({ menuOpen: false }); },
+      bodyCols: wide ? (s.planOpen ? 'minmax(0, 1fr) 440px' : 'minmax(0, 1fr)') : mid && !s.planOpen ? 'minmax(200px, 240px) minmax(0, 1fr)' : 'minmax(0, 1fr)',
+      showGlance: mid && !s.planOpen, showWeek: wide, showDay: !wide && !s.planOpen, planOpen: s.planOpen,
+      planMax: wide ? 'none' : '720px', planBorder: wide ? '1px solid var(--line)' : '0', planBg: wide ? 'var(--surface)' : 'transparent',
+      glance, weekCols,
+      dayTitle: this.WD[inf.wd] + ' ' + inf.dn + ' ' + this.MONL[inf.mo], isToday: d === 3, bigText: this.fmt(b), freeText: this.dayOff(d) ? 'Day off' : this.fmt(Math.max(0, this.BUDGET - b)) + ' free of 16h',
+      hasDayDelta: delta(d) > 0, dayDelta: '+' + this.fmt(delta(d)) + ' proposed by your plan, not booked yet',
+      hasLoad: lv !== 'fine', loadText: { heavy: 'No margin for anything running late.', strained: 'Extremely heavy day. ' + unb + ' unbooked.', unsustainable: 'Unsustainable. ' + unb + ' unbooked.' }[lv] || '',
+      listAria: 'Tasks on ' + this.WD[inf.wd] + ' ' + inf.dn, dayRows, dayEmpty: dayRows.length === 0,
+      closePlan: () => this.setState({ planOpen: false }), planHeading: heading,
+      vAsk: views.ask, vWait: views.wait, vFailed: views.failed, vReview: views.review, vApproved: views.approved, vExpired: views.expired,
+      askText: s.askText, setAsk: (e) => this.setState({ askText: e.target.value }), askCount: s.askText.length + ' / 500',
+      askErr: s.askTried && !s.askText.trim() ? 'Write what you want to plan.' : '', askInvalid: s.askTried && !s.askText.trim() ? 'true' : 'false', askRing: ring(s.askTried && !s.askText.trim()),
+      horizonVal: String(s.horizon), setHorizon: (e) => this.setState({ horizon: Number(e.target.value) }),
+      horizonOptions: this.range(1, 14).map(n => ({ v: String(n), sel: n === s.horizon, label: n + (n === 1 ? ' day, today only' : ' days, until ' + this.shortM(3 + n - 1)) })),
+      horizonHelp: s.horizon > 4 ? 'It fills this week first, up to Sunday 25. What doesn’t fit is offered for the days after.' : 'It stays inside this week. Saturday and Sunday are your days off.',
+      submitAsk: (e) => { e.preventDefault(); this.submitAsk(); }, askBusy: s.busy === 'ask' ? 'true' : 'false', askLabel: s.busy === 'ask' ? 'Sending…' : 'Make a plan',
+      startManual: () => this.startManual(),
+      hasRefusal: !!ref, refusalMsg: ref ? ref.msg : '', hasRetry: !!retryText, refusalRetry: retryText, refusalActions: refActions,
+      waitWord: job && job.status === 'running' ? 'Making the plan…' : 'Queued', waitLine: job ? (job.status === 'running' ? 'It started at ' + this.clock(this.wallOf(job.at) + 1) + '. Plans usually take under a minute.' : 'Asked at ' + this.clock(this.wallOf(job.at)) + ', for ' + job.horizon + ' days. It starts when a place frees up.') : '',
+      jobRequest: job ? job.request : '', failMsg: job && job.reason ? job.reason : '',
+      askAgain: () => this.setState({ view: 'ask', askText: (job && job.request) || (plan && plan.request) || this.REQ, job: null, plan: plan && plan.status === 'expired' ? null : plan, refusal: null }),
+      planRequest: plan ? plan.request : '', isManual: !!plan && !plan.byModel, isModel: !!plan && plan.byModel,
+      setManualFor: (e) => { const v = e.target.value; this.setPlan(p => { p.request = v; return p; }); },
+      hasPlanErr: !!s.planErr, planErr: s.planErr ? s.planErr.msg : '', planErrList: s.planErr ? s.planErr.list : [], isRace: !!(s.planErr && s.planErr.race),
+      rereadPlan: () => { this.setState({ planErr: null }); this.notify('Read again. Every step still has its time.'); },
+      hasImpact: !!plan && (vals.impact || []).length > 0, steps: vals.steps || [], noSteps: !!plan && plan.steps.length === 0,
+      ed: edv, saveStep: (e) => { e.preventDefault(); this.saveStep(); }, cancelEdit: () => this.setState({ edit: null }),
+      sendNext: () => this.sendNext(), sendBusy: s.busy === 'send' ? 'true' : 'false',
+      adding: !!a, notAdding: !a && !!plan, add: addv, addLabel: s.busy === 'add' ? 'Adding…' : 'Add', addBusy: s.busy === 'add' ? 'true' : 'false',
+      openAdd: () => { this.setState({ adding: { title: '', min: '60', desc: '', tried: false } }); this.wantSel = '#a-title'; }, cancelAdd: () => this.setState({ adding: null }), submitAdd: (e) => { e.preventDefault(); this.submitAdd(); },
+      hasDiscarded: !!plan && plan.discarded.length > 0,
+      progFig: progress ? progress.done + ' of ' + progress.total : '', hasGone: !!progress && progress.gone > 0, goneText: progress ? progress.gone + (progress.gone === 1 ? ' task from this plan was deleted, so it left the count.' : ' tasks from this plan were deleted, so they left the count.') : '',
+      planTaskRows: vals.planTaskRows || [],
+      hasNotice: !!s.notice, noticeText: s.notice ? s.notice.text : '', noticeActions: s.notice ? s.notice.actions : [],
+      dismissNotice: () => { clearTimeout(this.nT); this.setState({ notice: null }); }, pauseNotice: () => clearTimeout(this.nT), resumeNotice: () => { if (this.state.notice) this.arm(); },
+      barW: wide ? '440px' : '100%', barDay: !wide && !s.planOpen, barReview: s.planOpen && views.review && plan.status === 'pending',
+      prevLabel: this.short(pd), nextLabel: this.short(nd), prevDay: () => this.setState({ day: pd }), nextDay: () => this.setState({ day: nd }),
+      hasPrecheck: !!vals.precheck, precheck: vals.precheck || '',
+      confirmDiscard: s.confirmDiscard, notConfirmDiscard: !s.confirmDiscard, discardQ: plan ? 'Discard this plan? Its ' + plan.steps.length + ' steps won’t become tasks.' : '',
+      askDiscard: () => this.setState({ confirmDiscard: true }), keepPlan: () => this.setState({ confirmDiscard: false }),
+      doDiscard: () => { this.setState({ plan: null, job: null, view: 'ask', confirmDiscard: false, planErr: null, openStep: null, edit: null, adding: null }); this.notify('Plan discarded. Nothing was written.'); },
+      approve: () => this.approve(), approveBusy: s.busy === 'approve' ? 'true' : 'false',
+      approveLabel: s.busy === 'approve' ? 'Approving…' : plan ? 'Approve: make ' + plan.steps.length + (plan.steps.length === 1 ? ' task' : ' tasks') : 'Approve'
+    }, vals, { steps: vals.steps || [], discarded: vals.discarded || [], impact: vals.impact || [] });
+  }
+
+  audit() {
+    const f = this.frameRef.current; if (!f) return;
+    const parse = (c) => { const m = c.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0, 0]; };
+    const L = (rgb) => { const a = rgb.slice(0, 3).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; };
+    const bgOf = (el) => { while (el) { const c = parse(getComputedStyle(el).backgroundColor); if (c.length === 3 || (c.length >= 4 && c[3] > 0.5)) return c; el = el.parentElement; } return [255, 255, 255]; };
+    let n = 0, worst = 99, wt = '', below = 0, small = 0, tiny = 0;
+    f.querySelectorAll('*').forEach(el => {
+      const txt = Array.from(el.childNodes).filter(x => x.nodeType === 3 && x.textContent.trim()).map(x => x.textContent.trim()).join(' ');
+      if (!txt || el.tagName === 'OPTION') return; const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+      if (el.closest('[aria-hidden="true"]')) return;
+      const cs = getComputedStyle(el); if (cs.clip === 'rect(0px, 0px, 0px, 0px)') return;
+      const ratio = (() => { const a = L(parse(cs.color)), b = L(bgOf(el)); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); })();
+      n++; if (ratio < worst) { worst = ratio; wt = txt.slice(0, 24); } if (ratio < 4.5) below++; if (parseFloat(cs.fontSize) < 12) small++;
+    });
+    const fr = f.getBoundingClientRect(); let over = 0;
+    f.querySelectorAll('button, input, select, textarea, a').forEach(el => { const r = el.getBoundingClientRect(); if (!r.width) return; if (r.height < 43.5 && !(this.FRAMES[this.state.frame][0] >= 1100 && r.height >= 24)) tiny++; if (r.right > fr.right + 1) over++; });
+    this.setState({ audit: n + ' text · worst ' + worst.toFixed(2) + ':1 (“' + wt + '”) · below 4.5: ' + below + ' · under 12px: ' + small + ' · targets under ' + (this.FRAMES[this.state.frame][0] >= 1100 ? '24' : '44') + 'px: ' + tiny + ' · past the edge: ' + over });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+/*
+ * SyncaAI — design tokens, direction A — Papel.
+ *
+ * Drop-in replacement for apps/web/src/styles/tokens.css, written for the third design round.
+ * It retires the five patches of ADR-0024 (contrast, field border, radius, smallest size and the
+ * narrow layout) once the components move to the names below; until then the legacy block at the
+ * end keeps the current markup rendering, with the corrected values.
+ *
+ * Theme. Follows the operating system unless <html data-theme="light|dark"> says otherwise. The
+ * attribute goes on <html>, not on a div inside <body>: the page background resolves against
+ * :root, and an attribute further down drew dark ink on a dark page (ADR-0024, "To revisit").
+ * Settings writes "light" or "dark", or removes the attribute for "system".
+ *
+ * Colour. Every colour is opaque, and every ground text can sit on is a token of its own —
+ * including hover, pressed and the alert tints. Alpha over the ink made contrast depend on how
+ * many layers happened to stack (the opened row inside an overbooked day read 3.88:1); a fixed
+ * list of grounds is a list that can be tested. The contrast table for every pair the screen uses
+ * is computed from these values in "SyncaAI Design System.dc.html".
+ *
+ *   text  ink, ink-2, ink-3, alert-ink       >= 4.5:1 on every ground they appear on
+ *   edges line-strong, focus, alert, bar, tick >= 3:1 against what is next to them
+ *   line, track                              decorative only — never the only carrier of meaning
+ *
+ * The accent means trouble and only trouble: over capacity, conflict, error. alert is for
+ * graphics (a bar, an edge), alert-ink is for text, alert-solid is a filled flag with on-alert.
+ */
+
+:root {
+  --font-sans: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  --font-display: var(--font-sans);
+  --display-stretch: 100%;
+  --text-1: 12px;
+  --leading-1: 16px;
+  --text-2: 13px;
+  --leading-2: 18px;
+  --text-3: 15px;
+  --leading-3: 22px;
+  --text-4: 18px;
+  --leading-4: 24px;
+  --text-5: 22px;
+  --leading-5: 28px;
+  --text-6: 28px;
+  --leading-6: 32px;
+  --text-7: 36px;
+  --leading-7: 40px;
+  --text-8: 48px;
+  --leading-8: 52px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 700;
+  --tracking-figure: -0.02em;
+  --tracking-tight: -0.015em;
+  --tracking-caps: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+  --pad-column: var(--space-5);
+  --pad-row-y: var(--space-3);
+  --pad-row-x: var(--space-3);
+  --gap-columns: var(--space-2);
+  --gap-rows: var(--space-1);
+  --radius-1: 6px;
+  --radius-2: 10px;
+  --radius-3: 14px;
+  --radius-4: 20px;
+  --radius-full: 999px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --target: 24px;
+  --target-touch: 44px;
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 380ms;
+  --stagger: 30ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: linear(0, 0.064, 0.209, 0.383, 0.554, 0.703, 0.822, 0.911, 0.971, 1.009, 1.029, 1.038, 1.038, 1.034, 1.027, 1.021, 1.014, 1.009, 1.005, 1.002, 1, 0.999, 0.999, 1);
+  --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  --press-scale: 0.97;
+  --press-shift: 0px;
+}
+
+/* Coarse pointers get the 44px target; the 24px floor is for a mouse. */
+@media (pointer: coarse) {
+  :root {
+    --target: var(--target-touch);
+  }
+}
+
+/* The setting wins over everything. 1ms rather than 0, so transitionend still fires. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 1ms;
+    --dur-2: 1ms;
+    --dur-3: 1ms;
+    --stagger: 0ms;
+    --press-scale: 1;
+    --press-shift: 0px;
+  }
+}
+
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f1ec;
+  --surface: #fbf9f6;
+  --raised: #ffffff;
+  --sunken: #efebe4;
+  --hover: #ece8e1;
+  --pressed: #e4dfd6;
+  --open: #ffffff;
+  --field: #ffffff;
+  --tag: #e6e1d8;
+  --track: #e3ded5;
+  --alert-surface: #fbe9e3;
+  --alert-hover: #f6ddd4;
+  --alert-pressed: #f3d7ce;
+  --alert-open: #ffffff;
+  --primary: #1f1c18;
+  --primary-hover: #3a352e;
+  --primary-pressed: #4d473f;
+  --alert-solid: #b3261e;
+  --alert-solid-hover: #9a1f18;
+  --alert-solid-pressed: #861a14;
+  --ink: #1f1c18;
+  --ink-2: #433d35;
+  --ink-3: #635c52;
+  --alert-ink: #a3260e;
+  --on-primary: #fbf9f6;
+  --on-alert: #ffffff;
+  --line: #e3ded5;
+  --line-strong: #7c756a;
+  --focus: #1f1c18;
+  --bar: #1f1c18;
+  --tick: #635c52;
+  --alert: #d4401f;
+  --shadow-raised: 0 1px 2px rgba(31, 28, 24, 0.06), 0 12px 28px -12px rgba(31, 28, 24, 0.28);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121110;
+  --surface: #1a1917;
+  --raised: #252320;
+  --sunken: #1e1c1a;
+  --hover: #211f1c;
+  --pressed: #2b2925;
+  --open: #252320;
+  --field: #161514;
+  --tag: #2e2b27;
+  --track: #2e2b27;
+  --alert-surface: #2a1814;
+  --alert-hover: #331d18;
+  --alert-pressed: #3d221c;
+  --alert-open: #252320;
+  --primary: #f3efe8;
+  --primary-hover: #e0dad0;
+  --primary-pressed: #cdc6ba;
+  --alert-solid: #ff6b4a;
+  --alert-solid-hover: #ff8566;
+  --alert-solid-pressed: #ff9e85;
+  --ink: #f3efe8;
+  --ink-2: #c3bcb1;
+  --ink-3: #9c958a;
+  --alert-ink: #ff9b82;
+  --on-primary: #121110;
+  --on-alert: #121110;
+  --line: #2c2a26;
+  --line-strong: #7d776f;
+  --focus: #f3efe8;
+  --bar: #f3efe8;
+  --tick: #9c958a;
+  --alert: #ff6b4a;
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px -12px rgba(0, 0, 0, 0.75);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #121110;
+    --surface: #1a1917;
+    --raised: #252320;
+    --sunken: #1e1c1a;
+    --hover: #211f1c;
+    --pressed: #2b2925;
+    --open: #252320;
+    --field: #161514;
+    --tag: #2e2b27;
+    --track: #2e2b27;
+    --alert-surface: #2a1814;
+    --alert-hover: #331d18;
+    --alert-pressed: #3d221c;
+    --alert-open: #252320;
+    --primary: #f3efe8;
+    --primary-hover: #e0dad0;
+    --primary-pressed: #cdc6ba;
+    --alert-solid: #ff6b4a;
+    --alert-solid-hover: #ff8566;
+    --alert-solid-pressed: #ff9e85;
+    --ink: #f3efe8;
+    --ink-2: #c3bcb1;
+    --ink-3: #9c958a;
+    --alert-ink: #ff9b82;
+    --on-primary: #121110;
+    --on-alert: #121110;
+    --line: #2c2a26;
+    --line-strong: #7d776f;
+    --focus: #f3efe8;
+    --bar: #f3efe8;
+    --tick: #9c958a;
+    --alert: #ff6b4a;
+    --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px -12px rgba(0, 0, 0, 0.75);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: var(--ink);
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+/* One ring, following the corner it surrounds, two pixels out. */
+:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+::selection {
+  background: var(--tag);
+  color: var(--ink);
+}
+
+/* Several fields are named only by their placeholder and an aria-label, so a placeholder is the
+   label somebody reads, and text held to 4.5:1 (ADR-0026 §5). */
+::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* The indeterminate line under something that is saving. It moves; nothing else on screen does. */
+@keyframes saving {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.rise {
+  animation: rise var(--dur-3) var(--ease-out) both;
+}
+
+.skeleton {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/*
+ * Legacy names, so the current markup renders with the new values before any component moves.
+ * Delete this block in the change that moves the last module off it.
+ */
+:root {
+  --dim: var(--ink-2);
+  --faint: var(--ink-3);
+  --rule: var(--line);
+  --rule2: var(--line-strong);
+  --field-border: var(--line-strong);
+  --fill: var(--tag);
+  --accent: var(--alert);
+  --accent-ink: var(--on-alert);
+  --accent-tint: var(--alert-surface);
+  --chip-bg: transparent;
+  --chip-ink: var(--alert-ink);
+  --pad: var(--pad-column);
+  --rowpad: var(--pad-row-y);
+  --num: var(--text-6);
+  --dur: var(--dur-2);
+  --rev: var(--dur-3);
+  --radius-sm: var(--radius-1);
+  --radius-md: var(--radius-2);
+  --radius-lg: var(--radius-3);
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
+}
+
+/* ADR-0024's shell override, unchanged: it stops matching the day App.tsx stops writing the
+   inline padding. Remove both together. */
+@media (max-width: 1099px) {
+  #root > [data-theme][style*="padding: 56px"] {
+    padding: 24px !important;
+  }
+}
+
+@media (max-width: 699px) {
+  #root > [data-theme][style*="padding: 56px"] {
+    padding: 16px !important;
+  }
+}
