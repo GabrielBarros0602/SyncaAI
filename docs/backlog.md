@@ -151,18 +151,16 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
    predicado de um índice parcial.** Mudar um deles no modelo sem migration passa no check, e
    os testes de DDL leem o modelo, não o banco. Os testes de integração rodam sobre o banco
    migrado, mas só pegam o que exercitam.
-5. **Os testes rodam no banco de desenvolvimento.** `get_session` e os testes leem o
-   `DATABASE_URL` do ambiente; o `syncaai_test` do `conftest.py` não chega à sessão. Um teste
-   que roda o worker pode pegar um job deixado ali para validação manual.
-6. **Um teste de sobreposição aceita qualquer `IntegrityError`**
-   (`test_task_persistence.py`), e passaria também se a falha viesse de outra restrição. Os
-   testes de endpoint já distinguem `ex_tasks_no_overlap_per_user` de qualquer outra.
+5. ~~**Os testes rodam no banco de desenvolvimento.**~~ ✅ Feito em 2026-10-26: os testes de
+   integração rodam no `syncaai_test`, que a própria suíte cria e migra; um nome que não
+   termine em `_test` é recusado.
+6. ~~**Um teste de sobreposição aceita qualquer `IntegrityError`.**~~ ✅ Feito em 2026-10-26:
+   ele confere `ex_tasks_no_overlap_per_user` pelo nome.
 7. **A semana começa na segunda-feira do navegador** (`mondayOf(new Date())`), não na do fuso
    da pessoa. Em viagem, a tela e `/capacity` podem discordar sobre que semana é esta. É
    front, e espera o descongelamento.
-8. **O CLAUDE.md diz que os testes de integração pulam sem banco.** Eles falham com erro de
-   conexão. O risco que o texto descreve, um verde sem integração, não acontece; o texto é
-   que está errado.
+8. ~~**O CLAUDE.md diz que os testes de integração pulam sem banco.**~~ ✅ Feito em
+   2026-10-26: sem PostgreSQL a execução para na hora e diz por quê, e o texto diz isso.
 
 ---
 
