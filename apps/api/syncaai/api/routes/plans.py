@@ -19,8 +19,10 @@ from syncaai.schemas.plans import (
     PlanItemCreate,
     PlanItemRead,
     PlanItemUpdate,
+    PlanPage,
     PlanRead,
     PlanRequest,
+    PlanStatus,
 )
 from syncaai.services.ai_spend import ceilings_from
 from syncaai.services.plans import PlanService
@@ -77,6 +79,22 @@ def list_jobs(
 @router.get("/ai/plans/{job_id}", summary="How a plan request is going")
 def read_job(job_id: uuid.UUID, service: ServiceDep) -> JobRead:
     return service.job(job_id)
+
+
+@router.get("/plans", summary="Your plans, newest first")
+def list_plans(
+    service: ServiceDep,
+    statuses: Annotated[list[PlanStatus] | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> PlanPage:
+    """``?status=pending&limit=1`` finds the plan waiting for review. The status filtered is
+    the status read: a pending plan whose last day has ended is listed as ``expired``, as
+    reading it says (ADR-0050)."""
+    plans = service.plans(
+        statuses=statuses or [], limit=limit, offset=offset, now=datetime.now(timezone.utc)
+    )
+    return PlanPage(items=plans, limit=limit, offset=offset)
 
 
 @router.get("/plans/{plan_id}", summary="Read a plan for review")

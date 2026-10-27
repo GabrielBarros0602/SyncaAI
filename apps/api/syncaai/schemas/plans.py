@@ -18,6 +18,7 @@ from syncaai.schemas.tasks import reject_an_explicit_null, require_an_offset
 
 ItemState = Literal["placed", "passed", "no_room", "not_this_week", "after_unplaced"]
 JobStatus = Literal["queued", "running", "done", "failed"]
+PlanStatus = Literal["pending", "approved", "discarded", "expired"]
 
 
 class PlanRequest(BaseModel):
@@ -74,7 +75,7 @@ class PlanDiscardRead(BaseModel):
 
 class PlanRead(BaseModel):
     id: uuid.UUID
-    status: Literal["pending", "approved", "discarded", "expired"]
+    status: PlanStatus
     request: str
     first_day: date
     last_day: date
@@ -82,6 +83,14 @@ class PlanRead(BaseModel):
     week_ends_on: date
     items: list[PlanItemRead]
     discarded: list[PlanDiscardRead]
+
+
+class PlanPage(BaseModel):
+    """A slice of a person's plans, newest first, paged as their requests are (ADR-0050)."""
+
+    items: list[PlanRead]
+    limit: int
+    offset: int
 
 
 class PlanItemCreate(BaseModel):

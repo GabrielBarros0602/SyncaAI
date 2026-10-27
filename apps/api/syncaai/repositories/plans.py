@@ -7,15 +7,21 @@ belongs to somebody else is simply not found.
 import uuid
 from collections import defaultdict
 from collections.abc import Collection, Sequence
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
-from sqlalchemy import Select, exists, func, select
+from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from syncaai.models import AiJob, PlanDraft, PlanDraftItem, PlanDraftItemPrerequisite
 from syncaai.repositories.base import OwnedRepository
 
 IN_PROGRESS = ("queued", "running")
+
+# Everything a review shows, loaded in a fixed number of queries however many plans are read.
+FOR_REVIEW = (
+    selectinload(PlanDraft.items).selectinload(PlanDraftItem.links),
+    selectinload(PlanDraft.discards),
+)
 
 
 class AiJobRepository(OwnedRepository[AiJob]):
@@ -84,16 +90,26 @@ class PlanDraftRepository(OwnedRepository[PlanDraft]):
         return {job_id: plan_id for job_id, plan_id in rows if job_id is not None}
 
     def get_for_review(self, plan_id: uuid.UUID) -> PlanDraft | None:
-        """The plan with everything a review shows, in a fixed number of queries."""
+        """The plan with everything a review shows."""
+        statement = self._scoped().where(PlanDraft.id == plan_id).options(*FOR_REVIEW)
+        return self._session.scalar(statement)
+
+    def newest_first_for_review(
+        self, *, statuses: Collection[str], today: date, limit: int, offset: int
+    ) -> Sequence[PlanDraft]:
+        """A page of the owner's plans with everything a review shows, in any of
+        ``statuses`` as they read on the owner's ``today``, or in any status when none is
+        given (ADR-0050)."""
         statement = (
             self._scoped()
-            .where(PlanDraft.id == plan_id)
-            .options(
-                selectinload(PlanDraft.items).selectinload(PlanDraftItem.links),
-                selectinload(PlanDraft.discards),
-            )
+            .options(*FOR_REVIEW)
+            .order_by(PlanDraft.created_at.desc(), PlanDraft.id.desc())
+            .limit(limit)
+            .offset(offset)
         )
-        return self._session.scalar(statement)
+        if statuses:
+            statement = statement.where(or_(*(_reads_as(status, today) for status in statuses)))
+        return self._session.scalars(statement).all()
 
     def get_for_change(self, plan_id: uuid.UUID) -> PlanDraft | None:
         """The plan, locked until the transaction ends. Two edits of one plan wait for each
@@ -102,14 +118,30 @@ class PlanDraftRepository(OwnedRepository[PlanDraft]):
         return self._session.scalar(statement)
 
     def prerequisites(self, plan_id: uuid.UUID) -> dict[uuid.UUID, list[uuid.UUID]]:
-        """Each item's prerequisites. Reached through a plan already read through the owner
-        filter, and held to that plan by the table's own composite keys (ADR-0037)."""
+        return self.prerequisites_of([plan_id])
+
+    def prerequisites_of(self, plan_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, list[uuid.UUID]]:
+        """Each item's prerequisites, for every item of these plans. Reached through plans
+        already read through the owner filter, and held to each plan by the table's own
+        composite keys (ADR-0037)."""
         rows = self._session.execute(
             select(PlanDraftItemPrerequisite.item_id, PlanDraftItemPrerequisite.prerequisite_id)
-            .where(PlanDraftItemPrerequisite.draft_id == plan_id)
+            .where(PlanDraftItemPrerequisite.draft_id.in_(plan_ids))
             .order_by(PlanDraftItemPrerequisite.item_id)
         )
         found: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
         for item_id, prerequisite_id in rows:
             found[item_id].append(prerequisite_id)
         return found
+
+
+def _reads_as(status: str, today: date) -> ColumnElement[bool]:
+    """The plans whose status reads as ``status`` on ``today``. A pending plan whose last day
+    has ended reads as expired before the sweep records it (ADR-0033), so a listing filtered
+    by the stored status would disagree with reading the plan."""
+    ended = PlanDraft.last_day < today
+    if status == "pending":
+        return and_(PlanDraft.status == "pending", ~ended)
+    if status == "expired":
+        return or_(PlanDraft.status == "expired", and_(PlanDraft.status == "pending", ended))
+    return PlanDraft.status == status

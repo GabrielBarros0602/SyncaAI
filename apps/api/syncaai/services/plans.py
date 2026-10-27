@@ -2,7 +2,7 @@
 
 import math
 import uuid
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -183,23 +183,43 @@ class PlanService:
         draft = self._drafts.get_for_review(plan_id)
         if draft is None:
             raise PlanNotFoundError
-        prerequisites = self._drafts.prerequisites(draft.id)
-        # Expired once its last day has ended where its owner lives, whether or not the
-        # sweep has recorded it yet (ADR-0033).
-        status = "expired" if self._ended(draft, now) else draft.status
-        return PlanRead(
-            id=draft.id,
-            status=status,
-            request=draft.request,
-            first_day=draft.first_day,
-            last_day=draft.last_day,
-            week_ends_on=week_end(draft.first_day),
-            items=[_item(item, prerequisites.get(item.id, []), draft, now) for item in draft.items],
-            discarded=[
-                PlanDiscardRead(position=d.position, title=d.title, reasons=d.reasons)
-                for d in draft.discards
-            ],
+        (read,) = self._read([draft], now)
+        return read
+
+    def plans(
+        self, *, statuses: Collection[str], limit: int, offset: int, now: datetime
+    ) -> list[PlanRead]:
+        """The person's plans, newest first, each as reading it answers (ADR-0050)."""
+        drafts = self._drafts.newest_first_for_review(
+            statuses=statuses,
+            today=self._today(now),
+            limit=min(limit, MAX_PAGE_SIZE),
+            offset=offset,
         )
+        return self._read(drafts, now)
+
+    def _read(self, drafts: Sequence[PlanDraft], now: datetime) -> list[PlanRead]:
+        prerequisites = self._drafts.prerequisites_of([draft.id for draft in drafts])
+        return [
+            PlanRead(
+                id=draft.id,
+                # Expired once its last day has ended where its owner lives, whether or not
+                # the sweep has recorded it yet (ADR-0033).
+                status="expired" if self._ended(draft, now) else draft.status,
+                request=draft.request,
+                first_day=draft.first_day,
+                last_day=draft.last_day,
+                week_ends_on=week_end(draft.first_day),
+                items=[
+                    _item(item, prerequisites.get(item.id, []), draft, now) for item in draft.items
+                ],
+                discarded=[
+                    PlanDiscardRead(position=d.position, title=d.title, reasons=d.reasons)
+                    for d in draft.discards
+                ],
+            )
+            for draft in drafts
+        ]
 
     def update_item(
         self, plan_id: uuid.UUID, item_id: uuid.UUID, changes: PlanItemUpdate, *, now: datetime
