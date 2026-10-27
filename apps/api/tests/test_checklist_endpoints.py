@@ -40,6 +40,9 @@ class _FakeTasks:
             task.items.sort(key=lambda item: item.position)
         return task
 
+    # Nothing here runs concurrently, so the locked read is the plain one.
+    get_for_change = get_with_items
+
     def flush(self) -> None:
         for task in self.rows.values():
             for item in task.items:
