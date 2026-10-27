@@ -60,7 +60,7 @@
         "alert-open"
       ],
       "on-primary": ["primary", "primary-hover", "primary-pressed"],
-      "on-alert": ["alert-solid", "alert-solid-hover"]
+      "on-alert": ["alert-solid", "alert-solid-hover", "alert-solid-pressed"]
     }
   },
   "graphics": {
