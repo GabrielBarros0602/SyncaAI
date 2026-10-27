@@ -91,7 +91,8 @@ Stack rationale, including the estimated cost of the alternative, is in
 | `POST /api/v1/auth/refresh` | Exchanges a live session for a new access token. |
 | `POST /api/v1/auth/logout` | Revokes the session presented. |
 | `POST /api/v1/auth/forgot-password` | Answers `202` identically whether or not there is an account. |
-| `POST /api/v1/auth/reset-password` | Sets a new password and signs every device out. |
+| `POST /api/v1/auth/reset-password` | Sets a new password and signs every device out, opening no session in their place; the owner is told by email. |
+| `POST /api/v1/auth/change-password` | Sets a new password from the current one, keeping this session and signing every other device out, and tells the owner by email. A wrong current password is a field error, limited like a login ([ADR-0051](docs/adr/0051-a-password-change-keeps-this-session-and-a-reset-keeps-none.md)). |
 | `GET /api/v1/me` | The signed-in user, including the **time zone the server stores**. Every local date a client sends is read in that zone, not the browser's, and the two can differ. |
 | `PATCH /api/v1/me` | The usable day as a window of hours, days off and the length of a planned step ([ADR-0029](docs/adr/0029-the-usable-day-is-a-window-each-person-sets.md), [ADR-0032](docs/adr/0032-days-off-and-a-preferred-block-length.md)). All of a change is checked before any of it is written. |
 | `POST /api/v1/tasks` | Schedules a block of time with an optional checklist and tag. Overlapping an existing task answers `409` — the refusal comes from a database exclusion constraint, so it holds for any code path including a manual `INSERT`. |

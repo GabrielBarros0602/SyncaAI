@@ -110,9 +110,9 @@ be used to flood somebody else's address.
 
 ## Action Items
 
-1. [ ] `POST /auth/change-password`: the current password, this session kept, the others
+1. [x] `POST /auth/change-password`: the current password, this session kept, the others
        ended, limited like login.
-2. [ ] The message after a change and after a reset.
+2. [x] The message after a change and after a reset.
 3. [ ] The settings brief (step 5) and the sign-in brief (step 6) written against this record.
 
 ---
