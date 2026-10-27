@@ -56,6 +56,18 @@ class TaskRepository(OwnedRepository[Task]):
         )
         return self._session.scalar(statement)
 
+    def get_for_change(self, task_id: "uuid.UUID") -> Task | None:
+        """The task with its items, locked until the transaction ends. Locked first and
+        loaded after, so the items read are the ones another change committed while this
+        one waited."""
+        statement = (
+            self._scoped()
+            .where(Task.id == task_id)
+            .options(selectinload(Task.items), selectinload(Task.tag))
+            .with_for_update(of=Task)
+        )
+        return self._session.scalar(statement)
+
     def progress_by_plan(self, plan_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, tuple[int, int]]:
         """For each of these plans, how many of the owner's tasks from it are done, and how
         many there are (ADR-0050). A plan with no task left is absent."""

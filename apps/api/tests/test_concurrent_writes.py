@@ -9,15 +9,19 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Iterator
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
-from sqlalchemy import delete, text
+from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from syncaai.db import get_session_factory
-from syncaai.models import User
+from syncaai.models import ChecklistItem, Task, User
 from syncaai.repositories.tags import TagRepository
+from syncaai.repositories.tasks import TaskRepository
+from syncaai.schemas.tasks import ChecklistItemCreate
+from syncaai.services.checklist import ChecklistService
 
 pytestmark = pytest.mark.integration
 
@@ -96,3 +100,43 @@ def test_two_tasks_naming_the_same_new_tag_at_once_share_it(owner: uuid.UUID) ->
         thread.join(timeout=10)
 
     assert outcome == {"value": tag_id}
+
+
+def test_two_items_added_at_once_take_the_next_two_positions(owner: uuid.UUID) -> None:
+    """The second waits for the first and numbers itself after it, where both used to read
+    the same position and the second failed at commit."""
+    factory = get_session_factory()
+    with factory() as session:
+        task = Task(
+            user_id=owner,
+            title="Mudança",
+            start_at=datetime(2031, 6, 4, 15, 0, tzinfo=timezone.utc),
+            duration_minutes=60,
+        )
+        session.add(task)
+        session.commit()
+        task_id = task.id
+
+    def add(session: Session, label: str) -> int:
+        item = ChecklistService(TaskRepository(session, owner)).add(
+            task_id, ChecklistItemCreate(label=label)
+        )
+        return item.position
+
+    with factory() as first, factory() as second:
+        add(first, "Caixas")
+        pid = _backend(second)
+
+        thread, outcome = _in_a_thread(lambda session: add(session, "Fita"), second)
+        _until_blocked(pid)
+        first.commit()
+        thread.join(timeout=10)
+
+    assert outcome == {"value": 1}
+    with factory() as session:
+        rows = session.execute(
+            select(ChecklistItem.label, ChecklistItem.position)
+            .where(ChecklistItem.task_id == task_id)
+            .order_by(ChecklistItem.position)
+        ).all()
+    assert [tuple(row) for row in rows] == [("Caixas", 0), ("Fita", 1)]
