@@ -369,8 +369,13 @@ desenhava, então o redesign terminaria com o S8 ainda bloqueado. **Decidido: um
 logo depois do celular**, porque é o que destrava o S8 mais cedo. A ordem passa a ser:
 
 1. ✅ O design system, direção Papel (ADR-0026).
-2. A semana no desktop — voltou para correção em 2026-10-22.
-3. A semana no celular, como visão de um dia, e a faixa entre ele e o desktop.
+2. A semana no desktop — voltou para correção em 2026-10-22, e de novo em 2026-10-27: a escada
+   de carga entrou, mas criar tarefa e os atalhos (concluir com Espaço, a legenda visível) ainda
+   não.
+3. A semana no celular, como visão de um dia, e a faixa entre ele e o desktop — entregue em
+   2026-10-27 e conferida fora da ferramenta: contraste, larguras e números passam. Voltou com
+   dois ajustes: com o texto a 200% o cabeçalho não quebra e corta o Menu a 320 e 375px, e as
+   células da semana de relance têm 43,1px a 320px, abaixo dos 44px.
 4. **As telas do plano, para o S8.**
 5. Configurações, que ganharam dois campos depois do inventário: dias de folga e duração
    preferida de bloco (ADR-0032), além do tema e da janela do dia útil.
