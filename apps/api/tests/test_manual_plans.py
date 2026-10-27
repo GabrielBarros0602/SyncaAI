@@ -8,7 +8,7 @@ service with a fixed clock instead. Everything committed is deleted with its own
 import json
 import uuid
 from collections.abc import Iterator
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -175,6 +175,48 @@ def test_a_model_is_not_asked_while_a_plan_by_hand_is_pending(
     _write(client)
 
     assert client.post("/api/v1/ai/plans", json={"request": "Plano SQL"}).status_code == 409
+
+
+def _end(plan: dict[str, Any]) -> None:
+    """Where the clock leaves a plan once its horizon is over, before the sweep sees it."""
+    with get_session_factory()() as session:
+        session.execute(
+            update(PlanDraft)
+            .where(PlanDraft.id == uuid.UUID(plan["id"]))
+            .values(first_day=date(2020, 1, 6), last_day=date(2020, 1, 19))
+        )
+        session.commit()
+
+
+@pytest.mark.parametrize("path", [PLANS, "/api/v1/ai/plans"])
+def test_a_plan_whose_last_day_has_ended_makes_room_without_the_sweep(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID], path: str
+) -> None:
+    """It already reads as expired; asking for the next records it, so no worker is needed
+    for the place to be free (ADR-0033, ADR-0050)."""
+    _as(app, people[0])
+    ended = _write(client)
+    _end(ended)
+
+    response = client.post(path, json={"request": "O próximo plano"})
+
+    assert response.status_code in (201, 202), response.text
+    draft = _draft(ended)
+    assert (draft.status, draft.ended_at is not None) == ("expired", True)
+
+
+def test_asking_for_a_plan_lets_go_only_of_one_s_own(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Somebody else's ended plan is the sweep's to record, not this request's."""
+    _as(app, people[1])
+    theirs = _write(client)
+    _end(theirs)
+
+    _as(app, people[0])
+    assert client.post(PLANS, json={"request": "O meu plano"}).status_code == 201
+
+    assert _draft(theirs).status == "pending"
 
 
 # --- Adding a step -------------------------------------------------------------------------
