@@ -111,7 +111,7 @@ travamentos dos caminhos concorrentes e os testes de integração passaram. Saí
 de gravidade alta, decididos no mesmo dia, e os de gravidade média abaixo, abertos e em ordem.
 Nada aqui depende do redesign.
 
-### Alta 1 — um plano só era encontrado por quem já tinha o id — ✅ decidido no mesmo dia (ADR-0050)
+### Alta 1 — um plano só era encontrado por quem já tinha o id — ✅ decidido no mesmo dia (ADR-0050), feito em 2026-10-26
 
 O `job_id` só aparecia na resposta do `POST /ai/plans`, e o `plan_id` só no job. Um reload,
 outra aba ou outro aparelho perdiam os dois, e com eles o acompanhamento, a revisão e o

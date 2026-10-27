@@ -125,9 +125,9 @@ one. A person makes a plan at a time, and ADR-0020's trigger for a cursor is a m
 
 ## Action Items
 
-1. [ ] `GET /ai/plans`.
-2. [ ] `GET /plans`, filtered by the status as read.
-3. [ ] `progress` on the plan and `plan_id` on the task.
+1. [x] `GET /ai/plans`.
+2. [x] `GET /plans`, filtered by the status as read.
+3. [x] `progress` on the plan and `plan_id` on the task.
 
 ---
 
