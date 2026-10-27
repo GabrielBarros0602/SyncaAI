@@ -46,6 +46,7 @@ from syncaai.errors import (
     UsableWindowTooLongError,
     UsableWindowTooShortError,
     WeekdayOutOfRangeError,
+    WrongCurrentPasswordError,
 )
 from syncaai.planning.contract import MAX_ITEM_MINUTES, MAX_PLAN_ITEMS, MIN_ITEM_MINUTES
 from syncaai.schemas.tasks import MAX_CHECKLIST_ITEMS
@@ -96,6 +97,15 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Incorrect email or password."},
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(WrongCurrentPasswordError)
+    async def _wrong_current_password(_: Request, __: WrongCurrentPasswordError) -> JSONResponse:
+        # 422, never 401: the client answers a 401 by renewing the session and, when that
+        # does not help, by signing the person out, which a mistyped field must not do.
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "That is not your current password."},
         )
 
     @app.exception_handler(RateLimitExceededError)

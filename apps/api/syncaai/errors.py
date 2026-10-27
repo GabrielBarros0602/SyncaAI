@@ -39,6 +39,14 @@ class InvalidCredentialsError(DomainError):
     """
 
 
+class WrongCurrentPasswordError(DomainError):
+    """Raised when the current password given to change it is not the one stored (ADR-0051).
+
+    Not :class:`InvalidCredentialsError`: the person is signed in and their session is fine,
+    and only one field of the form is wrong.
+    """
+
+
 class RateLimitExceededError(DomainError):
     """Raised when a caller has spent its allowance for the current window."""
 

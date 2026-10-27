@@ -22,17 +22,20 @@ class RefreshTokenRepository:
             select(RefreshToken).where(RefreshToken.token_hash == token_hash)
         )
 
-    def revoke_all_for(self, user_id: uuid.UUID) -> None:
-        """End every session this user has open.
+    def revoke_all_for(self, user_id: uuid.UUID, *, keep: uuid.UUID | None = None) -> None:
+        """End every session this user has open, except ``keep`` when one is given.
 
         Called when the password changes. Without it, whoever knew the old password keeps a
-        live session for up to thirty days, and the reset would have secured nothing.
+        live session for up to thirty days, and the change would have secured nothing.
         """
-        self._session.execute(
+        statement = (
             update(RefreshToken)
             .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
             .values(revoked_at=datetime.now(timezone.utc))
         )
+        if keep is not None:
+            statement = statement.where(RefreshToken.id != keep)
+        self._session.execute(statement)
 
     def add(self, token: RefreshToken) -> None:
         self._session.add(token)

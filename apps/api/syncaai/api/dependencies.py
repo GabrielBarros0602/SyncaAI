@@ -100,6 +100,14 @@ def limit_verification_resend(
     RateLimiter(session).check(f"resend:{address}", settings.verification_resends_per_hour)
 
 
+def limit_password_change(
+    user_id: CurrentUserId, session: SessionDep, settings: SettingsDep
+) -> None:
+    """Bound guessing of the current password by whoever holds a session: per person, since
+    the person is known, on the login's budget, since it is the same guess (ADR-0051)."""
+    RateLimiter(session).check(f"password-change:{user_id}", settings.login_attempts_per_hour)
+
+
 def limit_password_reset(
     address: ClientAddress, session: SessionDep, settings: SettingsDep
 ) -> None:

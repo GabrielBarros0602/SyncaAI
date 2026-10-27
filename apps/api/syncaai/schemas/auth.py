@@ -91,6 +91,16 @@ class ResetPasswordRequest(BaseModel):
     password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
 
+class ChangePasswordRequest(BaseModel):
+    """The new password is held to registration's rules; the current one only to the length
+    a hash will take, since it was set under whatever rules held then."""
+
+    current_password: str = Field(max_length=MAX_PASSWORD_LENGTH)
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+    #: A native client's session, which it keeps; a browser's arrives as the refresh cookie.
+    refresh_token: str | None = None
+
+
 # What has to be identical is the answer *within* a flow — the two registration cases, the
 # two reset cases. Reusing one message across flows told someone asking to reset a password
 # to go and finish signing up.
