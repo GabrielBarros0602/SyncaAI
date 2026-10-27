@@ -122,7 +122,7 @@ ler.
 **Decidido:** `GET /ai/plans` e `GET /plans`, paginados e filtráveis por status, com o status
 lido, não o gravado; `progress` no plano aprovado, contado no servidor; `plan_id` na tarefa.
 
-### Alta 2 — a semana lê uma página só — ✅ decidido no mesmo dia: a semana pagina
+### Alta 2 — a semana lê uma página só — ✅ decidido no mesmo dia: a semana pagina; feito em 2026-10-26
 
 `useWeek.ts` pede `/tasks` com `limit=100` e nunca pede a página seguinte. A paginação é por
 offset (ADR-0020), e uma página cheia já diz que pode haver mais: quem não perguntava era o
