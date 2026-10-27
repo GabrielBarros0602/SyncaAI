@@ -376,10 +376,18 @@ logo depois do celular**, porque é o que destrava o S8 mais cedo. A ordem passa
    44,8px a 320px. Conferida em 64 medições.
 4. ✅ **As telas do plano, para o S8** — entregues em 2026-10-27. Todas as frases batem com as
    do servidor, e os números batem com a semana. Conferidas em 136 medições.
-5. Configurações, que ganharam dois campos depois do inventário: dias de folga e duração
-   preferida de bloco (ADR-0032), além do tema e da janela do dia útil. Brief pronto.
-6. Entrar, recuperar a senha e confirmar endereço. A recuperação entrou em 2026-10-27, com o
-   ADR-0051; entrar com o Google ficou fora da rodada. Brief pronto.
+5. ✅ Configurações, que ganharam dois campos depois do inventário: dias de folga e duração
+   preferida de bloco (ADR-0032), além do tema e da janela do dia útil. Entregues em
+   2026-10-27; conferidas em 78 medições. A janela, as folgas e o bloco salvam juntos, porque o
+   `PATCH /me` grava tudo ou nada.
+6. ✅ Entrar, recuperar a senha e confirmar endereço. A recuperação entrou em 2026-10-27, com o
+   ADR-0051; entrar com o Google ficou fora da rodada. Entregues no mesmo dia e conferidas em
+   130 medições. As respostas iguais do ADR-0019 saem idênticas também no desenho, e nenhum
+   campo recebe foco ao carregar.
+
+**A rodada está completa.** As seis telas voltaram e foram conferidas fora da ferramenta. O
+front-end continua congelado até a decisão de abrir a implementação, que é a que traz o ADR
+que supera o ADR-0024 nos cinco pontos em que ele remendou o design.
 
 Dois defeitos menores ficaram para a implementação, porque são de quebra de linha e não pedem
 outra volta de design. Os dois só aparecem com o texto a 200%:
@@ -387,9 +395,9 @@ outra volta de design. Os dois só aparecem com o texto a 200%:
 - a linha de conclusão tardia passa da borda no celular a 320, 375 e 667px;
 - o seletor de dia, ao editar um passo do plano, passa da borda a 320px.
 
-### Aberto pela conferência do passo 4 — para o S8
+### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 
-A tela do plano mostrou dois problemas que são do servidor, não do desenho:
+As telas mostraram três problemas que são do servidor, não do desenho:
 
 - **O motivo de um passo descartado por depender de um posterior fala com o modelo, não com a
   pessoa.** O validador escreve "it depends on items[6], which does not come before it", para a
@@ -399,6 +407,10 @@ A tela do plano mostrou dois problemas que são do servidor, não do desenho:
   link is not valid. Request a new one." Os dois links compartilham o erro; a frase tem que ser
   a de cada um. O brief do passo 6 já pede "That link to set a new password is not valid.
   Request a new one."
+- **O e-mail de confirmação não traz o código que o modo "I have a code" pede.** O token está só
+  dentro da URL. O modo já existe no app atual, e quem abre o e-mail em outro aparelho não tem
+  como usá-lo sem tirar o token da URL na mão. O desenho do passo 6 diz "The email also has a
+  code under the link", e é o e-mail que tem que passar a dizer isso.
 
 E uma pergunta para a implementação: o botão "Plan · 3 of 5" mostra o progresso de qual plano
 quando há mais de um aprovado.
