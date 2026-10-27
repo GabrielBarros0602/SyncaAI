@@ -247,7 +247,10 @@ and the ones kept are labelled by hand
 ([ADR-0048](docs/adr/0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md)).
 
 Tests marked `integration` need a reachable PostgreSQL. Start one with
-`docker compose up -d db` and they run as-is. Without one, deselect them:
+`docker compose up -d db` and they run as-is, in a database of their own, `syncaai_test`,
+which the suite creates and migrates itself; the development database is never touched. Set
+`TEST_DATABASE_URL` to use another, whose name has to end in `_test`. Without PostgreSQL,
+deselect them:
 
 ```bash
 pytest -m "not integration"
