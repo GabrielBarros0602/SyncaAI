@@ -9,7 +9,8 @@ where the state it needs is one a clock or a worker would reach.
 import json
 import uuid
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -19,7 +20,7 @@ from sqlalchemy import delete, func, update
 
 from syncaai.api.dependencies import get_current_user_id
 from syncaai.db import get_session_factory
-from syncaai.models import AiJob, AiUsage, User
+from syncaai.models import AiJob, AiUsage, PlanDraft, User
 from syncaai.planning.generator import FakeGenerator
 from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
 from syncaai.services.plan_jobs import run_plan_job
@@ -27,6 +28,7 @@ from syncaai.services.plan_jobs import run_plan_job
 pytestmark = pytest.mark.integration
 
 JOBS = "/api/v1/ai/plans"
+PLANS = "/api/v1/plans"
 REQUEST = "Organizar a mudança de apartamento"
 WEDNESDAY_NOON = datetime(2031, 6, 4, 12, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))
 ANSWER = json.dumps(
@@ -184,8 +186,136 @@ def test_someone_else_s_requests_are_not_listed(
     [{"status": "pending"}, {"limit": 0}, {"limit": 101}, {"offset": -1}],
 )
 def test_a_listing_outside_its_bounds_is_refused(
-    app: FastAPI, client: TestClient, people: list[uuid.UUID], params: dict[str, object]
+    app: FastAPI, client: TestClient, people: list[uuid.UUID], params: dict[str, Any]
 ) -> None:
     _as(app, people[0])
 
     assert client.get(JOBS, params=params).status_code == 422
+
+
+# --- Plans ---------------------------------------------------------------------------------
+
+
+def _write(client: TestClient, name: str) -> str:
+    """A plan by hand: no job, no model, and no worker needed to reach review (ADR-0047)."""
+    response = client.post(PLANS, json={"request": name})
+    assert response.status_code == 201, response.text
+    return str(response.json()["id"])
+
+
+def _discarded_then_pending(client: TestClient) -> tuple[str, str]:
+    first = _write(client, "Arrumar o quarto")
+    assert client.post(f"{PLANS}/{first}/discard").status_code == 204
+    return first, _write(client, "Estudar para a prova")
+
+
+def _listed(client: TestClient, **params: Any) -> list[str]:
+    response = client.get(PLANS, params=params)
+    assert response.status_code == 200, response.text
+    return [item["id"] for item in response.json()["items"]]
+
+
+def test_the_plans_are_listed_newest_first_each_as_it_reads(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    discarded, pending = _discarded_then_pending(client)
+
+    response = client.get(PLANS)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "items": [client.get(f"{PLANS}/{plan}").json() for plan in (pending, discarded)],
+        "limit": 50,
+        "offset": 0,
+    }
+    assert [item["status"] for item in response.json()["items"]] == ["pending", "discarded"]
+
+
+def test_the_plan_waiting_for_review_is_found_by_its_status(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    discarded, pending = _discarded_then_pending(client)
+
+    assert _listed(client, status="pending", limit=1) == [pending]
+    assert _listed(client, status="discarded") == [discarded]
+    assert _listed(client, status=["approved", "expired"]) == []
+    assert _listed(client, status=["discarded", "pending"]) == [
+        pending,
+        discarded,
+    ]
+
+
+def test_the_plans_are_paged_by_limit_and_offset(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    discarded, _ = _discarded_then_pending(client)
+
+    second = client.get(PLANS, params={"limit": 1, "offset": 1}).json()
+
+    assert ([item["id"] for item in second["items"]], second["limit"], second["offset"]) == (
+        [discarded],
+        1,
+        1,
+    )
+
+
+def _move_to_the_past(plan_id: str, **values: object) -> None:
+    """Where the clock leaves a plan once its horizon is over: two weeks long ago."""
+    with get_session_factory()() as session:
+        session.execute(
+            update(PlanDraft)
+            .where(PlanDraft.id == uuid.UUID(plan_id))
+            .values(first_day=date(2020, 1, 6), last_day=date(2020, 1, 19), **values)
+        )
+        session.commit()
+
+
+def test_a_plan_whose_last_day_has_ended_is_listed_as_expired_before_the_sweep(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Listed as it reads, not as it is stored (ADR-0033, ADR-0050). The first plan is where
+    the sweep leaves one; the second is still stored as pending, and must not be listed as
+    the plan waiting for review."""
+    _as(app, people[0])
+    swept = _write(client, "Arrumar o quarto")
+    _move_to_the_past(swept, status="expired", ended_at=func.now())
+    unswept = _write(client, "Estudar para a prova")
+    _move_to_the_past(unswept)
+
+    expired = client.get(PLANS, params={"status": "expired"}).json()["items"]
+
+    assert [(plan["id"], plan["status"]) for plan in expired] == [
+        (unswept, "expired"),
+        (swept, "expired"),
+    ]
+    assert _listed(client, status="pending") == []
+    assert client.get(f"{PLANS}/{unswept}").json()["status"] == "expired"
+    with get_session_factory()() as session:
+        assert session.get_one(PlanDraft, uuid.UUID(unswept)).status == "pending"
+
+
+def test_someone_else_s_plans_are_not_listed(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    _as(app, people[0])
+    _write(client, "Arrumar o quarto")
+
+    _as(app, people[1])
+    mine = _write(client, "Estudar para a prova")
+
+    assert _listed(client) == [mine]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [{"status": "queued"}, {"limit": 0}, {"limit": 101}, {"offset": -1}],
+)
+def test_a_plan_listing_outside_its_bounds_is_refused(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID], params: dict[str, Any]
+) -> None:
+    _as(app, people[0])
+
+    assert client.get(PLANS, params=params).status_code == 422
