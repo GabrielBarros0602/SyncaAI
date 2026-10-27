@@ -369,18 +369,39 @@ desenhava, então o redesign terminaria com o S8 ainda bloqueado. **Decidido: um
 logo depois do celular**, porque é o que destrava o S8 mais cedo. A ordem passa a ser:
 
 1. ✅ O design system, direção Papel (ADR-0026).
-2. A semana no desktop — voltou para correção em 2026-10-22, e de novo em 2026-10-27: a escada
-   de carga entrou, mas criar tarefa e os atalhos (concluir com Espaço, a legenda visível) ainda
-   não.
-3. A semana no celular, como visão de um dia, e a faixa entre ele e o desktop — entregue em
-   2026-10-27 e conferida fora da ferramenta: contraste, larguras e números passam. Voltou com
-   dois ajustes: com o texto a 200% o cabeçalho não quebra e corta o Menu a 320 e 375px, e as
-   células da semana de relance têm 43,1px a 320px, abaixo dos 44px.
-4. **As telas do plano, para o S8.**
+2. ✅ A semana no desktop — as correções entraram na terceira volta, em 2026-10-27: criar
+   tarefa com a tecla N, concluir com Espaço, a legenda que recolhe. Conferida a 1280px.
+3. ✅ A semana no celular, como visão de um dia, e a faixa entre ele e o desktop — corrigida na
+   mesma volta: o cabeçalho quebra com o texto a 200%, e as células da semana de relance têm
+   44,8px a 320px. Conferida em 64 medições.
+4. ✅ **As telas do plano, para o S8** — entregues em 2026-10-27. Todas as frases batem com as
+   do servidor, e os números batem com a semana. Conferidas em 136 medições.
 5. Configurações, que ganharam dois campos depois do inventário: dias de folga e duração
-   preferida de bloco (ADR-0032), além do tema e da janela do dia útil.
+   preferida de bloco (ADR-0032), além do tema e da janela do dia útil. Brief pronto.
 6. Entrar, recuperar a senha e confirmar endereço. A recuperação entrou em 2026-10-27, com o
-   ADR-0051; entrar com o Google ficou fora da rodada.
+   ADR-0051; entrar com o Google ficou fora da rodada. Brief pronto.
+
+Dois defeitos menores ficaram para a implementação, porque são de quebra de linha e não pedem
+outra volta de design. Os dois só aparecem com o texto a 200%:
+
+- a linha de conclusão tardia passa da borda no celular a 320, 375 e 667px;
+- o seletor de dia, ao editar um passo do plano, passa da borda a 320px.
+
+### Aberto pela conferência do passo 4 — para o S8
+
+A tela do plano mostrou dois problemas que são do servidor, não do desenho:
+
+- **O motivo de um passo descartado por depender de um posterior fala com o modelo, não com a
+  pessoa.** O validador escreve "it depends on items[6], which does not come before it", para a
+  mensagem de reparo, e o rascunho guarda o mesmo texto. A revisão mostraria `items[6]` a quem
+  só vê "step 7". Os outros motivos servem às duas leituras.
+- **Um link de reset inválido responde com a frase do link de confirmação:** "That confirmation
+  link is not valid. Request a new one." Os dois links compartilham o erro; a frase tem que ser
+  a de cada um. O brief do passo 6 já pede "That link to set a new password is not valid.
+  Request a new one."
+
+E uma pergunta para a implementação: o botão "Plan · 3 of 5" mostra o progresso de qual plano
+quando há mais de um aprovado.
 
 ---
 

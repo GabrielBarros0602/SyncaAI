@@ -207,9 +207,9 @@ base work that list began with is done (ADR-0027 to ADR-0029).
 
 1. The rest of the three screens, after the redesign: the day's "move something" offer,
    address confirmation and settings. `docs/design/README.md` records what the second round
-   decided. The third round's briefs are local, in `docs/design-brief-3*.md`; the desktop week
-   and the phone's day view are back, and both went back for corrections recorded in the
-   backlog, with the round's order.
+   decided. The third round's briefs are local, in `docs/design-brief-3*.md`; the desktop week,
+   the phone's day view and the plan screens are back and checked, and settings and signing in
+   are the round's last two steps, as the backlog orders them.
 2. Nothing else moves on its own. S8 and S10 wait for the third design round, S9 for S8 to
    be published (ADR-0002), and the paid client for a decision to pay (`docs/backlog.md`,
    "Quando um provedor for pago"). Parts of S11 — the multi-stage Dockerfile, metrics read
