@@ -363,6 +363,23 @@ decididas:
 Dois pontos voltaram para correção. A escada de carga: a tela a recalculava com limites
 próprios (12h, 14h, 16h), em vez de usar o `load` do servidor. E o criar tarefa, que faltava.
 
+### A ordem da terceira rodada — revista em 2026-10-26
+
+O inventário da rodada foi escrito antes do S6 e do S7, e dizia que a IA só encosta na tela pela
+oferta do dia pesado. Deixou de ser verdade: o S8 precisa do card de revisão do plano, do
+acompanhamento do pedido, do plano escrito à mão, do "3 of 5 preparations done" e dos estados de
+erro (falhou, modelo fora, teto atingido, limite de pedidos). Nenhum passo da rodada os
+desenhava, então o redesign terminaria com o S8 ainda bloqueado. **Decidido: um passo próprio,
+logo depois do celular**, porque é o que destrava o S8 mais cedo. A ordem passa a ser:
+
+1. ✅ O design system, direção Papel (ADR-0026).
+2. A semana no desktop — voltou para correção em 2026-10-22.
+3. A semana no celular, como visão de um dia, e a faixa entre ele e o desktop.
+4. **As telas do plano, para o S8.**
+5. Configurações, que ganharam dois campos depois do inventário: dias de folga e duração
+   preferida de bloco (ADR-0032), além do tema e da janela do dia útil.
+6. Entrar e confirmar endereço.
+
 ---
 
 ## Rodada 2 — os verbos que faltam
