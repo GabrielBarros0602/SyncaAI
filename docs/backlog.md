@@ -141,16 +141,15 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
 1. ~~**Um plano cujo último dia terminou segura a vaga até a varredura.**~~ ✅ Feito em
    2026-10-26: pedir um plano, ao modelo ou à mão, grava antes como expirados os planos da
    própria pessoa que já terminaram. Os dos outros continuam com a varredura.
-2. **Duas tarefas criadas ao mesmo tempo com a mesma etiqueta nova dão 500.**
-   `get_or_create` lê e depois insere, sem tratar a violação de `(user_id, name)`. O índice
-   mantém a integridade; quem perde a corrida recebe erro de servidor em vez da etiqueta.
-3. **Dois itens de checklist adicionados ao mesmo tempo disputam a mesma posição.** A posição
-   é `len(task.items)`, lida sem trava; a unique adiada barra o segundo só no commit, como
-   erro de servidor.
-4. **`alembic check` não enxerga trigger, a expressão de uma exclusion constraint nem o
-   predicado de um índice parcial.** Mudar um deles no modelo sem migration passa no check, e
-   os testes de DDL leem o modelo, não o banco. Os testes de integração rodam sobre o banco
-   migrado, mas só pegam o que exercitam.
+2. ~~**Duas tarefas criadas ao mesmo tempo com a mesma etiqueta nova dão 500.**~~ ✅ Feito em
+   2026-10-26: a inserção espera a primeira e, no conflito, não faz nada; as duas tarefas
+   ficam com a mesma etiqueta.
+3. ~~**Dois itens de checklist adicionados ao mesmo tempo disputam a mesma posição.**~~ ✅ Feito
+   em 2026-10-26: toda mudança que numera os itens trava a tarefa antes de lê-los.
+4. ~~**`alembic check` não enxerga a expressão de uma CHECK, de uma exclusion constraint nem o
+   predicado de um índice parcial.**~~ ✅ Feito em 2026-10-26: um teste compara cada constraint
+   e cada índice migrado com o do modelo, pela definição que o próprio PostgreSQL imprime. O
+   trigger do `end_at` existe só na migration e segue com os seus testes de comportamento.
 5. ~~**Os testes rodam no banco de desenvolvimento.**~~ ✅ Feito em 2026-10-26: os testes de
    integração rodam no `syncaai_test`, que a própria suíte cria e migra; um nome que não
    termine em `_test` é recusado.
