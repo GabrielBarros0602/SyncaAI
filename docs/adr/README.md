@@ -32,7 +32,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0021](0021-browser-session-and-origin.md) | Browser session handling and origin strategy | Accepted |
 | [0022](0022-capacity-against-a-usable-day.md) | Capacity is real occupancy, measured against a usable day | Accepted; decision 3 superseded by 0029 |
 | [0023](0023-a-budget-you-choose-under-a-ceiling-you-do-not.md) | A budget you choose, under a ceiling you do not | Accepted; items 7–9 redefined by 0029 |
-| [0024](0024-soften-the-visual-language-in-stylesheets-only.md) | Soften the visual language, in stylesheets only | Accepted; tokens superseded by 0026 |
+| [0024](0024-soften-the-visual-language-in-stylesheets-only.md) | Soften the visual language, in stylesheets only | Superseded by [0052](0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md) |
 | [0025](0025-undo-is-a-recreate.md) | Undo is a recreate, so it is offered only where recreating is faithful | Accepted |
 | [0026](0026-adopt-the-papel-tokens-and-test-every-pair.md) | Adopt the Papel tokens, and test every pair they promise | Accepted |
 | [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
@@ -60,6 +60,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0049](0049-a-step-that-waits-for-itself-loses-only-that.md) | A step that waits for itself loses only that | Accepted |
 | [0050](0050-plans-and-their-requests-are-listed-and-an-approved-plan-counts-its-tasks.md) | Plans and their requests are listed, and an approved plan counts its tasks | Accepted |
 | [0051](0051-a-password-change-keeps-this-session-and-a-reset-keeps-none.md) | A password change keeps this session, a reset keeps none, and both are told | Accepted |
+| [0052](0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md) | The third design round is the specification, and the front end opens | Accepted |
 
 ## Template
 
