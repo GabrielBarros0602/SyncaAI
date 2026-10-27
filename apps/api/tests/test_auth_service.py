@@ -35,6 +35,9 @@ class FakeUsers:
     def get_by_email(self, email: str) -> User | None:
         return next((user for user in self.rows if user.email == email), None)
 
+    def get_by_id(self, user_id: uuid.UUID) -> User | None:
+        return next((user for user in self.rows if user.id == user_id), None)
+
     def add(self, user: User) -> None:
         user.id = uuid.uuid4()
         user.created_at = A_TIMESTAMP
@@ -51,9 +54,9 @@ class FakeSessions:
     def get_by_hash(self, token_hash: str) -> RefreshToken | None:
         return next((row for row in self.rows if row.token_hash == token_hash), None)
 
-    def revoke_all_for(self, user_id: uuid.UUID) -> None:
+    def revoke_all_for(self, user_id: uuid.UUID, *, keep: uuid.UUID | None = None) -> None:
         for row in self.rows:
-            if row.user_id == user_id and row.revoked_at is None:
+            if row.user_id == user_id and row.revoked_at is None and row.id != keep:
                 row.revoked_at = datetime.now(timezone.utc)
 
     def add(self, token: RefreshToken) -> None:

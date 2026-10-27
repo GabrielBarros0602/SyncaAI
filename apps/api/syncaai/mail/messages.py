@@ -61,3 +61,24 @@ def password_reset_requested(to: str, reset_url: str) -> Message:
             "If this was not you, nothing has changed and you can ignore this message."
         ),
     )
+
+
+def password_changed(to: str) -> Message:
+    """Sent after a change and after a reset (ADR-0051).
+
+    No link, on purpose: a message that tells somebody their password changed is exactly the
+    one a phishing mail imitates, and having no link in the real one is what makes a fake
+    easy to spot. It cannot be sent to a stranger on demand either, since both routes that
+    send it need the password or the inbox already.
+    """
+    return Message(
+        to=to,
+        subject="Your SyncaAI password was changed",
+        text=(
+            "The password for the SyncaAI account at this address was just changed, and the "
+            "other devices signed in to it were signed out.\n\n"
+            "If this was you, there is nothing to do.\n\n"
+            "If it was not, somebody has your password or this inbox: reset the password "
+            "straight away, and change it anywhere else you use it."
+        ),
+    )

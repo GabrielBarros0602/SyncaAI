@@ -6,8 +6,10 @@ from fastapi import APIRouter, Body, Cookie, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from syncaai.api.dependencies import (
+    CurrentUserId,
     MailerDep,
     limit_login,
+    limit_password_change,
     limit_password_reset,
     limit_registration,
     limit_verification_resend,
@@ -24,6 +26,7 @@ from syncaai.schemas.auth import (
     REGISTRATION_ACCEPTED,
     VERIFICATION_RESEND_ACCEPTED,
     AcceptedResponse,
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
@@ -35,6 +38,7 @@ from syncaai.schemas.auth import (
 )
 from syncaai.security.tokens import create_access_token
 from syncaai.services.auth import AuthService
+from syncaai.services.password_change import PasswordChangeService
 from syncaai.services.password_reset import PasswordResetService
 from syncaai.services.registration import RegistrationService
 
@@ -79,7 +83,14 @@ def get_password_reset_service(
     )
 
 
+def get_password_change_service(
+    session: Annotated[Session, Depends(get_session)], mailer: MailerDep
+) -> PasswordChangeService:
+    return PasswordChangeService(UserRepository(session), RefreshTokenRepository(session), mailer)
+
+
 RegistrationDep = Annotated[RegistrationService, Depends(get_registration_service)]
+PasswordChangeDep = Annotated[PasswordChangeService, Depends(get_password_change_service)]
 PasswordResetDep = Annotated[PasswordResetService, Depends(get_password_reset_service)]
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -176,6 +187,34 @@ def reset_password(
 ) -> None:
     """Spend a reset token and sign every device out."""
     service.reset(payload.token, payload.password)
+    session.commit()
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Change your password, staying signed in here",
+    dependencies=[Depends(limit_password_change)],
+)
+def change_password(
+    payload: ChangePasswordRequest,
+    user_id: CurrentUserId,
+    service: PasswordChangeDep,
+    session: SessionDep,
+    cookie_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE_NAME)] = None,
+) -> None:
+    """This session stays and every other ends (ADR-0051).
+
+    Here rather than beside ``/me`` because only this path receives the refresh cookie, and
+    the cookie is what says which session is this one. A native client names it in the body,
+    as it does to sign out.
+    """
+    service.change(
+        user_id,
+        payload.current_password,
+        payload.new_password,
+        this_session=payload.refresh_token or cookie_token,
+    )
     session.commit()
 
 
