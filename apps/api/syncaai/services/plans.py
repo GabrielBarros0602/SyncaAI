@@ -46,6 +46,7 @@ from syncaai.schemas.plans import (
     PlanItemRead,
     PlanItemUpdate,
     PlanLinkRead,
+    PlanProgressRead,
     PlanRead,
 )
 from syncaai.services.ai_breaker import refuse_while_open
@@ -200,6 +201,8 @@ class PlanService:
 
     def _read(self, drafts: Sequence[PlanDraft], now: datetime) -> list[PlanRead]:
         prerequisites = self._drafts.prerequisites_of([draft.id for draft in drafts])
+        approved = [draft.id for draft in drafts if draft.status == "approved"]
+        progress = self._tasks().progress_by_plan(approved)
         return [
             PlanRead(
                 id=draft.id,
@@ -217,6 +220,7 @@ class PlanService:
                     PlanDiscardRead(position=d.position, title=d.title, reasons=d.reasons)
                     for d in draft.discards
                 ],
+                progress=_progress(draft, progress),
             )
             for draft in drafts
         ]
@@ -427,6 +431,15 @@ class PlanService:
                 continue
             if other.start_at < end and other.start_at + timedelta(minutes=other.minutes) > start:
                 raise StepOverlapsStepError
+
+
+def _progress(
+    draft: PlanDraft, counted: dict[uuid.UUID, tuple[int, int]]
+) -> PlanProgressRead | None:
+    if draft.status != "approved":
+        return None
+    done, total = counted.get(draft.id, (0, 0))
+    return PlanProgressRead(done=done, total=total)
 
 
 def _job(job: AiJob, plan_id: uuid.UUID | None) -> JobRead:

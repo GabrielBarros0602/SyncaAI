@@ -73,6 +73,14 @@ class PlanDiscardRead(BaseModel):
     reasons: list[str]
 
 
+class PlanProgressRead(BaseModel):
+    """What an approved plan's tasks have come to, counted as it is read (ADR-0050)."""
+
+    done: int
+    #: The plan's tasks that still exist: a deleted one leaves the count.
+    total: int
+
+
 class PlanRead(BaseModel):
     id: uuid.UUID
     status: PlanStatus
@@ -83,6 +91,8 @@ class PlanRead(BaseModel):
     week_ends_on: date
     items: list[PlanItemRead]
     discarded: list[PlanDiscardRead]
+    #: Only once the plan is approved and its steps are tasks; None before.
+    progress: PlanProgressRead | None
 
 
 class PlanPage(BaseModel):
