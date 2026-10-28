@@ -1,0 +1,29 @@
+/* The week's page: the header, the legend and the seven days, as week-desktop.dc.html lays
+   them out. The shell pads the page; this only spaces what is inside it. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Seven equal columns of at least 140px, which is what fits at 1100px. The round's page has a
+   minimum width for the same reason; here the week scrolls sideways inside itself instead, so
+   the header above it stays on screen. Sized by a floor rather than by what each column holds,
+   because the second round's rows still in them would make the columns unequal. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  gap: var(--gap-columns);
+  align-items: start;
+  overflow-x: auto;
+}
+
+/* Below 1100px the round puts one day beside the week, and below 640px one day under a strip
+   of seven (ADR-0052). Until those layouts land, the seven days keep a readable width and the
+   week scrolls sideways inside itself rather than squeezing every column to nothing. */
+@media (max-width: 1099px) {
+  .grid {
+    grid-template-columns: repeat(7, minmax(200px, 1fr));
+  }
+}

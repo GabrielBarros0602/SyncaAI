@@ -11,9 +11,9 @@ import {
   clock,
   zonedDay,
   daysFrom,
+  dayMonth,
   formatCompact,
   formatMinutes,
-  isoWeek,
   minutesBetween,
   mondayOf,
   parseClock,
@@ -21,6 +21,8 @@ import {
   stamp,
   startOfLocalDay,
   toLocalDate,
+  weekRange,
+  weekdayLong,
   weekdayName,
   zonedStamp,
 } from "../src/lib/time";
@@ -96,31 +98,6 @@ describe("formatCompact", () => {
     for (const minutes of [0, 45, 60, 120, 960, 1440]) {
       expect(formatCompact(minutes)).toBe(formatMinutes(minutes));
     }
-  });
-});
-
-describe("isoWeek", () => {
-  it("numbers an ordinary week from the Thursday it contains", () => {
-    expect(isoWeek(new Date(2026, 7, 24))).toEqual({ week: 35, year: 2026 });
-  });
-
-  it("gives January days to the year whose week actually holds them", () => {
-    // 1 January 2027 is a Friday, so its week's Thursday is 31 December 2026 — the week
-    // belongs to 2026 and reading the year off the date would print `week 53 · 2027`.
-    expect(isoWeek(new Date(2027, 0, 1))).toEqual({ week: 53, year: 2026 });
-  });
-
-  it("gives December days to the next year when the week has crossed", () => {
-    // 31 December 2019 is a Tuesday; that week's Thursday is 2 January 2020.
-    expect(isoWeek(new Date(2019, 11, 31))).toEqual({ week: 1, year: 2020 });
-  });
-
-  it("puts every day of one week on the same number", () => {
-    // The header is drawn from the Monday, but nothing stops a caller passing another day,
-    // and a week that renumbers itself halfway through would be a very quiet bug.
-    const numbers = daysFrom(mondayOf(new Date(2026, 7, 26))).map((day) => isoWeek(day).week);
-
-    expect(new Set(numbers)).toEqual(new Set([35]));
   });
 });
 
@@ -260,6 +237,27 @@ describe("the week", () => {
 });
 
 describe("labels", () => {
+  it("writes a date the way the round's week does, day first", () => {
+    expect(dayMonth(new Date(2026, 9, 2))).toBe("2 Oct");
+    expect(weekdayLong(3)).toBe("Wednesday");
+    expect(weekdayLong(7)).toBe("Sunday");
+  });
+
+  it("names a week inside one month with the month once", () => {
+    expect(weekRange(new Date(2026, 9, 19), new Date(2026, 9, 25))).toBe("19 – 25 Oct 2026");
+  });
+
+  it("names both months when the week crosses one", () => {
+    expect(weekRange(new Date(2026, 8, 28), new Date(2026, 9, 4))).toBe("28 Sep – 4 Oct 2026");
+  });
+
+  it("names both years when the week crosses into a new one", () => {
+    // With the year only at the end, the first date would read as December 2027.
+    expect(weekRange(new Date(2026, 11, 28), new Date(2027, 0, 3))).toBe(
+      "28 Dec 2026 – 3 Jan 2027",
+    );
+  });
+
   it("stamps a date short", () => {
     expect(stamp(new Date(2026, 7, 24))).toBe("Aug 24");
     expect(stamp(new Date(2026, 0, 5))).toBe("Jan 05");
