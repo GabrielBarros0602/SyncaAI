@@ -14,6 +14,7 @@ import { Navigate, Route, Routes } from "react-router";
 import { AuthScreen } from "./auth/AuthScreen";
 import { useSession } from "./auth/useSession";
 import { RouteFocus } from "./ui/RouteFocus";
+import shell from "./ui/Shell.module.css";
 import { WeekScreen } from "./week/WeekScreen";
 import { WeekSkeleton } from "./week/WeekSkeleton";
 
@@ -21,7 +22,7 @@ function Home(): React.ReactNode {
   const { status } = useSession();
 
   return (
-    <div style={{ minHeight: "100vh", padding: status === "authenticated" ? "56px 64px 96px" : 0 }}>
+    <div className={status === "authenticated" ? shell.signedIn : shell.signedOut}>
       {status === "loading" && <WeekSkeleton />}
       {status === "anonymous" && <AuthScreen />}
       {status === "authenticated" && <WeekScreen />}

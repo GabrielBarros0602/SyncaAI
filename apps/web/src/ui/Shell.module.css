@@ -1,0 +1,29 @@
+/*
+ * The page around a signed-in screen, at the round's breakpoints (ADR-0052): 1100px, where
+ * seven day columns of at least 140px fit, and 640px, below which one day fills the screen.
+ *
+ * It replaces the inline padding App.tsx used to write and the !important rule tokens.css
+ * needed to beat it (ADR-0024), which is why the two went together.
+ */
+
+.signedIn {
+  min-height: 100vh;
+  padding: 56px 64px 96px;
+}
+
+@media (max-width: 1099px) {
+  .signedIn {
+    padding: var(--space-6);
+  }
+}
+
+@media (max-width: 639px) {
+  .signedIn {
+    padding: var(--space-4);
+  }
+}
+
+/* The sign-in screen draws its own edges. */
+.signedOut {
+  min-height: 100vh;
+}
