@@ -4,17 +4,15 @@
  *
  * It replaces the inline padding App.tsx used to write and the !important rule tokens.css
  * needed to beat it (ADR-0024), which is why the two went together.
+ *
+ * 24px from 640px up, as week-desktop.dc.html pads the week. The second round's 56px and 64px
+ * took 80px from the seven columns at 1280px, where every pixel of a column is a word of a
+ * title that wraps or does not.
  */
 
 .signedIn {
   min-height: 100vh;
-  padding: 56px 64px 96px;
-}
-
-@media (max-width: 1099px) {
-  .signedIn {
-    padding: var(--space-6);
-  }
+  padding: var(--space-6);
 }
 
 @media (max-width: 639px) {
