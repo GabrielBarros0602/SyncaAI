@@ -270,7 +270,9 @@ export function useWeek(): Week {
 
   return {
     status,
-    me: ready?.me ?? null,
+    // From the last week that arrived, not only the current one: who is signed in does not
+    // change with the week, and the header keeps the Menu while the next week loads.
+    me: snapshot?.me ?? null,
     days: ready?.days ?? [],
     byDay,
     tasks: ready?.tasks ?? [],

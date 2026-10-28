@@ -1,51 +1,48 @@
-import { daysFrom, mondayOf, stamp, weekdayName } from "../lib/time";
+import { dayMonth, daysFrom, mondayOf, weekRange, weekdayLong } from "../lib/time";
 import { cx } from "../lib/cx";
-import styles from "./Week.module.css";
+import day from "./Day.module.css";
+import page from "./WeekScreen.module.css";
+
+interface Props {
+  /** The week on its way; the browser's own week while the session is still unknown. */
+  monday?: Date;
+}
 
 /**
- * What is on screen before the session is known.
+ * The week while its figures are on their way: before the session is known, and between one
+ * week and the next.
  *
  * Deliberately not the login screen and not a spinner in the middle of nothing. The shape
  * of the week is already true — seven days exist regardless of who is signed in — so it is
  * drawn, and only the numbers are withheld. A user who is signed in never sees the
  * signed-out interface, not even for a frame (ADR-0021).
+ *
+ * The dates are the week being loaded, not this week: after `]` they are next week's, which is
+ * what the heading above already says.
  */
-export function WeekSkeleton(): React.ReactNode {
-  const days = daysFrom(mondayOf(new Date()));
+export function WeekSkeleton({ monday = mondayOf(new Date()) }: Props): React.ReactNode {
+  const dates = daysFrom(monday);
 
   return (
-    <div className={styles.frame} aria-busy="true">
-      <div className={styles.chrome}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-          <span className={styles.wordmark}>SyncaAI</span>
-          <span className={styles.meta}>checking session</span>
-        </div>
-        <span className={cx(styles.shellBar, "skeleton")} style={{ width: 150 }} />
-      </div>
-      <div className={styles.summary}>
-        <span className={cx(styles.shellBar, "skeleton")} style={{ width: 280 }} />
-        <span className={styles.hint} role="status">
-          nothing renders until the session is known
-        </span>
-      </div>
-      <div className={styles.grid}>
-        {days.map((day, index) => (
-          <div key={day.toISOString()} className={styles.day}>
-            <div className={styles.head}>
-              <span className={styles.dayIndex}>{String(index + 1).padStart(2, "0")}</span>
-              <div className={styles.weekday} style={{ color: "var(--faint)" }}>
-                {weekdayName(index + 1)}
+    <>
+      {/* The phone's words for it (day-phone.dc.html); the desktop drawing has no loading
+          state of its own. */}
+      <p role="status" className={day.loading}>
+        Loading {weekRange(monday, dates[6] as Date)}…
+      </p>
+      <div className={page.grid} aria-busy="true">
+        {dates.map((date, index) => (
+          <div key={date.toISOString()} className={day.day}>
+            <div className={day.head}>
+              <div className={day.name}>
+                <span className={day.weekday}>{weekdayLong(index + 1)}</span>
+                <span className={day.date}>{dayMonth(date)}</span>
               </div>
-              <div className={styles.date}>{stamp(day)}</div>
-              <div className={styles.shellFree}>&#8212;</div>
-              <div
-                className={cx(styles.shellBar, "skeleton")}
-                style={{ marginTop: 22, height: 3 }}
-              />
+              <span className={cx(day.placeholder, "skeleton")} />
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

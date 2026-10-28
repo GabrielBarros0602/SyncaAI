@@ -22,7 +22,8 @@ function Home(): React.ReactNode {
   const { status } = useSession();
 
   return (
-    <div className={status === "authenticated" ? shell.signedIn : shell.signedOut}>
+    // The loading week is padded like the week it turns into, so nothing moves when it does.
+    <div className={status === "anonymous" ? shell.signedOut : shell.signedIn}>
       {status === "loading" && <WeekSkeleton />}
       {status === "anonymous" && <AuthScreen />}
       {status === "authenticated" && <WeekScreen />}

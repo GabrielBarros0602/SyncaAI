@@ -1,38 +1,11 @@
 /*
- * The week screen's rows, panels and forms, and the loading and unreachable weeks.
+ * The week's rows, carried bands, panels and the new task form.
  *
- * What is left of the second round's stylesheet. The page, its header and each day's header
- * moved to the round's tokens in WeekScreen, WeekHeader and Day.module.css (ADR-0052); the
- * rest moves as each part is rebuilt, and this file goes with the last of them.
+ * What is left of the second round's stylesheet. The page, its header, each day's header and
+ * the loading and unreachable weeks moved to the round's tokens in WeekScreen, WeekHeader and
+ * Day.module.css (ADR-0052); the rest moves as each part is rebuilt, and this file goes with
+ * the last of them.
  */
-
-/* Rounded, and clipping to its own corners: without the clip the first and last column paint
-   square fills straight through the curve. */
-.frame {
-  border: 1px solid var(--rule2);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.chrome {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--rule2);
-}
-
-.wordmark {
-  font: 800 15px/1 var(--sans);
-  letter-spacing: -0.01em;
-}
-
-.meta {
-  font: 400 12px/1 var(--mono);
-  letter-spacing: 0.06em;
-  color: var(--faint);
-}
 
 /* The keyboard hint next to every action. Not decoration: on a screen opened every day, a
    shortcut is a feature, and showing it is what makes it discoverable. */
@@ -42,51 +15,6 @@
   border-radius: 4px;
   padding: 2px 4px;
   color: var(--faint);
-}
-
-.summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 13px 20px;
-  border-bottom: 1px solid var(--rule);
-  flex-wrap: wrap;
-}
-
-.hint {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font: 400 12px/1 var(--sans);
-  color: var(--faint);
-}
-
-/* Never narrower than 150px. A crossing task's range, `22:00 – 01:00+1`, is 108px of 12px
-   type and does not break, and below that width it was the `+1` that got clipped — the one
-   character saying the end time belongs to tomorrow. Under 1180px the week scrolls a little
-   sideways instead. */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(150px, 1fr));
-  overflow-x: auto;
-}
-
-.day {
-  border-right: 1px solid var(--rule);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.day:last-child {
-  border-right: 0;
-}
-
-.head {
-  position: relative;
-  padding: var(--pad);
-  overflow: hidden;
 }
 
 /* The directional fill. It starts flat and grows from whichever edge the pointer crossed,
@@ -100,24 +28,6 @@
   transform-origin: left center;
   transition: transform var(--dur) cubic-bezier(0.2, 0.75, 0.2, 1);
   pointer-events: none;
-}
-
-.dayIndex {
-  font: 500 12px/1 var(--mono);
-  color: var(--faint);
-}
-
-.weekday {
-  margin-top: 13px;
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.date {
-  margin-top: 5px;
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
 }
 
 /*
@@ -828,138 +738,12 @@
   cursor: progress;
 }
 
-.banner {
-  border-bottom: 1px solid var(--rule);
-  border-radius: var(--radius-md);
-  background: var(--accent-tint);
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.bannerHead {
-  font: 500 15px/1.3 var(--sans);
-  color: var(--chip-ink);
-}
-
-.bannerNote {
-  margin-top: 7px;
-  font: 400 12px/1.4 var(--mono);
-  color: var(--dim);
-}
-
-.retry {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-  cursor: pointer;
-  transition: background var(--dur);
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.03em;
-  color: var(--chip-ink);
-}
-
-.retry:hover {
-  background: var(--hover);
-}
-
-.retryKey {
-  font: 500 11px/1 var(--mono);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  padding: 2px 4px;
-  color: var(--chip-ink);
-}
-
-.shellBar {
-  display: block;
-  height: 11px;
-  background: var(--fill);
-}
-
-.shellFree {
-  margin-top: 16px;
-  font: 500 var(--num) / 1 var(--mono);
-  color: var(--faint);
-}
-
-.shellNote {
-  margin-top: 7px;
-  font: 400 12px/1 var(--sans);
-  color: var(--faint);
-}
-
-/*
- * Below 1100px seven columns stop being readable, and the week becomes a strip.
- *
- * The days keep their order and their width, at least 230px, and the strip scrolls sideways
- * one day at a time. It keeps the thing a week view exists for, days side by side, at the
- * price of not seeing all seven at once. Snapping makes a partial swipe land on a day
- * rather than between two.
- */
-@media (max-width: 1099px) {
-  .grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(230px, 1fr);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-  }
-
-  .day {
-    scroll-snap-align: start;
-  }
-
-  /* The chrome was a wordmark, four controls, an address and a button: at 768px it ran 83px
-     past the frame, and the frame clips, so the address and sign-out were cut off. The Menu
-     now holds those two, and the chrome still wraps from here, not only on a phone. */
-  .chrome {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  }
-
-/*
- * On a phone, one column: the days stack, and the rule between them turns from vertical to
- * horizontal. A sideways strip of 230px days on a 390px screen shows one day and a sliver,
- * which is a day view without the day navigation.
- */
-@media (max-width: 699px) {
-  .grid {
-    grid-template-columns: 1fr;
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    overflow: visible;
-    scroll-snap-type: none;
-  }
-
-  .day {
-    border-right: 0;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  /* The frame already draws the last edge. */
-  .day:last-child {
-    border-bottom: 0;
-  }
-}
-
 /* A key nobody can press is a label for nothing. On a device with no hover and a coarse
    pointer there is almost certainly no keyboard, so the shortcuts go. */
 @media (hover: none) and (pointer: coarse) {
-  .hint,
   .key,
   .verbKey,
-  .submitKey,
-  .retryKey {
+  .submitKey {
     display: none;
   }
 }
