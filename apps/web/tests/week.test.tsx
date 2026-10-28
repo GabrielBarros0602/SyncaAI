@@ -1007,6 +1007,55 @@ describe("the week you are looking at", () => {
     expect(screen.getByRole("textbox", { name: "Title" })).toBeDefined();
   });
 
+  it("names the next week and keeps its header while that week loads", async () => {
+    // The skeleton used to be the second round's frame, saying "checking session" over this
+    // week's dates, and it took the header with it: the › just pressed was gone.
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    fetchMock.mockImplementation(async (input) => {
+      const [path = "", query = ""] = input.replace("/api/v1", "").split("?");
+      if (path === "/auth/refresh") {
+        return json(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 });
+      }
+      if (path === "/me") return json(200, ME);
+      if (path === "/tasks") return json(200, { items: [], limit: 100, offset: 0 });
+      if (path === "/capacity") {
+        const first = new URLSearchParams(query).get("first_day") ?? "";
+        if (first === "2026-08-31") await held;
+        return json(200, weekFrom(first, SEVEN));
+      }
+      throw new Error(`no route for ${path}`);
+    });
+    renderWeek();
+    await waitFor(() => {
+      expect(markedToday()).toBe("2026-08-26");
+    });
+    const next = screen.getByRole("button", { name: "Next week" });
+    next.focus();
+
+    fireEvent.click(next);
+
+    await waitFor(() => {
+      expect(screen.getByText("Loading 31 Aug – 6 Sep 2026…")).toBeDefined();
+    });
+    expect(heading()).toBe("31 Aug – 6 Sep 2026");
+    expect(screen.getByText("31 Aug")).toBeDefined();
+    expect(screen.queryByText("checking session")).toBeNull();
+    // The same button, still focused, and the Menu still there: the header never went away.
+    expect(document.activeElement).toBe(next);
+    expect(screen.getByRole("button", { name: /menu/i })).toBeDefined();
+
+    release();
+
+    await waitFor(() => {
+      expect(screen.queryByText(/^Loading/)).toBeNull();
+    });
+    expect(screen.getAllByText("Nothing booked.")).toHaveLength(7);
+  });
+
   it("walks a week at a time, and back in one press", async () => {
     vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
     routeWeek(SEVEN);

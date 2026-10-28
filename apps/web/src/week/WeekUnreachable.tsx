@@ -1,7 +1,10 @@
-import { daysFrom, mondayOf, stamp, weekdayName } from "../lib/time";
-import styles from "./Week.module.css";
+import { dayMonth, daysFrom, weekdayLong } from "../lib/time";
+import day from "./Day.module.css";
+import page from "./WeekScreen.module.css";
 
 interface Props {
+  /** The week that could not be read. */
+  monday: Date;
   onRetry: () => void;
 }
 
@@ -12,36 +15,31 @@ interface Props {
  * would be worse than showing none: a stale free-minutes count is a number somebody will
  * plan against, and it is wrong in the direction that overbooks.
  */
-export function WeekUnreachable({ onRetry }: Props): React.ReactNode {
-  const days = daysFrom(mondayOf(new Date()));
-
+export function WeekUnreachable({ monday, onRetry }: Props): React.ReactNode {
   return (
-    <div className={styles.frame}>
-      <div className={styles.banner} role="alert">
+    <>
+      <div className={day.problem} role="alert">
         <div>
-          <div className={styles.bannerHead}>Couldn&rsquo;t reach the server.</div>
-          <div className={styles.bannerNote}>no minutes shown rather than stale ones</div>
+          <p className={day.problemHead}>Couldn&rsquo;t reach the server.</p>
+          <p className={day.problemNote}>No minutes are shown rather than stale ones.</p>
         </div>
-        <button type="button" className={styles.retry} onClick={onRetry}>
-          <span>retry</span>
-          <span className={styles.retryKey}>R</span>
+        <button type="button" className={day.retry} onClick={onRetry}>
+          retry
         </button>
       </div>
-      <div className={styles.grid}>
-        {days.map((day, index) => (
-          <div key={day.toISOString()} className={styles.day}>
-            <div className={styles.head}>
-              <span className={styles.dayIndex}>{String(index + 1).padStart(2, "0")}</span>
-              <div className={styles.weekday} style={{ color: "var(--faint)" }}>
-                {weekdayName(index + 1)}
+      <div className={page.grid}>
+        {daysFrom(monday).map((date, index) => (
+          <div key={date.toISOString()} className={day.day}>
+            <div className={day.head}>
+              <div className={day.name}>
+                <span className={day.weekday}>{weekdayLong(index + 1)}</span>
+                <span className={day.date}>{dayMonth(date)}</span>
               </div>
-              <div className={styles.date}>{stamp(day)}</div>
-              <div className={styles.shellFree}>&#8212;</div>
-              <div className={styles.shellNote}>unknown</div>
+              <span className={day.bookedValue}>&#8212;</span>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

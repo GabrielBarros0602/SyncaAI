@@ -7,7 +7,11 @@
  *
  * The range is the page's heading. It is what changes when `[` or `]` is pressed, so it is
  * what a screen reader should be able to find, and the router puts focus on it on arrival.
+ *
+ * It stays on screen while a week loads, so a second press of › lands on the button the first
+ * one left focus on rather than on a page with no button in it.
  */
+import type { Me } from "../api/types";
 import { Menu } from "../ui/Menu";
 import styles from "./WeekHeader.module.css";
 
@@ -16,8 +20,8 @@ interface Props {
   range: string;
   /** Weeks from the one holding today; zero is this week. */
   offset: number;
-  email: string;
-  timezone: string;
+  /** Null until the first week has arrived; the Menu waits for it. */
+  me: Me | null;
   onGoTo: (offset: number) => void;
   onSignOut: () => void;
 }
@@ -25,8 +29,7 @@ interface Props {
 export function WeekHeader({
   range,
   offset,
-  email,
-  timezone,
+  me,
   onGoTo,
   onSignOut,
 }: Props): React.ReactNode {
@@ -81,7 +84,7 @@ export function WeekHeader({
           )}
         </nav>
       </div>
-      <Menu email={email} timezone={timezone} onSignOut={onSignOut} />
+      {me !== null && <Menu email={me.email} timezone={me.timezone} onSignOut={onSignOut} />}
     </header>
   );
 }

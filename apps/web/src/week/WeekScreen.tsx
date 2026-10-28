@@ -181,10 +181,33 @@ export function WeekScreen(): React.ReactNode {
     };
   }, [week]);
 
+  const dates = daysFrom(week.monday);
+
+  // The header and the legend sit at the same place in every state, so between one week and
+  // the next they stay mounted: focus stays on the › that was pressed, and a folded legend
+  // stays folded.
+  const top = (
+    <>
+      <WeekHeader
+        range={weekRange(week.monday, dates[6] as Date)}
+        offset={week.offset}
+        me={week.me}
+        onGoTo={week.goTo}
+        onSignOut={() => {
+          void signOut();
+        }}
+      />
+      <ShortcutLegend shortcuts={SHORTCUTS} />
+    </>
+  );
+
   if (week.status === "loading") {
     return (
       <>
-        <WeekSkeleton />
+        <main className={styles.page}>
+          {top}
+          <WeekSkeleton monday={week.monday} />
+        </main>
         {region}
       </>
     );
@@ -192,13 +215,14 @@ export function WeekScreen(): React.ReactNode {
   if (week.status === "unreachable" || week.me === null) {
     return (
       <>
-        <WeekUnreachable onRetry={week.reload} />
+        <main className={styles.page}>
+          {top}
+          <WeekUnreachable monday={week.monday} onRetry={week.reload} />
+        </main>
         {region}
       </>
     );
   }
-
-  const dates = daysFrom(week.monday);
 
   // In the zone the *server* stores, not the browser's. The two can differ, and a screen that
   // marked today from the browser would mark the wrong day for a user who travelled —
@@ -233,19 +257,7 @@ export function WeekScreen(): React.ReactNode {
   return (
     <>
       <main className={styles.page}>
-        <WeekHeader
-          range={weekRange(week.monday, dates[6] as Date)}
-          offset={week.offset}
-          email={week.me.email}
-          timezone={week.me.timezone}
-          onGoTo={week.goTo}
-          onSignOut={() => {
-            void signOut();
-          }}
-        />
-
-        <ShortcutLegend shortcuts={SHORTCUTS} />
-
+        {top}
         <div className={styles.grid}>
           {week.days.map((capacity, index) => (
             <DayColumn
