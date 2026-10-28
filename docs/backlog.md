@@ -256,6 +256,10 @@ de uma linha, e o `docs/design/` não especificou navegação por teclado além 
 atalho — então **é pergunta nova, não implementação faltando**. Provavelmente merece ADR
 próprio, porque decide como a semana inteira é percorrida.
 
+**Respondido em 2026-10-28 pelo ADR-0053.** A terceira rodada desenhou a resposta provável: a
+semana é um `grid` com uma parada de Tab só. Cada dia é uma `row` desenhada como coluna, e a
+própria linha da tarefa é a disclosure, agora como `gridcell`, que aceita `aria-expanded`.
+
 ### Aberto pela PR 5 — decidido em 2026-10-22: não oferecer (decisão 2)
 
 **Mover uma tarefa já concluída.** A PR 5 não oferece o verbo numa linha concluída. Concluir
