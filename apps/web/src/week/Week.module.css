@@ -1,5 +1,5 @@
 /*
- * The edit panel, the read-only checklist and the new task form.
+ * The read-only checklist and the new task form.
  *
  * What is left of the second round's stylesheet. The page, the days, their rows and bands, and
  * the loading and unreachable weeks moved to the round's tokens in WeekScreen, WeekHeader and
@@ -27,19 +27,6 @@
 .taskNote {
   font: 400 12px/1 var(--mono);
   color: var(--faint);
-}
-
-.panelForm {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.panelLabel {
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
 }
 
 .checklist {

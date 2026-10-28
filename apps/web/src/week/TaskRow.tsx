@@ -314,6 +314,7 @@ export function TaskRow({
           {open === "edit" && (
             <EditPanel
               task={task}
+              days={days}
               timezone={timezone}
               onSave={onSave}
               onCancel={() => {
