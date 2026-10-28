@@ -219,10 +219,41 @@ describe("errors that are not about the session", () => {
     await expect(api.delete("/tasks/1")).resolves.toBeUndefined();
   });
 
-  it("treats a network failure as no token rather than a lost session", async () => {
-    // A dead wifi is not a signed-out user. Clearing the token is right; declaring the
-    // session over would sign someone out for walking into a lift.
-    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+  it("fails the request, not the session, when the renewal cannot reach the server", async () => {
+    // A dead wifi is not a signed-out user. The request fails like any request that could not
+    // be sent; declaring the session over would sign someone out for walking into a lift.
+    const lost = vi.fn();
+    onSessionExpired(lost);
+    setAccessToken(AN_EXPIRED_TOKEN);
+    fetchMock.mockImplementation((input) =>
+      input.endsWith("/auth/refresh")
+        ? Promise.reject(new TypeError("Failed to fetch"))
+        : Promise.resolve(unauthorised()),
+    );
+
+    await expect(api.get("/tasks")).rejects.toBeInstanceOf(TypeError);
+    expect(lost).not.toHaveBeenCalled();
+  });
+
+  it("fails the request, not the session, when the server errs during the renewal", async () => {
+    // The proxy's 502 while the API restarts says nothing about the cookie.
+    const lost = vi.fn();
+    onSessionExpired(lost);
+    setAccessToken(AN_EXPIRED_TOKEN);
+    routeFetch({
+      "/tasks": unauthorised,
+      "/auth/refresh": () => jsonResponse(502, { detail: "Bad Gateway" }),
+    });
+
+    const error: unknown = await api.get("/tasks").catch((problem: unknown) => problem);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(502);
+    expect(lost).not.toHaveBeenCalled();
+  });
+
+  it("still reads a refused renewal as the end of the session", async () => {
+    routeFetch({ "/auth/refresh": unauthorised });
 
     await expect(refreshSession()).resolves.toBeNull();
   });

@@ -44,10 +44,17 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       if (!cancelled) setStatus("anonymous");
     });
 
-    void refreshSession().then((token) => {
-      if (cancelled) return;
-      setStatus(token === null ? "anonymous" : "authenticated");
-    });
+    refreshSession().then(
+      (token) => {
+        if (!cancelled) setStatus(token === null ? "anonymous" : "authenticated");
+      },
+      () => {
+        // The server could not answer, so whether there is a session is unknown. Never the
+        // sign-in screen for somebody who may be signed in (ADR-0021): the week says it could
+        // not reach the server, and its retry settles the session once the server answers.
+        if (!cancelled) setStatus("authenticated");
+      },
+    );
 
     return () => {
       cancelled = true;
