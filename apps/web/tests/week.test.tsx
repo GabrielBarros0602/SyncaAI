@@ -314,21 +314,13 @@ describe("what the day before is still holding", () => {
       carried: carriedFor([OVERNIGHT]),
     });
 
-    expect(screen.getByText("carried from Sun")).toBeDefined();
-    expect(screen.getByText("from Sun 23:00")).toBeDefined();
-    expect(screen.getByText("ends 04:00")).toBeDefined();
+    expect(screen.getByText("↳ carried from Sun")).toBeDefined();
+    expect(screen.getByText("23:00 → 04:00")).toBeDefined();
     expect(screen.getByText("pager")).toBeDefined();
-    expect(container.textContent).toContain("4h of this day");
-  });
-
-  it("says the inherited minutes are already counted above, not on top of it", () => {
-    // Without this the band reads as an addition, and a reader who adds it twice gets a
-    // number wrong in the direction that overbooks.
-    renderDay(booked(4 * 60, { task_count: 0 }), { carried: carriedFor([OVERNIGHT]) });
-
-    expect(
-      screen.getByText("Not this day’s task. Its minutes are already inside the 4h booked above."),
-    ).toBeDefined();
+    // "here": this day's share, which the booked figure above already counts. The round cut
+    // the sentence that said so in full (item 17); the word carries it.
+    expect(screen.getByText("4h here")).toBeDefined();
+    expect(container.textContent).toContain("4hbooked");
   });
 
   it("a day holding only inherited minutes is not empty", () => {
@@ -363,22 +355,23 @@ describe("what the day before is still holding", () => {
 
     expect(screen.queryByText(/^go to/)).toBeNull();
     // The band itself stays: the minutes are real whether or not the row is reachable.
-    expect(screen.getByText("carried from Sun")).toBeDefined();
+    expect(screen.getByText("↳ carried from Sun")).toBeDefined();
   });
 
   it("says nothing at all on a day that inherits nothing", () => {
     const container = renderDay(aDay());
 
     expect(container.textContent).not.toContain("carried from");
-    expect(container.textContent).not.toContain("of this day");
+    expect(container.textContent).not.toContain(" here");
   });
 });
 
 describe("the row, and the box that came out of it", () => {
   const PLAIN = aTask("plain", "2026-08-24T09:00:00", "2026-08-24T10:30:00");
 
+  /** The completion box: a checkbox named for what pressing it does. */
   function box(): HTMLElement {
-    return screen.getByRole("button", { name: /^Complete/ });
+    return screen.getByRole("checkbox", { name: /^(Complete|Reopen) / });
   }
 
   /** The shut row: a cell of the week's grid, and its own disclosure (ADR-0053). */
@@ -436,7 +429,8 @@ describe("the row, and the box that came out of it", () => {
     expect(disclosure().tabIndex).toBe(0);
     expect(disclosure().getAttribute("aria-expanded")).toBe("false");
     expect(box().tabIndex).toBe(-1);
-    expect(box().getAttribute("aria-pressed")).toBe("false");
+    expect(box().getAttribute("aria-checked")).toBe("false");
+    expect(box().getAttribute("aria-label")).toBe("Complete plain");
   });
 
   it("opens and closes on Enter, and completes on Space", () => {
@@ -527,12 +521,14 @@ describe("the row, and the box that came out of it", () => {
     expect(screen.queryByRole("button", { name: /Migration dry run/ })).toBeNull();
   });
 
-  it("says so plainly when there is neither", () => {
-    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], openTask: "plain" });
+  it("names its box for what pressing it does", () => {
+    const done = aTask("done", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
+      completed_at: instant("2026-08-24T10:30:00"),
+    });
+    renderDay(aDay({ task_count: 1 }), { tasks: [done] });
 
-    expect(
-      screen.getByText("No note, no checklist. Both are optional and neither is parsed."),
-    ).toBeDefined();
+    expect(box().getAttribute("aria-label")).toBe("Reopen done");
+    expect(box().getAttribute("aria-checked")).toBe("true");
   });
 });
 
@@ -717,31 +713,36 @@ describe("what a completed task says about the estimate", () => {
       completed_at: instant("2026-08-24T13:00:00"),
     });
 
-    expect(doneLineOf(exact)).toBe("done 13:00 · 1h of 1h · to the minute");
+    expect(doneLineOf(exact)).toBe("done 13:00 · 1h of 1h · ±0");
   });
 
-  it("drops the comparison when the tick came days after the task ran", () => {
-    // The box makes this a click away: forget Monday's task, tick it on Wednesday. Measured
-    // literally that is `56h22 of 2h30 · +53h52` — true about the clock and false about the
-    // work, on the row the planner reads plan-versus-actual from. The date replaces it,
-    // because when it was ticked is the only thing that is still known.
+  it("names the day it was ticked when that is not the day it began", () => {
+    // Item 22 of the round. Forget Monday's task, tick it on Wednesday, and `56h22` is the
+    // time between them: with the day in the line it reads as the fact it is, not a glitch.
     const remembered = aTask("remembered", "2026-08-24T14:00:00", "2026-08-24T16:30:00", {
       duration_minutes: 150,
       completed_at: instant("2026-08-26T22:22:00"),
     });
 
-    expect(doneLineOf(remembered)).toBe("done Aug 26 22:22");
+    expect(doneLineOf(remembered)).toBe("done Wed 22:22 · 56h22 of 2h30 · +53h52");
   });
 
-  it("keeps the comparison for a task that ran right up against the bound", () => {
-    // A day is the bound because no task may exceed 1440 minutes, so anything inside it can
-    // still be describing the task's own run. Twenty-three hours is a real shift.
+  it("names the next day for a shift that ended there", () => {
     const longShift = aTask("shift", "2026-08-24T06:00:00", "2026-08-25T02:00:00", {
       duration_minutes: 20 * 60,
       completed_at: instant("2026-08-25T05:00:00"),
     });
 
-    expect(doneLineOf(longShift)).toBe("done 05:00 · 23h of 20h · +3h");
+    expect(doneLineOf(longShift)).toBe("done Tue 05:00 · 23h of 20h · +3h");
+  });
+
+  it("says so when it was ticked before it began", () => {
+    // A duration measured backwards would be a negative number of minutes.
+    const early = aTask("early", "2026-08-24T14:00:00", "2026-08-24T15:00:00", {
+      completed_at: instant("2026-08-24T09:10:00"),
+    });
+
+    expect(doneLineOf(early)).toBe("done 09:10 · before its start");
   });
 
   it("says nothing at all while the task is still open", () => {
@@ -1153,17 +1154,17 @@ describe("the week you are looking at", () => {
     const container = renderWeek();
 
     await waitFor(() => {
-      expect(screen.getAllByText(/^carried from/)).toHaveLength(2);
+      expect(screen.getAllByText(/carried from/)).toHaveLength(2);
     });
     const columns = container.querySelectorAll("[class*=grid] > div");
     const monday = columns[0] as HTMLElement;
     const thursday = columns[3] as HTMLElement;
 
     expect(monday.textContent).toContain("carried from Sun");
-    expect(monday.querySelector("[class*=carriedGoTo]")).toBeNull();
+    expect(monday.querySelector("[class*=bandGo]")).toBeNull();
 
     expect(thursday.textContent).toContain("carried from Wed");
-    expect(thursday.querySelector("[class*=carriedGoTo]")).not.toBeNull();
+    expect(thursday.querySelector("[class*=bandGo]")).not.toBeNull();
   });
 
   it("sends the reader to the row that owns the inherited task", async () => {

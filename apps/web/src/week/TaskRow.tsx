@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
-import { clock, formatMinutes } from "../lib/time";
+import { clock, formatCompact } from "../lib/time";
 import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
 import { DeletePanel } from "./DeletePanel";
 import { type RestoreBlocker, restoreBlocker, snapshotOf } from "./restore";
 import { EditPanel } from "./EditPanel";
 import { MovePanel } from "./MovePanel";
 import { NotePanel } from "./NotePanel";
-import { useDirectionalFill } from "./useDirectionalFill";
 import { cx } from "../lib/cx";
+import day from "./Day.module.css";
 import styles from "./Week.module.css";
 
 /**
@@ -25,17 +25,25 @@ interface Verb {
   label: string;
   /** What the key hint shows. */
   key: string;
+  /** How `aria-keyshortcuts` names it. */
+  shortcut: string;
   /** The `KeyboardEvent.key` values that reach this verb from the row. */
   keys: string[];
 }
 
-const EDIT: Verb = { panel: "edit", label: "edit", key: "E", keys: ["e", "E"] };
-const MOVE: Verb = { panel: "move", label: "move", key: "M", keys: ["m", "M"] };
-const NOTE: Verb = { panel: "note", label: "note", key: "O", keys: ["o", "O"] };
+const EDIT: Verb = { panel: "edit", label: "edit", key: "E", shortcut: "E", keys: ["e", "E"] };
+const MOVE: Verb = { panel: "move", label: "move", key: "M", shortcut: "M", keys: ["m", "M"] };
+const NOTE: Verb = { panel: "note", label: "note", key: "O", shortcut: "O", keys: ["o", "O"] };
 // The design's key is ⌫. Delete is accepted beside Backspace because on a Mac keyboard the
 // key labelled delete sends Backspace, and on a PC the key labelled Delete sends Delete —
 // each person presses the one their keyboard calls delete.
-const DELETE: Verb = { panel: "delete", label: "delete", key: "⌫", keys: ["Backspace", "Delete"] };
+const DELETE: Verb = {
+  panel: "delete",
+  label: "delete",
+  key: "⌫",
+  shortcut: "Delete",
+  keys: ["Backspace", "Delete"],
+};
 
 /**
  * The verbs a row offers, in the design's order.
@@ -64,18 +72,14 @@ function whyNot(task: Task): string | null {
 
 interface Props {
   task: Task;
-  /** `03.02` — the day's number and the task's place in it. */
-  index: string;
   minutesFromMidnight: number;
+  /** The task runs past midnight, so its end time is tomorrow's. */
+  crosses: boolean;
   /**
-   * How this task's minutes divide across the midnight it crosses, or null when it does not.
-   *
-   * Precomputed, like `index` is: the split needs the zone and the names of two weekdays,
-   * and the row has neither. Non-null is also what says the row crosses at all, so the
-   * superscript and the sentence cannot disagree about it.
+   * The line under the title: `done 15:00 · 1h30 of 3h · −1h30` once done, how its minutes
+   * divide across midnight until then, and null when neither applies. Precomputed: it needs
+   * the zone and the names of two weekdays, and the row has neither.
    */
-  split: string | null;
-  /** `done 15:00 · 1h30 of 3h · −1h30`, or null while the task is still open. */
   doneLine: string | null;
   timezone: string;
   /** The week on screen and every task it holds, which is what the move panel weighs. */
@@ -114,9 +118,8 @@ interface Props {
  */
 export function TaskRow({
   task,
-  index,
   minutesFromMidnight,
-  split,
+  crosses,
   doneLine,
   timezone,
   days,
@@ -131,7 +134,6 @@ export function TaskRow({
   onToggle,
   onDelete,
 }: Props): React.ReactNode {
-  const { onMouseEnter, onMouseLeave, fillRef } = useDirectionalFill();
   const done = task.completed_at !== null;
   const verbs = verbsFor(task);
   // The server's sentence for the last thing refused on the closed row: a delete or a
@@ -184,9 +186,7 @@ export function TaskRow({
       aria-expanded={open !== null}
       aria-busy={saving}
       data-open={open !== null ? "1" : undefined}
-      className={cx(styles.task, done && styles.taskDone)}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      className={cx(day.row, open !== null && day.rowOpen)}
       onFocus={onFocusCell}
       onClick={(event) => {
         // The pointer's way in, anywhere on a shut row but its box. Once open, the row is a
@@ -215,85 +215,89 @@ export function TaskRow({
         else onOpen(verb.panel);
       }}
     >
-      <span ref={fillRef} className={styles.fill} aria-hidden="true" />
-      <span className={styles.taskTop}>
-        <span className={styles.taskIndex}>{index}</span>
-        <span className={styles.taskRange}>
-          {clock(minutesFromMidnight)} – {clock(minutesFromMidnight + task.duration_minutes)}
-          {/* The end time wraps past midnight rather than reading `25:30`, so on its own it
-              claims a morning that belongs to tomorrow. This is the mark that says so. */}
-          {split !== null && <span className={styles.taskNextDay}>+1</span>}
+      <div className={day.time}>
+        <span>
+          {clock(minutesFromMidnight)} –{" "}
+          <span className={day.end}>
+            {clock(minutesFromMidnight + task.duration_minutes)}
+            {/* The end time wraps past midnight rather than reading `25:30`, so on its own it
+                claims a morning that belongs to tomorrow. This is the mark that says so. */}
+            {crosses && <span className={day.plusOne}>+1</span>}
+          </span>
         </span>
-        <span className={styles.taskDuration}>{formatMinutes(task.duration_minutes)}</span>
-      </span>
+        <span>{formatCompact(task.duration_minutes)}</span>
+      </div>
 
-      <span className={styles.taskLine}>
+      <div className={day.line}>
         <button
           type="button"
-          className={styles.check}
-          aria-pressed={done}
-          aria-label={`Complete ${task.title}`}
+          role="checkbox"
+          className={day.box}
+          aria-checked={done}
+          aria-label={`${done ? "Reopen" : "Complete"} ${task.title}`}
           aria-keyshortcuts={open === null ? undefined : "Space"}
           tabIndex={open === null ? -1 : 0}
           onClick={toggle}
         >
-          {done && <span className={styles.checkMark} />}
+          <span className={cx(day.mark, done && day.markDone)} />
         </button>
-        <span className={styles.taskTitle}>{task.title}</span>
-      </span>
+        <span className={cx(day.title, done && day.titleDone)}>{task.title}</span>
+      </div>
 
-      {split !== null && <span className={styles.taskSplit}>{split}</span>}
-
-      <span className={styles.taskFoot}>
-        {task.tag !== null && <span className={styles.tag}>{task.tag.name}</span>}
-        {hasNote && <span className={styles.taskNote}>note</span>}
-        {task.items.length > 0 && (
-          <span className={styles.taskNote}>
-            {checked}/{task.items.length} checked
-          </span>
-        )}
-        {/* The word is the whole signal: the row keeps what it showed until the server has
-            answered and the week has been read again, so nothing on it is a guess. */}
-        {saving && <span className={styles.taskSaving}>saving…</span>}
-      </span>
-
-      {doneLine !== null && <span className={styles.taskDoneLine}>{doneLine}</span>}
-
-      {/* Outside the panel, because a delete or a completion can be pressed with the row shut,
-          and a refusal nobody can see is a refusal that did not happen. */}
-      {refusal !== null && (
-        <div role="alert" className={cx(styles.error, styles.rowError)}>
-          {refusal}
+      {(task.tag !== null || hasNote || task.items.length > 0 || saving) && (
+        <div className={day.meta}>
+          {task.tag !== null && <span className={day.tag}>{task.tag.name}</span>}
+          {/* Only while shut: open, the note itself is on the row. */}
+          {hasNote && open === null && <span className={day.quiet}>note</span>}
+          {task.items.length > 0 && (
+            <span className={cx(day.quiet, day.figure)}>
+              {checked}/{task.items.length} checked
+            </span>
+          )}
+          {/* The word is the whole signal: the row keeps what it showed until the server has
+              answered and the week has been read again, so nothing on it is a guess. */}
+          {saving && <span className={day.saving}>saving…</span>}
         </div>
       )}
 
+      {doneLine !== null && <span className={day.doneLine}>{doneLine}</span>}
+      {open === "open" && hasNote && <span className={day.note}>{task.notes}</span>}
+
+      {/* On the row, because a delete or a completion can be pressed with the row shut, and a
+          refusal nobody can see is a refusal that did not happen. */}
+      {refusal !== null && (
+        <span role="alert" className={day.refusal}>
+          {refusal}
+        </span>
+      )}
+
       {open !== null && (
-        <div className={styles.panel}>
-          <div className={styles.panelTop}>
+        <>
+          <div role="toolbar" aria-label={`Actions for ${task.title}`} className={day.verbs}>
             {verbs.map((verb) => (
-              <span key={verb.panel} className={styles.verb}>
-                <button
-                  type="button"
-                  className={cx(
-                    styles.verbLabel,
-                    open === verb.panel && styles.verbActive,
-                    verb === DELETE && styles.verbDanger,
-                  )}
-                  aria-pressed={open === verb.panel}
-                  onClick={() => {
-                    if (open === verb.panel) onOpen("open");
-                    else if (verb === DELETE) startDelete();
-                    else onOpen(verb.panel);
-                  }}
-                >
-                  {verb.label}
-                </button>
-                <span className={styles.verbKey}>{verb.key}</span>
-              </span>
+              <button
+                key={verb.panel}
+                type="button"
+                className={cx(day.verb, open === verb.panel && day.verbOn)}
+                aria-pressed={open === verb.panel}
+                aria-keyshortcuts={verb.shortcut}
+                onClick={() => {
+                  if (open === verb.panel) onOpen("open");
+                  else if (verb === DELETE) startDelete();
+                  else onOpen(verb.panel);
+                }}
+              >
+                {verb.label}
+                <kbd aria-hidden="true" className={day.cap}>
+                  {verb.key}
+                </kbd>
+              </button>
             ))}
             <button
               type="button"
-              className={styles.panelClose}
+              className={day.close}
+              aria-label="Close"
+              aria-keyshortcuts="Escape"
               onClick={() => {
                 onOpen(null);
               }}
@@ -337,46 +341,33 @@ export function TaskRow({
             />
           )}
 
-          {open === "open" && (
-            <>
-              {hasNote && <p className={styles.panelNote}>{task.notes}</p>}
-              {!hasNote && task.items.length === 0 && (
-                <p className={styles.panelBlank}>
-                  No note, no checklist. Both are optional and neither is parsed.
-                </p>
-              )}
-
-              {task.items.length > 0 && (
-                <div className={styles.checklist}>
-                  <div className={styles.checklistHead}>
-                    <span className={styles.checklistTitle}>Checklist</span>
-                    <span className={styles.taskNote}>
-                      {checked}/{task.items.length} checked
-                    </span>
-                  </div>
-                  {task.items.map((item) => (
-                    // Not a button. Editing a checklist has no API yet — `TaskUpdate` has no
-                    // items field and no route touches ChecklistItem — and a control that
-                    // silently does nothing is worse than a line that never offered.
-                    <span key={item.id} className={styles.checkItem}>
-                      <span className={styles.itemBox}>
-                        {item.completed_at !== null && <span className={styles.checkMark} />}
-                      </span>
-                      <span
-                        className={cx(
-                          styles.checkLabel,
-                          item.completed_at !== null && styles.checkLabelDone,
-                        )}
-                      >
-                        {item.label}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
+          {/* Shown, not editable: the checklist's own panel, C, comes with its controls. */}
+          {open === "open" && task.items.length > 0 && (
+            <div className={styles.checklist}>
+              <div className={styles.checklistHead}>
+                <span className={styles.checklistTitle}>Checklist</span>
+                <span className={styles.taskNote}>
+                  {checked}/{task.items.length} checked
+                </span>
+              </div>
+              {task.items.map((item) => (
+                <span key={item.id} className={styles.checkItem}>
+                  <span className={styles.itemBox}>
+                    {item.completed_at !== null && <span className={styles.checkMark} />}
+                  </span>
+                  <span
+                    className={cx(
+                      styles.checkLabel,
+                      item.completed_at !== null && styles.checkLabelDone,
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </span>
+              ))}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

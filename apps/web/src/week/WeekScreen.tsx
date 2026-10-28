@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
-import { dayMonth, daysFrom, weekRange, weekdayName, zonedDay } from "../lib/time";
+import { dayMonth, daysFrom, weekRange, weekdayName, weekdayOf, zonedDay } from "../lib/time";
 import type { NewTask, Task } from "../api/types";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
@@ -47,9 +47,7 @@ const SHORTCUTS: Shortcut[] = [
 
 /** `Thu 22`, for a local date: what the status region calls the day a task was on. */
 function dayLabel(localDate: string): string {
-  // Noon UTC, so no zone can move the date the weekday is read from.
-  const weekday = new Date(`${localDate}T12:00:00Z`).getUTCDay();
-  return `${weekdayName(weekday === 0 ? 7 : weekday)} ${String(Number(localDate.slice(8, 10)))}`;
+  return `${weekdayOf(localDate)} ${String(Number(localDate.slice(8, 10)))}`;
 }
 
 export function WeekScreen(): React.ReactNode {

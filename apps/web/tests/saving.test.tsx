@@ -148,7 +148,8 @@ function row(): HTMLElement {
 }
 
 function check(): HTMLElement {
-  return screen.getByRole("button", { name: "Complete Thesis" });
+  // "Complete Thesis" while open, "Reopen Thesis" once done: the same box either way.
+  return screen.getByRole("checkbox", { name: /Thesis$/ });
 }
 
 beforeEach(() => {
@@ -184,13 +185,13 @@ it("keeps the week on screen through a write, and changes the row only on the an
     expect(row().getAttribute("aria-busy")).toBe("true");
   });
   expect(row().textContent).toContain("saving…");
-  expect(check().getAttribute("aria-pressed")).toBe("false");
+  expect(check().getAttribute("aria-checked")).toBe("false");
   expect(screen.queryByText("checking session")).toBeNull();
 
   await release();
 
   await waitFor(() => {
-    expect(check().getAttribute("aria-pressed")).toBe("true");
+    expect(check().getAttribute("aria-checked")).toBe("true");
   });
   expect(row().getAttribute("aria-busy")).toBe("false");
   expect(row().textContent).not.toContain("saving…");
@@ -208,7 +209,7 @@ it("leaves focus on the control that was pressed", async () => {
 
   fireEvent.click(pressed);
   await waitFor(() => {
-    expect(pressed.getAttribute("aria-pressed")).toBe("true");
+    expect(pressed.getAttribute("aria-checked")).toBe("true");
   });
 
   // The same element, not one like it: the week was read again without being torn down.

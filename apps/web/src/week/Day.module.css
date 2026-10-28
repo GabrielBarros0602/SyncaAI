@@ -221,6 +221,314 @@
   color: var(--ink-3);
 }
 
+/* A row and the band, as the round draws them. A day past its budget tints what a pointer and
+   an open row put behind them, so nothing on it reads as an ordinary day's. */
+
+.day {
+  --row-hover: var(--hover);
+  --row-pressed: var(--pressed);
+  --row-open: var(--open);
+}
+
+.dayOver {
+  --row-hover: var(--alert-hover);
+  --row-pressed: var(--alert-pressed);
+  --row-open: var(--alert-open);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--pad-row-y) var(--pad-row-x);
+  border-radius: var(--radius-3);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.row:hover {
+  background: var(--row-hover);
+}
+
+.row:active {
+  background: var(--row-pressed);
+}
+
+.rowOpen,
+.rowOpen:hover,
+.rowOpen:active {
+  gap: var(--space-2);
+  margin: 2px 0;
+  background: var(--row-open);
+  box-shadow: var(--shadow-raised);
+  cursor: auto;
+}
+
+.time {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-2);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-mono);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The range may break after its dash when text is large, but never between the end time and
+   the mark saying it is tomorrow's. */
+.end {
+  white-space: nowrap;
+}
+
+/* Full ink, unlike the rest of the range: it is the one mark on the row saying the end time
+   belongs to tomorrow. */
+.plusOne {
+  margin-left: 2px;
+  font: var(--weight-strong) var(--text-1) / 1 var(--font-mono);
+  color: var(--ink);
+  vertical-align: super;
+}
+
+.line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.box {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  margin: -1px 0 0 -3px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  cursor: pointer;
+  transition: transform var(--dur-2) var(--ease-spring);
+}
+
+.box:active {
+  transform: scale(var(--press-scale));
+}
+
+.mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-1);
+  background: var(--field);
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+
+.markDone {
+  background: var(--primary);
+  box-shadow: none;
+}
+
+.markDone::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid var(--on-primary);
+  border-bottom: 2px solid var(--on-primary);
+  transform: rotate(45deg);
+}
+
+.title {
+  min-width: 0;
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  color: var(--ink);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.titleDone {
+  color: var(--ink-2);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* Everything under the title lines up with it, past the box. */
+.meta,
+.doneLine,
+.note {
+  padding-left: calc(18px + var(--space-2));
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.tag {
+  min-width: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--tag);
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  /* One long word in a 155px column at 200% text: broken, it is still read. */
+  overflow-wrap: anywhere;
+}
+
+.quiet {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-3);
+}
+
+.saving {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.doneLine {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-mono);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.note {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  text-wrap: pretty;
+}
+
+.refusal {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--alert-surface);
+  box-shadow: inset 0 0 0 1px var(--alert);
+  color: var(--alert-ink);
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  text-wrap: pretty;
+}
+
+.verbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0 calc(var(--space-1) * -1);
+}
+
+.verb,
+.close {
+  display: inline-flex;
+  align-items: center;
+  min-height: max(32px, var(--target));
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  cursor: pointer;
+}
+
+.verb {
+  gap: var(--space-1);
+  color: var(--ink-2);
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  transition:
+    background var(--dur-1) var(--ease-out),
+    transform var(--dur-2) var(--ease-spring);
+}
+
+.verbOn {
+  background: var(--tag);
+  color: var(--ink);
+}
+
+.close {
+  margin-left: auto;
+  color: var(--ink-3);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-mono);
+}
+
+.verb:hover,
+.close:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.verb:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.cap {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-mono);
+  color: var(--ink-3);
+}
+
+/* Dashed, with the arrow it came by and no verbs: it cannot be mistaken for a row. */
+.band {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--pad-row-y) var(--pad-row-x);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-3);
+}
+
+.band[data-goes] {
+  cursor: pointer;
+}
+
+.bandTop,
+.bandFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.bandFoot {
+  font-family: var(--font-mono);
+}
+
+.bandTitle {
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.bandGo {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-strong);
+}
+
+/* Cells sit 4px apart, so a ring outside one would run into the next: it goes inside the edge
+   (item 6 of the round). An opened row is the exception: an inner ring would sit on its
+   controls. */
+.row:focus-visible,
+.band:focus-visible {
+  outline-offset: -2px;
+}
+
+.rowOpen:focus-visible {
+  outline-offset: 2px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .cap {
+    display: none;
+  }
+}
+
 /* The week before its figures arrive, and when they cannot. */
 
 .loading {

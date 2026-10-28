@@ -1,28 +1,24 @@
-import { clock, formatMinutes, zonedMinutes } from "../lib/time";
+import { clock, formatCompact, zonedMinutes } from "../lib/time";
 import type { Carried } from "./carried";
-import styles from "./Week.module.css";
+import day from "./Day.module.css";
 
 /**
  * What the day before is still holding, on the day receiving it.
  *
- * Not a task row, and drawn so it cannot be mistaken for one: dimmed, indented behind an
- * arrow, and with no verb on it anywhere. The task belongs to the day it starts on and is
+ * Not a task row, and drawn so it cannot be mistaken for one: a dashed edge, the arrow it
+ * came by, and no verb on it anywhere. The task belongs to the day it starts on and is
  * listed, counted and acted on there. Repeating the row here was the alternative and it is
  * worse — the count would say five tasks where there are three, and a delete button would
  * sit on half a task.
  *
- * The footer exists because the band otherwise reads as an addition. These minutes are
- * already inside the figure at the top of the column, and a reader who adds them again gets
- * a number that is wrong in the direction that overbooks.
+ * One band at most: tasks cannot overlap, so only one can be running at a midnight. The
+ * whole band is a cell of the week's grid and the way back to its owner (ADR-0053).
  */
 interface Props {
-  carried: Carried[];
-  /** The weekday every one of these came from. A task cannot cross two midnights — the
-   *  CHECK constraint caps it at 1440 minutes — so one day's band has exactly one source. */
+  entry: Carried;
+  /** The weekday it came from: the day before, since a task cannot cross two midnights. */
   fromWeekday: string;
   timezone: string;
-  /** What the day has booked in total, which is what the footer says these are already in. */
-  bookedMinutes: number;
   /**
    * Focus the row that owns the task, or null when that row is not on this screen.
    *
@@ -31,32 +27,25 @@ interface Props {
    * exist is worse than not offering.
    */
   onGoToOwner: ((taskId: string) => void) | null;
-  /** The band's place in the week's grid; a day holds one band at most (ADR-0053). */
   cell: string;
   tabStop: boolean;
   onFocusCell: () => void;
 }
 
 export function CarriedBand({
-  carried,
+  entry,
   fromWeekday,
   timezone,
-  bookedMinutes,
   onGoToOwner,
   cell,
   tabStop,
   onFocusCell,
 }: Props): React.ReactNode {
-  const total = carried.reduce((sum, entry) => sum + entry.minutes, 0);
-  const one = carried.length === 1;
-  // Only one task can be running at a midnight, since tasks cannot overlap, so the band has
-  // one owner and the whole cell is the way back to it.
-  const owner = carried[0]?.task.id;
   const goToOwner =
-    onGoToOwner === null || owner === undefined
+    onGoToOwner === null
       ? undefined
       : () => {
-          onGoToOwner(owner);
+          onGoToOwner(entry.task.id);
         };
 
   return (
@@ -64,7 +53,8 @@ export function CarriedBand({
       role="gridcell"
       data-cell={cell}
       tabIndex={tabStop ? 0 : -1}
-      className={styles.carried}
+      className={day.band}
+      data-goes={goToOwner === undefined ? undefined : "1"}
       onFocus={onFocusCell}
       onClick={goToOwner}
       onKeyDown={(event) => {
@@ -73,40 +63,20 @@ export function CarriedBand({
         goToOwner();
       }}
     >
-      <div className={styles.carriedHead}>
-        <span className={styles.carriedArrow} aria-hidden="true">
-          ↳
-        </span>
-        <span className={styles.carriedFrom}>carried from {fromWeekday}</span>
-        <span className={styles.carriedTotal}>{formatMinutes(total)} of this day</span>
+      {/* "here" is this day's share of it, which the booked figure above already counts. */}
+      <div className={day.bandTop}>
+        <span>↳ carried from {fromWeekday}</span>
+        <span className={day.figure}>{formatCompact(entry.minutes)} here</span>
       </div>
-
-      {carried.map((entry) => (
-        <div key={entry.task.id} className={styles.carriedItem}>
-          <div className={styles.carriedWhen}>
-            <span>
-              from {fromWeekday} {clock(zonedMinutes(entry.task.start_at, timezone))}
-            </span>
-            <span>ends {clock(zonedMinutes(entry.task.end_at, timezone))}</span>
-          </div>
-          <div className={styles.carriedTitle}>{entry.task.title}</div>
-          <div className={styles.carriedFoot}>
-            <span className={styles.carriedMinutes}>
-              {formatMinutes(entry.minutes)} of this day
-            </span>
-            {/* Words, not a button: the whole band is the control, and Enter on it goes. */}
-            {onGoToOwner !== null && (
-              <span className={styles.carriedGoTo}>go to {fromWeekday}</span>
-            )}
-          </div>
-        </div>
-      ))}
-
-      <p className={styles.carriedNote}>
-        {one
-          ? `Not this day’s task. Its minutes are already inside the ${formatMinutes(bookedMinutes)} booked above.`
-          : `Not this day’s tasks. Their ${formatMinutes(total)} is already inside the ${formatMinutes(bookedMinutes)} booked above.`}
-      </p>
+      <span className={day.bandTitle}>{entry.task.title}</span>
+      <div className={day.bandFoot}>
+        <span>
+          {clock(zonedMinutes(entry.task.start_at, timezone))} →{" "}
+          {clock(zonedMinutes(entry.task.end_at, timezone))}
+        </span>
+        {/* Words, not a button: the whole band is the control, and Enter on it goes. */}
+        {goToOwner !== undefined && <span className={day.bandGo}>go to {fromWeekday}</span>}
+      </div>
     </div>
   );
 }
