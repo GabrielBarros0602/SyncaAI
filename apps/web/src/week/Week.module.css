@@ -42,21 +42,6 @@
   color: var(--faint);
 }
 
-.identity {
-  text-align: right;
-  font-family: var(--mono);
-}
-
-.identityEmail {
-  font: 400 12px/1.5 var(--mono);
-  color: var(--dim);
-}
-
-.identityZone {
-  font: 400 12px/1.5 var(--mono);
-  color: var(--faint);
-}
-
 .nav {
   display: flex;
   align-items: center;
@@ -1302,9 +1287,9 @@
     scroll-snap-align: start;
   }
 
-  /* The chrome is a wordmark, four controls, an address and a button: at 768px it ran 83px
-     past the frame, and the frame clips, so the address and sign-out were cut off. It wraps
-     from here, not only on a phone. */
+  /* The chrome was a wordmark, four controls, an address and a button: at 768px it ran 83px
+     past the frame, and the frame clips, so the address and sign-out were cut off. The Menu
+     now holds those two, and the chrome still wraps from here, not only on a phone. */
   .chrome {
     flex-wrap: wrap;
     gap: 12px;
@@ -1312,13 +1297,6 @@
 
   .range {
     min-width: 0;
-  }
-
-  .identityEmail {
-    max-width: 40vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 

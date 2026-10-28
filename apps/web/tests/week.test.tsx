@@ -1054,6 +1054,13 @@ describe("the week you are looking at", () => {
     expect(wednesday.contains(document.activeElement)).toBe(true);
   });
 
+  /** A row's title buttons: every expandable button but the Menu, which opens a dialog. */
+  function rows(expanded: boolean): HTMLElement[] {
+    return screen
+      .getAllByRole("button", { expanded })
+      .filter((button) => button.getAttribute("aria-haspopup") === null);
+  }
+
   it("keeps one row open across the whole week, not one per column", async () => {
     // Two panels standing open would each be offering to act on a different task with
     // nothing saying which is in front — which is why the state is on the screen rather than
@@ -1065,9 +1072,9 @@ describe("the week you are looking at", () => {
 
     renderWeek();
     await waitFor(() => {
-      expect(screen.getAllByRole("button", { expanded: false })).toHaveLength(2);
+      expect(rows(false)).toHaveLength(2);
     });
-    const [first, second] = screen.getAllByRole("button", { expanded: false });
+    const [first, second] = rows(false);
 
     fireEvent.click(first as HTMLElement);
     await waitFor(() => {
@@ -1088,17 +1095,17 @@ describe("the week you are looking at", () => {
 
     renderWeek();
     await waitFor(() => {
-      expect(screen.getByRole("button", { expanded: false })).toBeDefined();
+      expect(rows(false)).toHaveLength(1);
     });
-    fireEvent.click(screen.getByRole("button", { expanded: false }));
+    fireEvent.click(rows(false)[0] as HTMLElement);
     await waitFor(() => {
-      expect(screen.getByRole("button", { expanded: true })).toBeDefined();
+      expect(rows(true)).toHaveLength(1);
     });
 
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { expanded: false })).toBeDefined();
+      expect(rows(false)).toHaveLength(1);
     });
   });
 
