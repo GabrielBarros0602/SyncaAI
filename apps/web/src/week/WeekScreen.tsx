@@ -4,6 +4,7 @@ import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
 import { daysFrom, formatMinutes, isoWeek, stamp, weekdayName, zonedDay } from "../lib/time";
 import type { NewTask, Task } from "../api/types";
+import { Menu } from "../ui/Menu";
 import { DayColumn } from "./DayColumn";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
@@ -209,21 +210,13 @@ export function WeekScreen(): React.ReactNode {
             </span>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div className={styles.identity}>
-            <div className={styles.identityEmail}>{week.me.email}</div>
-            <div className={styles.identityZone}>{week.me.timezone}</div>
-          </div>
-          <button
-            type="button"
-            className={styles.ghost}
-            onClick={() => {
-              void signOut();
-            }}
-          >
-            <span>sign out</span>
-          </button>
-        </div>
+        <Menu
+          email={week.me.email}
+          timezone={week.me.timezone}
+          onSignOut={() => {
+            void signOut();
+          }}
+        />
       </div>
 
       <div className={styles.summary}>

@@ -1,0 +1,99 @@
+/*
+ * The Menu as the round drew it in settings.dc.html: a 320px panel under the button from
+ * 640px, and below that a sheet from the bottom edge, where a thumb reaches (ADR-0052).
+ */
+
+.trigger,
+.action {
+  min-height: var(--target-touch);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--raised);
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+}
+
+.trigger:hover,
+.action:hover {
+  background: var(--hover);
+}
+
+.trigger:active,
+.action:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.action {
+  text-align: left;
+}
+
+.menu {
+  position: fixed;
+  inset: var(--space-9) var(--space-3) auto auto;
+  width: 320px;
+  max-width: calc(100vw - 2 * var(--space-3));
+  max-height: calc(100vh - var(--space-9) - var(--space-3));
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-3);
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised);
+}
+
+/* Transparent, as drawn: the panel is the thing to look at, not a dimmed page. */
+.menu::backdrop {
+  background: transparent;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.facts dt {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.facts dd {
+  margin: 0;
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .menu {
+    inset: auto 0 0;
+    width: auto;
+    max-width: none;
+    max-height: 100vh;
+    border-radius: var(--radius-4) var(--radius-4) 0 0;
+  }
+}
