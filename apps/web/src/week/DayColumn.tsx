@@ -117,7 +117,7 @@ interface Props {
   onOpenForm: (day: string) => void;
   onCancelForm: () => void;
   onCreate: (task: NewTask) => void;
-  onToggle: (task: Task) => void;
+  onToggle: (task: Task) => Promise<void>;
 }
 
 export function DayColumn({

@@ -322,9 +322,7 @@ export function WeekScreen(): React.ReactNode {
                     // moving the task an hour.
                   });
               }}
-              onToggle={(task) => {
-                void week.toggle(task);
-              }}
+              onToggle={week.toggle}
             />
           ))}
         </div>

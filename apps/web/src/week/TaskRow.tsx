@@ -86,7 +86,8 @@ interface Props {
   saving: boolean;
   onOpen: (panel: Panel | null) => void;
   onSave: (changes: TaskChanges) => Promise<void>;
-  onToggle: (task: Task) => void;
+  /** Complete or reopen. Rejects with the server's `ApiError` when it refuses. */
+  onToggle: (task: Task) => Promise<void>;
   /**
    * Delete the task. `snapshot` is what an undo would recreate, or null when the delete was
    * confirmed because no faithful recreate exists. Rejects with the server's `ApiError`.
@@ -127,7 +128,13 @@ export function TaskRow({
   const { onMouseEnter, onMouseLeave, fillRef } = useDirectionalFill();
   const done = task.completed_at !== null;
   const verbs = verbsFor(task);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // The server's sentence for the last thing refused on the closed row: a delete or a
+  // completion, both of which can be pressed without opening it.
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  function refused(problem: unknown): void {
+    setRefusal(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
+  }
 
   // Judged at the press, not when the row was drawn: a task that could be put back when the
   // screen loaded may have started since (ADR-0025). A faithful recreate exists, so the delete
@@ -137,10 +144,8 @@ export function TaskRow({
       onOpen("delete");
       return;
     }
-    setDeleteError(null);
-    onDelete(snapshotOf(task)).catch((problem: unknown) => {
-      setDeleteError(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
-    });
+    setRefusal(null);
+    onDelete(snapshotOf(task)).catch(refused);
   }
   const checked = task.items.filter((item) => item.completed_at !== null).length;
   const hasNote = task.notes !== null && task.notes.trim() !== "";
@@ -176,7 +181,8 @@ export function TaskRow({
           aria-pressed={done}
           aria-label={`Complete ${task.title}`}
           onClick={() => {
-            onToggle(task);
+            setRefusal(null);
+            onToggle(task).catch(refused);
           }}
         >
           {done && <span className={styles.checkMark} />}
@@ -223,11 +229,11 @@ export function TaskRow({
 
       {doneLine !== null && <span className={styles.taskDoneLine}>{doneLine}</span>}
 
-      {/* Outside the panel, because a delete can be started from the title with the row shut,
+      {/* Outside the panel, because a delete or a completion can be pressed with the row shut,
           and a refusal nobody can see is a refusal that did not happen. */}
-      {deleteError !== null && (
+      {refusal !== null && (
         <div role="alert" className={cx(styles.error, styles.rowError)}>
-          {deleteError}
+          {refusal}
         </div>
       )}
 
