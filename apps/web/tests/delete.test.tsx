@@ -304,6 +304,9 @@ describe("deleting a task that can come back", () => {
     items: [{ label: "Outline" }, { label: "Sources" }],
   };
 
+  // Named by its day, since the day may not be on screen (ADR-0052).
+  const DELETED = "Deleted “Thesis chapter” from Thu 27.";
+
   function posts(server: Server): Call[] {
     return server.calls.filter((call) => call.method === "POST" && call.path === "/tasks");
   }
@@ -314,7 +317,7 @@ describe("deleting a task that can come back", () => {
     await openRow("Thesis chapter");
     fireEvent.click(screen.getByRole("button", { name: "delete" }));
     await waitFor(() => {
-      expect(screen.getByRole("status").textContent).toContain("deleted · Thesis chapter");
+      expect(screen.getByRole("status").textContent).toContain(DELETED);
     });
   }
 
@@ -331,7 +334,7 @@ describe("deleting a task that can come back", () => {
     expect(screen.queryByText(/There is no undo for this one\./)).toBeNull();
 
     await waitFor(() => {
-      expect(screen.getByRole("status").textContent).toContain("deleted · Thesis chapter");
+      expect(screen.getByRole("status").textContent).toContain(DELETED);
     });
     expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
     expect(screen.getByRole("button", { name: "undo" })).toBeDefined();
@@ -350,7 +353,8 @@ describe("deleting a task that can come back", () => {
     await waitFor(() => {
       expect(title("Thesis chapter")).toBeDefined();
     });
-    expect(screen.queryByRole("status")).toBeNull();
+    // The region stays in the page, empty, once there is nothing left to say.
+    expect(screen.getByRole("status").textContent).toBe("");
   });
 
   it("puts focus on the restored row, which has a new id", async () => {
@@ -379,7 +383,7 @@ describe("deleting a task that can come back", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("status").textContent).toBe(
-        "Thesis chapter was not brought back. A task cannot start in the past.",
+        "“Thesis chapter” was not brought back. A task cannot start in the past.",
       );
     });
     expect(screen.queryByRole("button", { name: "undo" })).toBeNull();

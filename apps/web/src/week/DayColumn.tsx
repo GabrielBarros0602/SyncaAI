@@ -14,7 +14,6 @@ import { CarriedBand } from "./CarriedBand";
 import { warningFor } from "./load";
 import { type Panel, TaskRow } from "./TaskRow";
 import { NewTaskForm } from "./NewTaskForm";
-import { type Trash, TrashNotice } from "./Trash";
 import { useDirectionalFill } from "./useDirectionalFill";
 import { cx } from "../lib/cx";
 import styles from "./Week.module.css";
@@ -97,9 +96,6 @@ interface Props {
   onOpenTask: (open: { id: string; panel: Panel } | null) => void;
   onSaveTask: (taskId: string, changes: TaskChanges) => Promise<void>;
   onDeleteTask: (task: Task, snapshot: NewTask | null) => Promise<void>;
-  /** What was deleted from this day in the last nine seconds and can still come back. */
-  trash: Trash | null;
-  onUndo: () => Promise<void>;
   index: number;
   weekday: string;
   date: string;
@@ -130,8 +126,6 @@ export function DayColumn({
   onOpenTask,
   onSaveTask,
   onDeleteTask,
-  trash,
-  onUndo,
   index,
   weekday,
   date,
@@ -308,8 +302,6 @@ export function DayColumn({
           onDelete={(snapshot) => onDeleteTask(task, snapshot)}
         />
       ))}
-
-      {trash !== null && <TrashNotice trash={trash} onUndo={onUndo} />}
 
       {/* A day holding only inherited minutes is not empty, and saying it is would
           contradict both the figure above and the band. */}
