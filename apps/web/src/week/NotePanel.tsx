@@ -1,8 +1,8 @@
-import { useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent, type SyntheticEvent } from "react";
 
 import { ApiError } from "../api/client";
 import type { Task, TaskChanges } from "../api/types";
-import styles from "./Week.module.css";
+import day from "./Day.module.css";
 
 /** Kept in step with `MAX_NOTES_LENGTH` in the API's task schema. */
 const MAX_NOTES = 4000;
@@ -20,24 +20,18 @@ interface Props {
  * API reads as "remove this", and the two are otherwise indistinguishable to everything
  * downstream — including the `note` mark on the resting row.
  *
- * The counter only appears near the bound. A note is a place to think out loud, and a
- * character count standing over it from the first keystroke changes what it feels like to
- * use; it earns its place only once it is about to matter.
+ * The count stands beside the label from the first character, as the round draws it, and the
+ * field stops at the bound rather than letting somebody type past what the server keeps.
  */
 export function NotePanel({ task, onSave, onCancel }: Props): React.ReactNode {
   const [value, setValue] = useState(task.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const field = useId();
 
-  const remaining = MAX_NOTES - value.length;
-
-  function save(): void {
+  function save(event?: SyntheticEvent): void {
+    event?.preventDefault();
     const trimmed = value.trim();
-    if (trimmed.length > MAX_NOTES) {
-      setError(`A note is at most ${String(MAX_NOTES)} characters.`);
-      return;
-    }
-
     setSaving(true);
     onSave({ notes: trimmed === "" ? null : trimmed })
       .catch((problem: unknown) => {
@@ -51,51 +45,49 @@ export function NotePanel({ task, onSave, onCancel }: Props): React.ReactNode {
   function onKeyDown(event: KeyboardEvent): void {
     // Enter belongs to the text here, unlike every other field on this screen. A note is the
     // one place somebody writes more than one line, and stealing Enter to save would make
-    // paragraphs impossible.
+    // paragraphs impossible. The modifier saves.
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      save();
+      save(event);
     } else if (event.key === "Escape") {
       onCancel();
     }
   }
 
   return (
-    <div className={styles.panelForm}>
-      <div className={styles.panelLabel}>Note</div>
+    <form className={day.panel} onSubmit={save}>
+      <div className={day.fieldHead}>
+        <label htmlFor={field} className={day.panelHead}>
+          Note
+        </label>
+        <span className={day.count}>
+          {value.length}/{MAX_NOTES}
+        </span>
+      </div>
       <textarea
-        className={styles.textarea}
-        rows={4}
+        id={field}
+        className={day.textarea}
+        rows={5}
+        maxLength={MAX_NOTES}
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
           setError(null);
         }}
         onKeyDown={onKeyDown}
-        placeholder="Free text. Nothing is parsed out of it."
-        aria-label="Note"
       />
-      {remaining <= 200 && (
-        <div className={styles.panelCount}>
-          {remaining >= 0
-            ? `${String(remaining)} characters left`
-            : `${String(-remaining)} over the limit`}
-        </div>
-      )}
       {error !== null && (
-        <div role="alert" className={styles.error}>
+        <span role="alert" className={day.refusal}>
           {error}
-        </div>
+        </span>
       )}
-      <div className={styles.actions}>
-        <button type="button" className={styles.submit} disabled={saving} onClick={save}>
-          <span>save</span>
-          <span className={styles.submitKey}>⌘⏎</span>
+      <div className={day.actions}>
+        <button type="submit" className={day.primary} disabled={saving}>
+          save note
         </button>
-        <button type="button" className={styles.cancel} onClick={onCancel}>
-          <span>cancel</span>
+        <button type="button" className={day.secondary} onClick={onCancel}>
+          cancel
         </button>
       </div>
-    </div>
+    </form>
   );
 }

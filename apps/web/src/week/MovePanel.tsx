@@ -2,11 +2,11 @@ import { useState } from "react";
 
 import { ApiError } from "../api/client";
 import type { DayCapacity, Task, TaskChanges } from "../api/types";
-import { clock, formatCompact, weekdayName, zonedMinutes, zonedStamp } from "../lib/time";
+import { clock, formatCompact, weekdayName, zonedMinutes } from "../lib/time";
 import { cx } from "../lib/cx";
 import { moveTo } from "./changes";
 import { lightestOpen, moveOptions, type MoveOption } from "./move";
-import styles from "./Week.module.css";
+import day from "./Day.module.css";
 
 interface Props {
   task: Task;
@@ -18,15 +18,43 @@ interface Props {
   onSave: (changes: TaskChanges) => Promise<void>;
 }
 
-/** What a disabled day is answering, for somebody who cannot see that it is greyed. */
-const BLOCKED: Record<NonNullable<MoveOption["blocker"]>, string> = {
-  own: "the day it is on",
-  past: "already past",
-  taken: "taken",
-};
+function span(task: Task, timezone: string): string {
+  const start = zonedMinutes(task.start_at, timezone);
+  return `${clock(start)}–${clock(start + task.duration_minutes)}`;
+}
 
 /**
- * Move to another day of the week, at the same clock time.
+ * What stands in the way, in one sentence under the days (item 19 of the round): the days
+ * already past as one run, each taken day with the task that holds it, and the lightest.
+ */
+function whyNot(options: MoveOption[], lightest: DayCapacity | null, timezone: string): string {
+  const said: string[] = [];
+  const past = options.filter((option) => option.blocker === "past").map((option) => weekdayName(option.weekday));
+  if (past.length > 0) {
+    said.push(`${past.length > 1 ? `${past[0] ?? ""}–${past[past.length - 1] ?? ""}` : (past[0] ?? "")}: already past.`);
+  }
+  for (const option of options) {
+    if (option.takenBy !== null) {
+      said.push(`${weekdayName(option.weekday)}: ${option.takenBy.title} is there, ${span(option.takenBy, timezone)}.`);
+    }
+  }
+  if (lightest !== null) said.push(`${weekdayName(lightest.weekday)} is the lightest.`);
+  if (!options.some((option) => option.blocker === null)) said.push("No day this week has that time free.");
+  return said.join(" ");
+}
+
+/** What a day that cannot take the task says on its button, and to a screen reader. */
+function offAs(option: MoveOption): { sub: string; reason: string } {
+  if (option.blocker === "own") return { sub: "here", reason: "this day" };
+  if (option.blocker === "past") return { sub: "past", reason: "already past" };
+  return { sub: "taken", reason: `taken by ${option.takenBy?.title ?? "another task"}` };
+}
+
+/**
+ * Move to another day of the week, at the same clock time (item 19 of the round).
+ *
+ * All seven days are shown. The ones that cannot take the task say why on the button, and
+ * the sentence below names what is in the way.
  *
  * The days this offers are advice and the server decides. A 409 means the constraint found a
  * task this screen cannot see, or one that arrived since it loaded, and the panel stays open
@@ -41,10 +69,8 @@ export function MovePanel({ task, days, tasks, timezone, onSave }: Props): React
   // passes the start it is offering.
   const options = moveOptions(task, days, tasks, timezone, new Date());
   const lightest = lightestOpen(options, days);
-
-  const start = zonedMinutes(task.start_at, timezone);
-  const range = `${clock(start)}–${clock(start + task.duration_minutes)}`;
-  const anyOpen = options.some((option) => option.blocker === null);
+  // The server's free figure for each day, never arithmetic here (ADR-0022).
+  const free = new Map(days.map((capacity) => [capacity.day, capacity.free_minutes]));
 
   function go(option: MoveOption): void {
     setError(null);
@@ -59,38 +85,54 @@ export function MovePanel({ task, days, tasks, timezone, onSave }: Props): React
   }
 
   return (
-    <div className={styles.panelForm}>
-      <div className={styles.panelLabel}>Move to</div>
-      <div className={styles.moveDays}>
+    <div role="group" aria-label="Move to another day" className={day.panel}>
+      <span className={day.panelHead}>Move to</span>
+      <span className={day.panelHint}>
+        Same clock time, <span className={day.figure}>{span(task, timezone)}</span>, on another day of
+        this week.
+      </span>
+      <div className={day.moveDays}>
         {options.map((option) => {
-          const name = `${weekdayName(option.weekday)} ${zonedStamp(option.startAt, timezone)}`;
+          const name = weekdayName(option.weekday);
+          if (option.blocker !== null) {
+            const off = offAs(option);
+            return (
+              <button
+                key={option.day}
+                type="button"
+                disabled
+                className={cx(day.moveDay, day.moveDayOff)}
+                aria-label={`${name}: ${off.reason}`}
+              >
+                <span className={day.moveName}>{name}</span>
+                <span className={day.moveSub}>{off.sub}</span>
+              </button>
+            );
+          }
+          const room = `${formatCompact(free.get(option.day) ?? 0)} free`;
+          const isLightest = lightest?.day === option.day;
           return (
             <button
               key={option.day}
               type="button"
-              className={cx(styles.moveDay, lightest?.day === option.day && styles.moveDayLightest)}
-              disabled={option.blocker !== null || saving}
-              aria-label={option.blocker === null ? name : `${name}, ${BLOCKED[option.blocker]}`}
+              disabled={saving}
+              className={cx(day.moveDay, isLightest && day.moveDayLightest)}
+              aria-label={`${name}, ${room}${isLightest ? ", lightest" : ""}`}
               onClick={() => {
                 go(option);
               }}
             >
-              {weekdayName(option.weekday)}
+              <span className={day.moveName}>{name}</span>
+              <span className={day.moveSub}>{room}</span>
             </button>
           );
         })}
       </div>
-      <p className={styles.panelNote}>
-        {anyOpen
-          ? `Same clock time on the new day. Days where ${range} is taken, or already past, are out — nothing overlaps.`
-          : `No other day this week has ${range} free and still ahead. Edit can change the time instead.`}
-        {lightest !== null &&
-          ` ${weekdayName(lightest.weekday)} is lightest, ${formatCompact(lightest.free_minutes)} free.`}
-      </p>
+      <span className={day.panelHint}>{whyNot(options, lightest, timezone)}</span>
       {error !== null && (
-        <div role="alert" className={styles.error}>
+        <span role="alert" className={day.refusal}>
           {error}
-        </div>
+        </span>
       )}
     </div>
   );

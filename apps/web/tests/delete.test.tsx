@@ -208,7 +208,7 @@ describe("deleting a task that cannot come back", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "delete" }));
 
-    expect(screen.getByText(/There is no undo for this one\./)).toBeDefined();
+    expect(screen.getByText("No undo for this one")).toBeDefined();
     expect(deletes(server)).toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "delete for good" }));
@@ -230,7 +230,7 @@ describe("deleting a task that cannot come back", () => {
     fireEvent.click(screen.getByRole("button", { name: "delete" }));
     fireEvent.click(screen.getByRole("button", { name: "keep it" }));
 
-    expect(screen.queryByText(/There is no undo for this one\./)).toBeNull();
+    expect(screen.queryByText("No undo for this one")).toBeNull();
     expect(row("Standup", true)).not.toBeNull();
     expect(deletes(server)).toHaveLength(0);
   });
@@ -275,9 +275,32 @@ describe("deleting a task that cannot come back", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "delete" }));
 
-    expect(
-      screen.getByText(/It has already started, and the server will not book a start in the past\./),
-    ).toBeDefined();
+    // In the person's own time and day: the undo would need a start in the past.
+    expect(screen.getByText("It has started — 09:00 today.")).toBeDefined();
+  });
+
+  it("lists every reason, not only the first", async () => {
+    // Done, and partly ticked: an undo would bring it back open and unticked, two losses.
+    const done = {
+      ...STARTED,
+      completed_at: at("2026-08-26T09:30:00"),
+      items: [
+        { id: "i1", label: "Agenda", position: 0, completed_at: at("2026-08-26T09:10:00") },
+        { id: "i2", label: "Notes", position: 1, completed_at: null },
+      ],
+    };
+    const server: Server = { tasks: [done], calls: [] };
+    serve(server);
+    renderWeek();
+    await openRow("Standup");
+
+    fireEvent.click(screen.getByRole("button", { name: "delete" }));
+
+    const reasons = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(reasons).toEqual([
+      "It is done.",
+      "1 of 2 checklist items is ticked, and would come back unticked.",
+    ]);
   });
 
   it("moves focus to the day's new-task button when nothing is left on it", async () => {
@@ -342,7 +365,7 @@ describe("deleting a task that can come back", () => {
 
     // At once: on the press, before any notice or reload, and with no question in between.
     expect(deletes(server)).toEqual([{ method: "DELETE", path: "/tasks/thesis", body: undefined }]);
-    expect(screen.queryByText(/There is no undo for this one\./)).toBeNull();
+    expect(screen.queryByText("No undo for this one")).toBeNull();
 
     await waitFor(() => {
       expect(screen.getByRole("status").textContent).toContain(DELETED);

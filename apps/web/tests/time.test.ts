@@ -12,6 +12,7 @@ import {
   zonedDay,
   daysFrom,
   dayMonth,
+  relativeDay,
   formatCompact,
   formatMinutes,
   minutesBetween,
@@ -240,6 +241,15 @@ describe("labels", () => {
     expect(dayMonth(new Date(2026, 9, 2))).toBe("2 Oct");
     expect(weekdayLong(3)).toBe("Wednesday");
     expect(weekdayLong(7)).toBe("Sunday");
+  });
+
+  it("names a day from today the way a sentence does", () => {
+    expect(relativeDay("2026-10-28", "2026-10-28")).toBe("today");
+    expect(relativeDay("2026-10-27", "2026-10-28")).toBe("yesterday");
+    expect(relativeDay("2026-10-29", "2026-10-28")).toBe("tomorrow");
+    expect(relativeDay("2026-10-22", "2026-10-28")).toBe("Thu 22");
+    // Across a month, and across the night a clock changes: whole days either way.
+    expect(relativeDay("2026-11-01", "2026-10-31")).toBe("tomorrow");
   });
 
   it("names a week inside one month with the month once", () => {

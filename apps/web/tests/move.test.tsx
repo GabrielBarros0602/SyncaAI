@@ -107,7 +107,7 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
 
 /** The button for a day in the move panel. Its name says why when it is not on offer. */
 function dayButton(weekday: string): HTMLButtonElement {
-  return screen.getByRole("button", { name: new RegExp(`^${weekday} Aug \\d{2}`) });
+  return screen.getByRole("button", { name: new RegExp(`^${weekday}[,:]`) });
 }
 
 beforeEach(() => {
@@ -146,7 +146,8 @@ describe("moving a task to another day", () => {
     openMove({ task: LECTURE });
 
     expect(dayButton("Mon").disabled).toBe(true);
-    expect(dayButton("Mon").getAttribute("aria-label")).toContain("the day it is on");
+    expect(dayButton("Mon").getAttribute("aria-label")).toBe("Mon: this day");
+    expect(dayButton("Mon").textContent).toBe("Monhere");
   });
 
   it("never offers a start at or before now", () => {
@@ -189,7 +190,21 @@ describe("moving a task to another day", () => {
 
     expect(dayButton("Tue").disabled).toBe(false);
     expect(dayButton("Wed").disabled).toBe(true);
-    expect(dayButton("Wed").getAttribute("aria-label")).toContain("taken");
+    // Named, so the person knows what to move first if Wednesday is where it has to go.
+    expect(dayButton("Wed").getAttribute("aria-label")).toBe("Wed: taken by wed-report");
+    expect(screen.getByText(/Wed: wed-report is there, 10:00–13:00\./)).toBeDefined();
+  });
+
+  it("says the days already gone as one run, and which open day is lightest", () => {
+    // Wednesday 26, before nine: Monday and Tuesday have gone. Every open day has the same
+    // room here, so the first of them is the lightest.
+    vi.setSystemTime(new Date(at("2026-08-26T08:00:00")));
+    const thursday = aTask("standup", "2026-08-27T09:00:00", "2026-08-27T09:30:00");
+
+    openMove({ task: thursday });
+
+    expect(screen.getByText("Mon–Tue: already past. Wed is the lightest.")).toBeDefined();
+    expect(dayButton("Wed").getAttribute("aria-label")).toBe("Wed, 16h free, lightest");
   });
 
   it("treats a task across midnight as holding the next morning", () => {

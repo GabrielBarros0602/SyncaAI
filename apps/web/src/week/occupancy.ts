@@ -42,12 +42,12 @@ export function overlaps(a: Interval, b: Interval): boolean {
 }
 
 /**
- * Whether `minutes` starting at `start` are clear of every task except `except`.
+ * The task already holding some of that time, or null when it is clear: what a refusal names.
  *
  * The task being moved is left out, because the slot it is leaving is about to be free and
  * would otherwise refuse a move onto part of itself.
  */
-export function isFree(tasks: Task[], start: Date, minutes: number, except: string): boolean {
+export function takenBy(tasks: Task[], start: Date, minutes: number, except: string): Task | null {
   const slot = { start: start.getTime(), end: start.getTime() + minutes * MILLISECONDS_IN_A_MINUTE };
-  return tasks.every((task) => task.id === except || !overlaps(slot, occupancyOf(task)));
+  return tasks.find((task) => task.id !== except && overlaps(slot, occupancyOf(task))) ?? null;
 }

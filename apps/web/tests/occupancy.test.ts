@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Task } from "../src/api/types";
-import { isFree, occupancyOf, overlaps } from "../src/week/occupancy";
+import { occupancyOf, overlaps, takenBy } from "../src/week/occupancy";
 
 /** A local São Paulo wall time as the instant the API would send. */
 function at(local: string): string {
@@ -53,30 +53,30 @@ describe("what a task holds", () => {
     });
 
     // 11:30 for an hour sits inside the three planned hours and after the real end.
-    expect(isFree([done], slot("2026-08-24T11:30:00"), 60, "moving")).toBe(true);
+    expect(takenBy([done], slot("2026-08-24T11:30:00"), 60, "moving")).toBeNull();
     // 10:30 is still inside the hour it really took.
-    expect(isFree([done], slot("2026-08-24T10:30:00"), 60, "moving")).toBe(false);
+    expect(takenBy([done], slot("2026-08-24T10:30:00"), 60, "moving")).not.toBeNull();
   });
 
   it("holds the first hours of the next day when it crosses midnight", () => {
     const overnight = aTask("deploy", "2026-08-24T23:00:00", "2026-08-25T02:00:00");
 
-    expect(isFree([overnight], slot("2026-08-25T01:00:00"), 60, "moving")).toBe(false);
-    expect(isFree([overnight], slot("2026-08-25T00:00:00"), 30, "moving")).toBe(false);
+    expect(takenBy([overnight], slot("2026-08-25T01:00:00"), 60, "moving")).not.toBeNull();
+    expect(takenBy([overnight], slot("2026-08-25T00:00:00"), 30, "moving")).not.toBeNull();
     // Half-open: the moment it ends is free, as it is in tstzrange.
-    expect(isFree([overnight], slot("2026-08-25T02:00:00"), 60, "moving")).toBe(true);
+    expect(takenBy([overnight], slot("2026-08-25T02:00:00"), 60, "moving")).toBeNull();
   });
 
   it("lets a slot end exactly where a task begins", () => {
     const lecture = aTask("lecture", "2026-08-24T09:00:00", "2026-08-24T10:00:00");
 
-    expect(isFree([lecture], slot("2026-08-24T08:00:00"), 60, "moving")).toBe(true);
+    expect(takenBy([lecture], slot("2026-08-24T08:00:00"), 60, "moving")).toBeNull();
   });
 
   it("does not count the task being moved against its own new slot", () => {
     const lecture = aTask("lecture", "2026-08-24T09:00:00", "2026-08-24T10:00:00");
 
-    expect(isFree([lecture], slot("2026-08-24T09:30:00"), 60, "lecture")).toBe(true);
+    expect(takenBy([lecture], slot("2026-08-24T09:30:00"), 60, "lecture")).toBeNull();
   });
 
   it("holds nothing when it was completed before it began", () => {
@@ -86,7 +86,7 @@ describe("what a task holds", () => {
       completed_at: at("2026-08-24T12:00:00"),
     });
 
-    expect(isFree([early], slot("2026-08-24T14:30:00"), 60, "moving")).toBe(true);
+    expect(takenBy([early], slot("2026-08-24T14:30:00"), 60, "moving")).toBeNull();
     expect(overlaps(occupancyOf(early), { start: 0, end: Number.MAX_SAFE_INTEGER })).toBe(false);
   });
 });

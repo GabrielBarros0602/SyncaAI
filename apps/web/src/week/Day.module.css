@@ -472,6 +472,185 @@
   color: var(--ink-3);
 }
 
+/* The panels an open row shows under its verbs: move, delete and note. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.panelHead {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.panelHint {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.moveDays {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.moveDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: var(--space-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    transform var(--dur-2) var(--ease-spring);
+}
+
+.moveDay:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.moveDay:active:not(:disabled) {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+/* The lightest day the task can go to, ringed in ink rather than the accent, which means
+   trouble. */
+.moveDayLightest {
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.moveDayOff {
+  border-style: dashed;
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.moveName {
+  font: var(--weight-medium) var(--text-2) / var(--leading-1) var(--font-mono);
+}
+
+.moveSub {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.moveDayOff .moveSub {
+  color: inherit;
+}
+
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.fieldHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.count {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-mono);
+  color: var(--ink-3);
+}
+
+.textarea {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: var(--field);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.primary,
+.secondary,
+.danger {
+  min-height: max(40px, var(--target));
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-2);
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    transform var(--dur-2) var(--ease-spring);
+}
+
+.primary {
+  padding: 0 var(--space-4);
+  border: 0;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.primary:hover {
+  background: var(--primary-hover);
+}
+
+.primary:active {
+  background: var(--primary-pressed);
+}
+
+.secondary {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.secondary:hover {
+  background: var(--hover);
+}
+
+.secondary:active {
+  background: var(--pressed);
+}
+
+.danger {
+  border: 1px solid var(--alert);
+  background: var(--alert-surface);
+  color: var(--alert-ink);
+}
+
+.danger:hover {
+  background: var(--alert-hover);
+}
+
+.danger:active {
+  background: var(--alert-pressed);
+  transform: scale(var(--press-scale));
+}
+
+.primary:disabled,
+.danger:disabled {
+  cursor: progress;
+}
+
 /* Dashed, with the arrow it came by and no verbs: it cannot be mistaken for a row. */
 .band {
   display: flex;
