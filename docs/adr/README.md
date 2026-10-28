@@ -61,6 +61,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0050](0050-plans-and-their-requests-are-listed-and-an-approved-plan-counts-its-tasks.md) | Plans and their requests are listed, and an approved plan counts its tasks | Accepted |
 | [0051](0051-a-password-change-keeps-this-session-and-a-reset-keeps-none.md) | A password change keeps this session, a reset keeps none, and both are told | Accepted |
 | [0052](0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md) | The third design round is the specification, and the front end opens | Accepted |
+| [0053](0053-the-week-is-one-grid-with-one-tab-stop.md) | The week is one grid with one tab stop | Accepted |
 
 ## Template
 
