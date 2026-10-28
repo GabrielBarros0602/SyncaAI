@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { clock, formatMinutes } from "../lib/time";
@@ -25,7 +25,7 @@ interface Verb {
   label: string;
   /** What the key hint shows. */
   key: string;
-  /** The `KeyboardEvent.key` values that reach this verb from the title. */
+  /** The `KeyboardEvent.key` values that reach this verb from the row. */
   keys: string[];
 }
 
@@ -82,6 +82,11 @@ interface Props {
   days: DayCapacity[];
   allTasks: Task[];
   open: Panel | null;
+  /** `2:3`: the row's place in the week's grid, which the arrow keys move between. */
+  cell: string;
+  /** The week's one tab stop is on this row (ADR-0053). */
+  tabStop: boolean;
+  onFocusCell: () => void;
   /** A write about this task has not reached the screen yet. */
   saving: boolean;
   onOpen: (panel: Panel | null) => void;
@@ -96,18 +101,16 @@ interface Props {
 }
 
 /**
- * One task, on the day it belongs to.
+ * One task, on the day it belongs to: a cell of the week's grid (ADR-0053).
  *
- * The row is a container and the two things it offers are real buttons: a checkbox that
- * completes, and the title, which is the disclosure that opens the panel. Completing is the
- * frequent verb and must not cost an opening; everything else needs room the resting row
- * does not have.
+ * The row itself is the disclosure. It holds the week's one tab stop when the arrows bring it
+ * there, Enter opens and closes it, Space completes it, and the verb letters reach a verb
+ * without opening first. The box stays a real button for the pointer, out of the tab order
+ * while the row is shut, since Space on the row is the same press.
  *
- * An earlier version of this made the row itself focusable — `role="group"`, `tabIndex={0}`,
- * `aria-expanded`, and hand-written key handling — to keep the design's single tab stop per
- * row. `eslint-plugin-jsx-a11y` refused it, and was right: `aria-expanded` is not supported
- * on `group`, so the open state was announced to nobody, and a container carrying a tab stop
- * and key handlers is a control pretending not to be one.
+ * The second round's answer, a box and a title button per row, was two tab stops a row: about
+ * sixty to cross a full week. A row that took focus itself was refused then because it was a
+ * `group`, which cannot carry `aria-expanded`; a `gridcell` can.
  */
 export function TaskRow({
   task,
@@ -119,6 +122,9 @@ export function TaskRow({
   days,
   allTasks,
   open,
+  cell,
+  tabStop,
+  onFocusCell,
   saving,
   onOpen,
   onSave,
@@ -131,9 +137,25 @@ export function TaskRow({
   // The server's sentence for the last thing refused on the closed row: a delete or a
   // completion, both of which can be pressed without opening it.
   const [refusal, setRefusal] = useState<string | null>(null);
+  const self = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(open !== null);
+
+  // A closed panel takes the focused control with it. Focus comes back to the row it was in,
+  // whichever way the row was closed, rather than falling to the page (ADR-0053).
+  useEffect(() => {
+    if (wasOpen.current && open === null && document.activeElement === document.body) {
+      self.current?.focus();
+    }
+    wasOpen.current = open !== null;
+  }, [open]);
 
   function refused(problem: unknown): void {
     setRefusal(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
+  }
+
+  function toggle(): void {
+    setRefusal(null);
+    onToggle(task).catch(refused);
   }
 
   // Judged at the press, not when the row was drawn: a task that could be put back when the
@@ -152,15 +174,46 @@ export function TaskRow({
 
   return (
     <div
+      ref={self}
       // Addressable so the band on the receiving day has somewhere to send the reader back
       // to. The task id rather than the position: the row moves when its neighbours change.
       id={`task-${task.id}`}
-      role="group"
+      role="gridcell"
+      data-cell={cell}
+      tabIndex={tabStop ? 0 : -1}
+      aria-expanded={open !== null}
       aria-busy={saving}
       data-open={open !== null ? "1" : undefined}
       className={cx(styles.task, done && styles.taskDone)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onFocus={onFocusCell}
+      onClick={(event) => {
+        // The pointer's way in, anywhere on a shut row but its box. Once open, the row is a
+        // panel full of controls, and a press between them should not shut it.
+        const onControl = event.target instanceof Element && event.target.closest("button");
+        if (open === null && !onControl) onOpen("open");
+      }}
+      onKeyDown={(event) => {
+        // Only keys pressed on the row itself: inside an open row they belong to its controls.
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onOpen(open === null ? "open" : null);
+          return;
+        }
+        if (event.key === " ") {
+          event.preventDefault();
+          toggle();
+          return;
+        }
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        const verb = verbs.find((candidate) => candidate.keys.includes(event.key));
+        if (verb === undefined) return;
+        event.preventDefault();
+        if (verb === DELETE) startDelete();
+        else onOpen(verb.panel);
+      }}
     >
       <span ref={fillRef} className={styles.fill} aria-hidden="true" />
       <span className={styles.taskTop}>
@@ -180,36 +233,13 @@ export function TaskRow({
           className={styles.check}
           aria-pressed={done}
           aria-label={`Complete ${task.title}`}
-          onClick={() => {
-            setRefusal(null);
-            onToggle(task).catch(refused);
-          }}
+          aria-keyshortcuts={open === null ? undefined : "Space"}
+          tabIndex={open === null ? -1 : 0}
+          onClick={toggle}
         >
           {done && <span className={styles.checkMark} />}
         </button>
-        {/* The disclosure. A real button, so focus, Enter and Space are the browser's rather
-            than this file's, and `aria-expanded` sits on a role that supports it.
-
-            It also carries the verb shortcuts, because it is the row's focusable element and
-            a key handler belongs on something that can be focused. They reach a verb without
-            opening first, which is what the letters are for. */}
-        <button
-          type="button"
-          className={styles.taskTitle}
-          aria-expanded={open !== null}
-          onClick={() => {
-            onOpen(open === null ? "open" : null);
-          }}
-          onKeyDown={(event) => {
-            const verb = verbs.find((candidate) => candidate.keys.includes(event.key));
-            if (verb === undefined) return;
-            event.preventDefault();
-            if (verb === DELETE) startDelete();
-            else onOpen(verb.panel);
-          }}
-        >
-          {task.title}
-        </button>
+        <span className={styles.taskTitle}>{task.title}</span>
       </span>
 
       {split !== null && <span className={styles.taskSplit}>{split}</span>}

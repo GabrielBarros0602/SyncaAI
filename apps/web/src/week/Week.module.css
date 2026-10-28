@@ -146,6 +146,22 @@
   background: transparent;
 }
 
+/* Inside the edge, like every cell of the grid; outside once the row has opened into a panel,
+   where an inner ring would sit on its controls (item 6 of the round). */
+.task:focus-visible,
+.carried:focus-visible {
+  outline-offset: -2px;
+}
+
+.task[data-open="1"]:focus-visible {
+  outline-offset: var(--focus-offset);
+}
+
+/* A shut row opens from a press anywhere on it, not only on its title. */
+.task:not([data-open="1"]) {
+  cursor: pointer;
+}
+
 /* An open row keeps the hover tint after the pointer has gone, so it stays findable while
    the reader is inside the panel it opened. */
 .task[data-open="1"] {

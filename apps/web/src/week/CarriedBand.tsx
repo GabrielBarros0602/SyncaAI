@@ -31,6 +31,10 @@ interface Props {
    * exist is worse than not offering.
    */
   onGoToOwner: ((taskId: string) => void) | null;
+  /** The band's place in the week's grid; a day holds one band at most (ADR-0053). */
+  cell: string;
+  tabStop: boolean;
+  onFocusCell: () => void;
 }
 
 export function CarriedBand({
@@ -39,12 +43,36 @@ export function CarriedBand({
   timezone,
   bookedMinutes,
   onGoToOwner,
+  cell,
+  tabStop,
+  onFocusCell,
 }: Props): React.ReactNode {
   const total = carried.reduce((sum, entry) => sum + entry.minutes, 0);
   const one = carried.length === 1;
+  // Only one task can be running at a midnight, since tasks cannot overlap, so the band has
+  // one owner and the whole cell is the way back to it.
+  const owner = carried[0]?.task.id;
+  const goToOwner =
+    onGoToOwner === null || owner === undefined
+      ? undefined
+      : () => {
+          onGoToOwner(owner);
+        };
 
   return (
-    <div className={styles.carried}>
+    <div
+      role="gridcell"
+      data-cell={cell}
+      tabIndex={tabStop ? 0 : -1}
+      className={styles.carried}
+      onFocus={onFocusCell}
+      onClick={goToOwner}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" || goToOwner === undefined) return;
+        event.preventDefault();
+        goToOwner();
+      }}
+    >
       <div className={styles.carriedHead}>
         <span className={styles.carriedArrow} aria-hidden="true">
           ↳
@@ -66,16 +94,9 @@ export function CarriedBand({
             <span className={styles.carriedMinutes}>
               {formatMinutes(entry.minutes)} of this day
             </span>
+            {/* Words, not a button: the whole band is the control, and Enter on it goes. */}
             {onGoToOwner !== null && (
-              <button
-                type="button"
-                className={styles.carriedGoTo}
-                onClick={() => {
-                  onGoToOwner(entry.task.id);
-                }}
-              >
-                go to {fromWeekday}
-              </button>
+              <span className={styles.carriedGoTo}>go to {fromWeekday}</span>
             )}
           </div>
         </div>

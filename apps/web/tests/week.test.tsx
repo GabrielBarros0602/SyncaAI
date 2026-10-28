@@ -7,7 +7,7 @@
  * belongs to the database, so its refusal has to arrive from the server rather than from a
  * check this client is not in a position to make.
  */
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, resetClientForTests } from "../src/api/client";
@@ -62,7 +62,8 @@ function booked(minutes: number, overrides: Partial<DayCapacity> = {}): DayCapac
 }
 
 const NOOP = {
-  onHover: () => undefined,
+  focusedCell: 0,
+  onFocusCell: () => undefined,
   onOpenForm: () => undefined,
   onCancelForm: () => undefined,
   onCreate: () => undefined,
@@ -112,7 +113,11 @@ interface When {
   past?: boolean;
 }
 
-function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
+function renderDay(
+  capacity: DayCapacity,
+  when: When = {},
+  grid: { focusedCell?: number | null } = {},
+): HTMLElement {
   const { container } = render(
     <DayColumn
       capacity={capacity}
@@ -136,6 +141,7 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       submitting={false}
       serverError={null}
       {...NOOP}
+      focusedCell={grid.focusedCell ?? NOOP.focusedCell}
       onToggle={when.onToggle ?? (() => Promise.resolve())}
     />,
   );
@@ -375,8 +381,9 @@ describe("the row, and the box that came out of it", () => {
     return screen.getByRole("button", { name: /^Complete/ });
   }
 
+  /** The shut row: a cell of the week's grid, and its own disclosure (ADR-0053). */
   function disclosure(): HTMLElement {
-    return screen.getByRole("button", { expanded: false });
+    return screen.getByRole("gridcell", { expanded: false });
   }
 
   it("completes from the box without opening the row", () => {
@@ -408,30 +415,43 @@ describe("the row, and the box that came out of it", () => {
     });
   });
 
-  it("opens from the title without completing the task", () => {
+  it("opens from a press on its title without completing the task", () => {
     // The inverse, and the one that used to be impossible: before this the whole row was the
     // toggle, so there was nowhere to press that did not complete something.
     const toggled = vi.fn<(task: Task) => Promise<void>>().mockResolvedValue(undefined);
     const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
-    fireEvent.click(disclosure());
+    fireEvent.click(screen.getByText("plain"));
 
     expect(opened).toHaveBeenCalledWith({ id: "plain", panel: "open" });
     expect(toggled).not.toHaveBeenCalled();
   });
 
-  it("gives each verb its own control rather than sharing one tab stop", () => {
-    // The single focusable row this replaced needed hand-written key handling, and the state
-    // it announced sat on a role that does not support it. Two buttons get focus, activation
-    // and both states from the elements themselves.
-    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN] });
+  it("is one tab stop: the row takes focus, and the box does not while it is shut", () => {
+    // Two stops a row was about sixty to cross a full week (ADR-0053). Space on the row is
+    // the box's press, so the box leaves the tab order until the row opens.
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN] }, { focusedCell: 1 });
 
-    expect(box().getAttribute("aria-pressed")).toBe("false");
+    expect(disclosure().tabIndex).toBe(0);
     expect(disclosure().getAttribute("aria-expanded")).toBe("false");
+    expect(box().tabIndex).toBe(-1);
+    expect(box().getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("closes the row it is asked to open again", () => {
+  it("opens and closes on Enter, and completes on Space", () => {
+    const toggled = vi.fn<(task: Task) => Promise<void>>().mockResolvedValue(undefined);
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
+    renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
+
+    fireEvent.keyDown(disclosure(), { key: "Enter" });
+    expect(opened).toHaveBeenLastCalledWith({ id: "plain", panel: "open" });
+
+    fireEvent.keyDown(disclosure(), { key: " " });
+    expect(toggled).toHaveBeenCalledWith(PLAIN);
+  });
+
+  it("closes on Enter once open, and its box joins the tab order", () => {
     const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), {
       tasks: [PLAIN],
@@ -439,15 +459,30 @@ describe("the row, and the box that came out of it", () => {
       onOpenTask: opened,
     });
 
-    fireEvent.click(screen.getByRole("button", { expanded: true }));
+    fireEvent.keyDown(screen.getByRole("gridcell", { expanded: true }), { key: "Enter" });
 
     expect(opened).toHaveBeenCalledWith(null);
+    expect(box().tabIndex).toBe(0);
+    expect(box().getAttribute("aria-keyshortcuts")).toBe("Space");
+  });
+
+  it("leaves keys pressed inside an open row to the control they were pressed on", () => {
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [PLAIN],
+      openTask: "plain",
+      onOpenTask: opened,
+    });
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "edit" }), { key: "Enter" });
+
+    expect(opened).not.toHaveBeenCalledWith(null);
   });
 
   it("says the row is expanded, so it is not only a visual state", () => {
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], openTask: "plain" });
 
-    expect(screen.getByRole("button", { expanded: true })).toBeDefined();
+    expect(screen.getByRole("gridcell", { expanded: true })).toBeDefined();
   });
 
   it("shows nothing of the note or the checklist while it is shut", () => {
@@ -521,13 +556,13 @@ describe("the two verbs an opened row offers", () => {
     };
   }
 
-  it("reaches a verb from the title without opening first", () => {
+  it("reaches a verb from the row without opening first", () => {
     // The letters are the point of the letters. Having to press Enter and then E would make
     // the shortcut slower than the mouse.
     const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [TASK], onOpenTask: opened });
 
-    fireEvent.keyDown(screen.getByRole("button", { expanded: false }), { key: "e" });
+    fireEvent.keyDown(screen.getByRole("gridcell", { expanded: false }), { key: "e" });
 
     expect(opened).toHaveBeenCalledWith({ id: "lecture", panel: "edit" });
   });
@@ -1014,11 +1049,15 @@ describe("the week you are looking at", () => {
     const header = (day: string): HTMLElement =>
       document.querySelector(`[data-day="${day}"]`)?.firstElementChild as HTMLElement;
 
-    fireEvent.mouseEnter(header("2026-08-24"));
+    act(() => {
+      header("2026-08-24").focus();
+    });
     fireEvent.keyDown(window, { key: "n" });
     expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
 
-    fireEvent.mouseEnter(header("2026-08-27"));
+    act(() => {
+      header("2026-08-27").focus();
+    });
     fireEvent.keyDown(window, { key: "n" });
     expect(screen.getByRole("textbox", { name: "Title" })).toBeDefined();
   });
@@ -1150,19 +1189,102 @@ describe("the week you are looking at", () => {
     expect(wednesday.contains(document.activeElement)).toBe(true);
   });
 
-  /**
-   * A row's title buttons: every expandable button but the Menu, which opens a dialog, and the
-   * legend's toggle, which names the list it folds.
-   */
+  /** The rows: the only cells of the grid that open. */
   function rows(expanded: boolean): HTMLElement[] {
-    return screen
-      .getAllByRole("button", { expanded })
-      .filter(
-        (button) =>
-          button.getAttribute("aria-haspopup") === null &&
-          button.getAttribute("aria-controls") === null,
-      );
+    return screen.queryAllByRole("gridcell", { expanded });
   }
+
+  describe("the grid (ADR-0053)", () => {
+    // Wednesday 26 August, 12:00 in São Paulo: two rows on Wednesday, one on Thursday.
+    const EARLY = aTask("early", "2026-08-26T14:00:00", "2026-08-26T15:00:00");
+    const LATE = aTask("late", "2026-08-26T16:00:00", "2026-08-26T17:00:00");
+    const NEXT = aTask("next", "2026-08-27T09:00:00", "2026-08-27T10:00:00");
+
+    async function renderGrid(): Promise<HTMLElement> {
+      vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+      routeWeek(SEVEN, ME, [EARLY, LATE, NEXT]);
+      renderWeek();
+      await waitFor(() => {
+        expect(screen.getByRole("grid")).toBeDefined();
+      });
+      return screen.getByRole("grid");
+    }
+
+    function cell(at: string): HTMLElement {
+      return document.querySelector(`[data-cell="${at}"]`) as HTMLElement;
+    }
+
+    function press(key: string): void {
+      fireEvent.keyDown(document.activeElement as HTMLElement, { key });
+    }
+
+    it("is one tab stop for the whole week, on today's header", async () => {
+      const grid = await renderGrid();
+
+      const stops = grid.querySelectorAll('[tabindex="0"]');
+      expect(stops).toHaveLength(1);
+      expect(stops[0]).toBe(cell("2:0"));
+      expect(grid.getAttribute("aria-label")).toBe("Week of 24 – 30 Aug 2026");
+    });
+
+    it("walks days with left and right and rows with up and down, and the stop follows", async () => {
+      const grid = await renderGrid();
+      act(() => {
+        cell("2:0").focus();
+      });
+
+      press("ArrowDown");
+      expect(document.activeElement).toBe(document.getElementById("task-early"));
+      press("ArrowDown");
+      expect(document.activeElement).toBe(document.getElementById("task-late"));
+      // Thursday has one row, so the place is kept as far down as Thursday goes: its last
+      // cell, the way to a new task.
+      press("ArrowRight");
+      expect(document.activeElement).toBe(cell("3:2"));
+      press("Home");
+      expect(document.activeElement).toBe(cell("3:0"));
+      press("End");
+      expect(document.activeElement?.getAttribute("data-new-task")).toBe("2026-08-27");
+
+      const stops = grid.querySelectorAll('[tabindex="0"]');
+      expect(stops).toHaveLength(1);
+      expect(stops[0]).toBe(document.activeElement);
+    });
+
+    it("stops at the edges of the week", async () => {
+      await renderGrid();
+      act(() => {
+        cell("0:0").focus();
+      });
+
+      press("ArrowLeft");
+      press("ArrowUp");
+
+      expect(document.activeElement).toBe(cell("0:0"));
+    });
+
+    it("puts focus back on the row that Escape closed", async () => {
+      await renderGrid();
+      const early = document.getElementById("task-early") as HTMLElement;
+      act(() => {
+        early.focus();
+      });
+      press("Enter");
+      await waitFor(() => {
+        expect(early.getAttribute("aria-expanded")).toBe("true");
+      });
+      act(() => {
+        screen.getByRole("button", { name: "edit" }).focus();
+      });
+
+      fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Escape" });
+
+      await waitFor(() => {
+        expect(early.getAttribute("aria-expanded")).toBe("false");
+      });
+      expect(document.activeElement).toBe(early);
+    });
+  });
 
   it("keeps one row open across the whole week, not one per column", async () => {
     // Two panels standing open would each be offering to act on a different task with

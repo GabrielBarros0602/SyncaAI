@@ -29,6 +29,13 @@
   border-radius: var(--radius-3);
 }
 
+/* Cells sit 4px apart, so a ring outside one would run into the next: it goes inside the edge
+   (item 6 of the round). An opened row is the exception, in Week.module.css. */
+.head:focus-visible,
+.newTask:focus-visible {
+  outline-offset: -2px;
+}
+
 .title {
   display: flex;
   flex-wrap: wrap;

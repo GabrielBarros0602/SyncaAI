@@ -26,19 +26,19 @@ type FocusTarget = { task: string } | { newTaskOn: string };
 /**
  * The keys that do something today, in the design's order and words.
  *
- * The round's legend has fifteen. The arrows, Home and End, `C` and Alt with the arrows wait
- * for the row grid and the checklist panel; Space waits too, because on a row's title today it
- * presses the button and opens the row, which is the opposite of what the legend would say. A
+ * The round's legend has fifteen. `C` and Alt with the arrows wait for the checklist panel: a
  * legend that promises a key is a worse guide than a short one, so each joins when it works.
- * `N` reaches the day under the pointer until the grid gives the week a focused day.
  */
 const SHORTCUTS: Shortcut[] = [
+  { keys: ["←", "→", "↑", "↓"], label: "move between days and rows" },
+  { keys: ["Home", "End"], label: "first or last in a day" },
   { keys: ["Enter"], label: "open or close a row" },
+  { keys: ["Space"], label: "mark done" },
   { keys: ["E"], label: "edit" },
   { keys: ["M"], label: "move" },
   { keys: ["O"], label: "note" },
   { keys: ["⌫"], label: "delete" },
-  { keys: ["N"], label: "new task on the day under the pointer" },
+  { keys: ["N"], label: "new task on the focused day" },
   { keys: ["[", "]"], label: "previous or next week" },
   { keys: ["T"], label: "back to this week" },
   { keys: ["Ctrl", "Z"], label: "undo a delete" },
@@ -59,7 +59,16 @@ export function WeekScreen(): React.ReactNode {
   // One row open across the whole week, not one per column. Two panels standing open at once
   // would each be offering to act on a different task with nothing saying which is in front.
   const [openTask, setOpenTask] = useState<{ id: string; panel: Panel } | null>(null);
-  const hovered = useRef<string | null>(null);
+  // Where the week's one tab stop is (ADR-0053), for the week it was set in. Another week
+  // starts again from today's header, or Monday's when today is not in it.
+  const [focus, setFocus] = useState<{ offset: number; day: number; cell: number } | null>(null);
+  // In the zone the *server* stores, not the browser's. The two can differ, and a screen that
+  // marked today from the browser would mark the wrong day for a user who travelled —
+  // silently, which is the worst way to be wrong about which day it is.
+  const todayKey = week.me === null ? null : zonedDay(new Date().toISOString(), week.me.timezone);
+  const todayIndex = week.days.findIndex((day) => day.day === todayKey);
+  const current =
+    focus !== null && focus.offset === week.offset ? focus : { day: Math.max(0, todayIndex), cell: 0 };
   // Every write reloads the week, and the row somebody acted on may not be where it was when
   // the new week arrives: moved to another day, deleted, or brought back under a new id. Focus
   // is put on the week that arrives after the write — `after` is the load it has to be newer
@@ -81,7 +90,7 @@ export function WeekScreen(): React.ReactNode {
     const { target } = pending;
     const element =
       "task" in target
-        ? document.getElementById(`task-${target.task}`)?.querySelector<HTMLElement>("[aria-expanded]")
+        ? document.getElementById(`task-${target.task}`)
         : document.querySelector<HTMLElement>(`[data-new-task="${target.newTaskOn}"]`);
     element?.focus();
   }, [loaded, status]);
@@ -160,9 +169,12 @@ export function WeekScreen(): React.ReactNode {
       if (event.key === "Escape") {
         setOpenDay(null);
         setOpenTask(null);
-      } else if ((event.key === "n" || event.key === "N") && hovered.current !== null) {
+      } else if (event.key === "n" || event.key === "N") {
+        // The focused day, and never one that has gone: it offers no "+ new task" either.
+        const day = week.days[current.day];
+        if (day === undefined || current.day < todayIndex) return;
         event.preventDefault();
-        setOpenDay(hovered.current);
+        setOpenDay(day.day);
       } else if (event.key === "t" || event.key === "T") {
         // Unconditional, including when it is already zero. A key that silently does nothing
         // on the week you are already on is indistinguishable from one that is broken.
@@ -179,7 +191,7 @@ export function WeekScreen(): React.ReactNode {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [week]);
+  }, [week, current.day, todayIndex]);
 
   const dates = daysFrom(week.monday);
 
@@ -224,26 +236,56 @@ export function WeekScreen(): React.ReactNode {
     );
   }
 
-  // In the zone the *server* stores, not the browser's. The two can differ, and a screen that
-  // marked today from the browser would mark the wrong day for a user who travelled —
-  // silently, which is the worst way to be wrong about which day it is.
-  const todayKey = zonedDay(new Date().toISOString(), week.me.timezone);
-
   // Focus rather than scroll: moving the keyboard there is what makes the way back usable by
   // somebody who is not holding a mouse. `scrollIntoView` would move the eye and leave the
-  // focus in the band it came from.
-  //
-  // The target is the row's disclosure, not the row. The row is a plain container with no tab
-  // stop of its own — `focus()` on it silently does nothing, which is how this quietly stopped
-  // working when the row gave up being focusable.
+  // focus in the band it came from. The row is a cell of the grid, so it takes focus itself.
   function focusTask(taskId: string): void {
-    const row = document.getElementById(`task-${taskId}`);
-    row?.querySelector<HTMLElement>("[aria-expanded]")?.focus();
+    document.getElementById(`task-${taskId}`)?.focus();
   }
 
-  // Focus may not stay on a row that no longer exists. It goes where the same convention
-  // already sends it — a row's title — and to the next row in the day, or the one before it,
-  // so a run of deletes walks down a day; with none left, to the day's `new task` button.
+  /**
+   * The arrows, Home and End, between the cells of the grid (ADR-0053).
+   *
+   * Only from a cell itself: inside an opened row the keys belong to its controls. Days are
+   * rows drawn as columns, so left and right change day and keep the place in it, as far down
+   * as the other day goes.
+   */
+  function onGridKey(event: React.KeyboardEvent<HTMLDivElement>): void {
+    const at = event.target instanceof HTMLElement ? event.target.dataset.cell : undefined;
+    if (at === undefined) return;
+    const [day = 0, cell = 0] = at.split(":").map(Number);
+    const grid = event.currentTarget;
+    const last = (of: number): number => grid.querySelectorAll(`[data-cell^="${String(of)}:"]`).length - 1;
+    let next: [number, number];
+    switch (event.key) {
+      case "ArrowDown":
+        next = [day, Math.min(cell + 1, last(day))];
+        break;
+      case "ArrowUp":
+        next = [day, Math.max(0, cell - 1)];
+        break;
+      case "ArrowRight":
+        next = [Math.min(6, day + 1), Math.min(cell, last(Math.min(6, day + 1)))];
+        break;
+      case "ArrowLeft":
+        next = [Math.max(0, day - 1), Math.min(cell, last(Math.max(0, day - 1)))];
+        break;
+      case "Home":
+        next = [day, 0];
+        break;
+      case "End":
+        next = [day, last(day)];
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    grid.querySelector<HTMLElement>(`[data-cell="${String(next[0])}:${String(next[1])}"]`)?.focus();
+  }
+
+  // Focus may not stay on a row that no longer exists. It goes to the next row in the day, or
+  // the one before it, so a run of deletes walks down a day; with none left, to the day's
+  // `new task` button.
   function focusAfterDeleting(task: Task, timezone: string): FocusTarget {
     const day = zonedDay(task.start_at, timezone);
     const rows = week.byDay.get(day) ?? [];
@@ -258,7 +300,15 @@ export function WeekScreen(): React.ReactNode {
     <>
       <main className={styles.page}>
         {top}
-        <div className={styles.grid}>
+        {/* Not a stop itself: its cells hold the one tab stop and the keys arrive from them,
+            as the grid pattern has it (ADR-0053). */}
+        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+        <div
+          role="grid"
+          aria-label={`Week of ${weekRange(week.monday, dates[6] as Date)}`}
+          className={styles.grid}
+          onKeyDown={onGridKey}
+        >
           {week.days.map((capacity, index) => (
             <DayColumn
               key={capacity.day}
@@ -306,13 +356,14 @@ export function WeekScreen(): React.ReactNode {
               date={dayMonth(dates[index] as Date)}
               today={capacity.day === todayKey}
               // Local dates as YYYY-MM-DD compare as strings in calendar order.
-              past={capacity.day < todayKey}
+              past={todayKey !== null && capacity.day < todayKey}
               timezone={week.me?.timezone ?? "UTC"}
               formOpen={openDay === capacity.day}
               submitting={week.creating}
               serverError={openDay === capacity.day ? week.createError : null}
-              onHover={(day) => {
-                hovered.current = day;
+              focusedCell={current.day === index ? current.cell : null}
+              onFocusCell={(cell) => {
+                setFocus({ offset: week.offset, day: index, cell });
               }}
               onOpenForm={(day) => {
                 week.clearCreateError();
