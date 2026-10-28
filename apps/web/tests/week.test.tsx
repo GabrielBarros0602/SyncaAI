@@ -1052,11 +1052,18 @@ describe("the week you are looking at", () => {
     expect(wednesday.contains(document.activeElement)).toBe(true);
   });
 
-  /** A row's title buttons: every expandable button but the Menu, which opens a dialog. */
+  /**
+   * A row's title buttons: every expandable button but the Menu, which opens a dialog, and the
+   * legend's toggle, which names the list it folds.
+   */
   function rows(expanded: boolean): HTMLElement[] {
     return screen
       .getAllByRole("button", { expanded })
-      .filter((button) => button.getAttribute("aria-haspopup") === null);
+      .filter(
+        (button) =>
+          button.getAttribute("aria-haspopup") === null &&
+          button.getAttribute("aria-controls") === null,
+      );
   }
 
   it("keeps one row open across the whole week, not one per column", async () => {
