@@ -1,18 +1,10 @@
 /*
- * The week screen.
+ * The week screen's rows, panels and forms, and the loading and unreachable weeks.
  *
- * CSS modules rather than inline styles: the design arrived as inline everything, which is
- * how a design tool writes, but it makes a hover state impossible to express and a diff
- * impossible to read. Every value here is a token from `styles/tokens.css`; nothing is a
- * literal colour.
+ * What is left of the second round's stylesheet. The page, its header and each day's header
+ * moved to the round's tokens in WeekScreen, WeekHeader and Day.module.css (ADR-0052); the
+ * rest moves as each part is rebuilt, and this file goes with the last of them.
  */
-
-.screen {
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--sans);
-}
 
 /* Rounded, and clipping to its own corners: without the clip the first and last column paint
    square fills straight through the curve. */
@@ -42,67 +34,6 @@
   color: var(--faint);
 }
 
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.range {
-  font: 500 13px/1 var(--mono);
-  letter-spacing: 0.02em;
-  min-width: 190px;
-  text-align: center;
-}
-
-/* A ground instead of an outline. The border only drew a box around a word, and a row of
-   boxes in the chrome read as a second set of columns. It stays as a transparent pixel so
-   `.home`, which does mean something by its border, keeps the same size. */
-.ghost {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
-  background: var(--surface);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background var(--dur);
-  font: 400 12px/1 var(--sans);
-  color: var(--dim);
-}
-
-.ghost:hover {
-  background: var(--hover);
-}
-
-/*
- * The way back. It carries the full ink because it is the only control in the chrome that
- * undoes an unbounded number of presses of the other two — and it goes quiet the moment
- * there is nothing to undo, which is the state it is in most of the time.
- */
-.home {
-  composes: ghost;
-  color: var(--ink);
-  border-color: var(--ink);
-}
-
-.home:disabled {
-  color: var(--dim);
-  border-color: var(--rule);
-  opacity: 0.4;
-  cursor: default;
-}
-
-.home:disabled:hover {
-  background: var(--surface);
-}
-
-.away {
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
-}
-
 /* The keyboard hint next to every action. Not decoration: on a screen opened every day, a
    shortcut is a feature, and showing it is what makes it discoverable. */
 .key {
@@ -123,44 +54,12 @@
   flex-wrap: wrap;
 }
 
-.summaryFigures {
-  display: flex;
-  align-items: baseline;
-  gap: 24px;
-  flex-wrap: wrap;
-  font-family: var(--mono);
-}
-
-.figureStrong {
-  font: 500 12px/1 var(--mono);
-}
-
-.figure {
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
-}
-
 .hint {
   display: flex;
   align-items: center;
   gap: 9px;
   font: 400 12px/1 var(--sans);
   color: var(--faint);
-}
-
-/* Where the shared legend sits until the week itself moves to the round's layout, which puts
-   it between the header and the grid with the gap the frame does not have yet. */
-.legendSlot {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.chip {
-  font: 500 12px/1 var(--mono);
-  color: var(--chip-ink);
-  background: var(--chip-bg);
-  border: 1px solid var(--accent);
-  padding: 4px 6px;
 }
 
 /* Never narrower than 150px. A crossing task's range, `22:00 – 01:00+1`, is 108px of 12px
@@ -184,17 +83,6 @@
   border-right: 0;
 }
 
-/* Two pixels along the top edge, and nothing else. Today has to be findable in a row of
-   seven identical columns without becoming the loudest thing on the screen — the accent is
-   spoken for, and it means trouble. */
-.day[data-today="1"] {
-  box-shadow: inset 0 2px 0 var(--ink);
-}
-
-.dayOver {
-  background: var(--accent-tint);
-}
-
 .head {
   position: relative;
   padding: var(--pad);
@@ -214,28 +102,8 @@
   pointer-events: none;
 }
 
-.over .fill {
-  background: transparent;
-}
-
-.layer {
-  position: relative;
-}
-
 .dayIndex {
   font: 500 12px/1 var(--mono);
-  color: var(--faint);
-}
-
-/* The index is a position in a list; `today` is the answer to a question. It takes the full
-   ink because it is the only label on the screen somebody actually looks for. */
-.dayIndexToday {
-  color: var(--ink);
-}
-
-.dayTotalNote {
-  font: 400 12px/1 var(--mono);
-  letter-spacing: 0.03em;
   color: var(--faint);
 }
 
@@ -250,145 +118,6 @@
   margin-top: 5px;
   font: 400 12px/1 var(--mono);
   color: var(--dim);
-}
-
-/* A day that has already happened is still worth reading — the tasks on it are the record.
-   Only the date recedes, so the column stays legible without competing with the days that
-   can still be planned. */
-.datePast {
-  color: var(--faint);
-}
-
-/* The number the product exists to report. Scale carries it, not colour. */
-/* Wraps rather than overflows: a five-character figure at --num is a hundred pixels on its
-   own, and in a narrow column the word goes under it instead of out of the column. */
-.booked {
-  margin-top: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 7px;
-}
-
-.bookedValue {
-  font: 500 var(--num) / 1 var(--mono);
-  letter-spacing: -0.02em;
-}
-
-.bookedWord {
-  font: 400 12px/1 var(--sans);
-  color: var(--dim);
-}
-
-.freeOf {
-  margin-top: 7px;
-  font: 400 12px/1.4 var(--sans);
-  color: var(--dim);
-}
-
-.freeOfValue {
-  font-family: var(--mono);
-}
-
-.overChip {
-  margin-top: 10px;
-  display: inline-block;
-  font: 500 12px/1 var(--mono);
-  color: var(--chip-ink);
-  background: var(--chip-bg);
-  border: 1px solid var(--accent);
-  padding: 4px 6px;
-}
-
-/*
- * What a heavy day says.
- *
- * Two weights, not four. `heavy` and `strained` share the quiet one; only
- * `unsustainable` gets the accent's full attention, because a screen where three levels
- * shout is a screen where none of them is heard.
- */
-.warning {
-  margin-top: 12px;
-  border-left: 2px solid var(--rule2);
-  padding-left: 10px;
-  border-radius: 0;
-}
-
-.warningLoud {
-  border-left-color: var(--accent);
-}
-
-.warningText {
-  margin: 0;
-  font: 500 12px/1.45 var(--sans);
-  color: var(--dim);
-  text-wrap: pretty;
-}
-
-.warningLoud .warningText {
-  color: var(--chip-ink);
-}
-
-.warningMove {
-  margin: 6px 0 0;
-  font: 400 12px/1.45 var(--sans);
-  color: var(--faint);
-  text-wrap: pretty;
-}
-
-.warningMoveDay {
-  color: var(--dim);
-}
-
-.trackRow {
-  margin-top: 15px;
-}
-
-/*
- * The track's width is the length of the day, scaled against the longest a day can be.
- * This is the one place the data model changes geometry: a 1380-minute day is visibly
- * shorter than a 1440, without a caption saying so. Encoding it in the column's height
- * would have been prettier and impossible, because the column also has to hold tasks.
- */
-.track {
-  position: relative;
-  height: 3px;
-  background: var(--fill);
-}
-
-.bar {
-  height: 3px;
-  background: var(--ink);
-}
-
-.dayOver .bar {
-  background: var(--accent);
-}
-
-/*
- * Where the budget falls on a track that measures the whole day.
- *
- * It overhangs the 3px bar on both sides so it is findable at this size, and it is one pixel
- * wide because it is a line on a ruler, not a value.
- */
-.budgetMark {
-  position: absolute;
-  top: -3px;
-  width: 1px;
-  height: 9px;
-  background: var(--rule2);
-}
-
-/* Past the line, the tick is drawn in the page's own background — a notch cut out of the
-   fill rather than a mark laid over it. */
-.budgetMarkPassed {
-  background: var(--bg);
-}
-
-.dayMeta {
-  margin-top: 9px;
-  font: 400 12px/1 var(--mono);
-  color: var(--faint);
 }
 
 /*
@@ -914,43 +643,6 @@
   margin-top: 8px;
 }
 
-.emptyDay {
-  border-top: 1px solid var(--rule);
-  padding: var(--pad);
-  font: 400 12px/1.55 var(--sans);
-  color: var(--faint);
-  text-wrap: pretty;
-}
-
-.emptyDayValue {
-  font-family: var(--mono);
-  color: var(--dim);
-}
-
-.newTask {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border: 0;
-  border-top: 1px solid var(--rule);
-  border-radius: var(--radius-md);
-  padding: var(--rowpad) var(--pad);
-  background: transparent;
-  color: var(--dim);
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--dur), color var(--dur);
-  font: 500 12px/1 var(--sans);
-  letter-spacing: 0.03em;
-  width: 100%;
-}
-
-.newTask:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-
 .form {
   border-top: 1px solid var(--rule2);
   padding: var(--pad);
@@ -1136,30 +828,6 @@
   cursor: progress;
 }
 
-.emptyWeek {
-  border-top: 1px solid var(--rule2);
-  padding: 28px 20px;
-  display: flex;
-  align-items: baseline;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.emptyWeekHead {
-  font: 500 21px/1 var(--sans);
-  letter-spacing: -0.015em;
-}
-
-.emptyWeekFigure {
-  font: 400 13px/1 var(--mono);
-  color: var(--dim);
-}
-
-.emptyWeekNote {
-  font: 400 13px/1 var(--sans);
-  color: var(--faint);
-}
-
 .banner {
   border-bottom: 1px solid var(--rule);
   border-radius: var(--radius-md);
@@ -1257,10 +925,7 @@
     gap: 12px;
   }
 
-  .range {
-    min-width: 0;
   }
-}
 
 /*
  * On a phone, one column: the days stack, and the rule between them turns from vertical to
@@ -1288,10 +953,8 @@
 }
 
 /* A key nobody can press is a label for nothing. On a device with no hover and a coarse
-   pointer there is almost certainly no keyboard, so the shortcuts go. The legend hides itself;
-   its slot goes with it, or an empty band would be left where it was. */
+   pointer there is almost certainly no keyboard, so the shortcuts go. */
 @media (hover: none) and (pointer: coarse) {
-  .legendSlot,
   .hint,
   .key,
   .verbKey,
