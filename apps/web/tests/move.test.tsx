@@ -99,7 +99,7 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
       onOpenForm={() => undefined}
       onCancelForm={() => undefined}
       onCreate={() => undefined}
-      onToggle={() => undefined}
+      onToggle={() => Promise.resolve()}
     />,
   );
 }

@@ -66,7 +66,7 @@ const NOOP = {
   onOpenForm: () => undefined,
   onCancelForm: () => undefined,
   onCreate: () => undefined,
-  onToggle: () => undefined,
+  onToggle: () => Promise.resolve(),
 };
 
 /** A task, given a local start and end in São Paulo. */
@@ -107,7 +107,7 @@ interface When {
   openTask?: string | { id: string; panel: Panel } | null;
   onOpenTask?: (open: { id: string; panel: Panel } | null) => void;
   onSaveTask?: (taskId: string, changes: TaskChanges) => Promise<void>;
-  onToggle?: (task: Task) => void;
+  onToggle?: (task: Task) => Promise<void>;
   today?: boolean;
   past?: boolean;
 }
@@ -136,7 +136,7 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       submitting={false}
       serverError={null}
       {...NOOP}
-      onToggle={when.onToggle ?? (() => undefined)}
+      onToggle={when.onToggle ?? (() => Promise.resolve())}
     />,
   );
   return container;
@@ -382,7 +382,7 @@ describe("the row, and the box that came out of it", () => {
   it("completes from the box without opening the row", () => {
     // The whole reason the box was promoted out of the opened set: this is the verb somebody
     // presses dozens of times a week, and it must not cost an opening.
-    const toggled = vi.fn<(task: Task) => void>();
+    const toggled = vi.fn<(task: Task) => Promise<void>>().mockResolvedValue(undefined);
     const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
@@ -392,10 +392,26 @@ describe("the row, and the box that came out of it", () => {
     expect(opened).not.toHaveBeenCalled();
   });
 
+  it("shows the server's sentence on the row when it refuses the box", async () => {
+    // Reopening a task whose freed time has since been booked is refused (ADR-0022). The
+    // promise used to reject with nobody listening, and the row went back without a word.
+    const reason = "This task's time has been taken since it was completed.";
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [PLAIN],
+      onToggle: () => Promise.reject(new ApiError(409, reason)),
+    });
+
+    fireEvent.click(box());
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toBe(reason);
+    });
+  });
+
   it("opens from the title without completing the task", () => {
     // The inverse, and the one that used to be impossible: before this the whole row was the
     // toggle, so there was nowhere to press that did not complete something.
-    const toggled = vi.fn<(task: Task) => void>();
+    const toggled = vi.fn<(task: Task) => Promise<void>>().mockResolvedValue(undefined);
     const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
     renderDay(aDay({ task_count: 1 }), { tasks: [PLAIN], onToggle: toggled, onOpenTask: opened });
 
