@@ -7,13 +7,14 @@
   gap: var(--space-5);
 }
 
-/* Seven equal columns of at least 140px, which is what fits at 1100px. The round's page has a
-   minimum width for the same reason; here the week scrolls sideways inside itself instead, so
-   the header above it stays on screen. Sized by a floor rather than by what each column holds,
-   because the second round's rows still in them would make the columns unequal. */
+/* Seven equal columns of at least 155px, what the round's 1180px minimum page leaves each one.
+   A task crossing midnight shows `22:00 – 01:00+1` unbroken, and at 140px the `+1`, the one
+   mark saying the end belongs to tomorrow, was cut. Between 1100 and about 1180px the week
+   scrolls sideways inside itself, so the header above it stays on screen. Sized by a floor
+   rather than by what each column holds, which the old rows would make unequal. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  grid-template-columns: repeat(7, minmax(155px, 1fr));
   gap: var(--gap-columns);
   align-items: start;
   overflow-x: auto;

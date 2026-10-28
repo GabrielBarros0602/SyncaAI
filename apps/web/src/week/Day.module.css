@@ -48,7 +48,7 @@
 .weekday {
   font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
   color: var(--ink);
-  /* "Wednesday" at 200% text is wider than a 140px column. Broken, it is still read; cut, it
+  /* "Wednesday" at 200% text is wider than a 155px column. Broken, it is still read; cut, it
      is not. `anywhere` rather than `break-word`, because a flex item will not shrink below a
      word that only `break-word` is allowed to break. */
   min-width: 0;
