@@ -279,6 +279,11 @@ plano-contra-real que o S6 vai ler deixa de significar alguma coisa. As opções
   usado, continua perdendo o foco.** Consertar de vez pede manter a semana anterior na tela
   enquanto a nova chega, o que esbarra de propósito no `WeekUnreachable`, que prefere não mostrar
   número velho. É decisão, não detalhe.
+
+  **Resolvido em 2026-10-27.** A terceira rodada decidiu (item 29): a linha fica onde está, diz
+  "saving…" com `aria-busy`, e os números mudam só quando o servidor responde. A semana
+  anterior fica na tela durante a recarga, e o `WeekUnreachable` continua valendo quando a
+  recarga falha, então número velho segue sem aparecer como se fosse atual.
 - **A oferta do dia pesado sugere dia que já passou.** Numa quarta, a sexta estourada dizia
   "Mon has 16h free". O `lightestDay` do `load.ts` não olha o relógio. É a PR 6, que vai
   transformar a frase em botão — e um botão para mover algo para segunda-feira passada seria
@@ -287,6 +292,9 @@ plano-contra-real que o S6 vai ler deixa de significar alguma coisa. As opções
   `aria-live="polite"`, e nasce junto com o texto, porque a semana inteira é remontada depois da
   recarga. Leitores de tela anunciam esse caso de forma inconsistente. O jsdom confirma o papel e
   o texto, não o que um leitor fala: falta uma passada com NVDA ou VoiceOver.
+
+  **A causa saiu em 2026-10-27:** a região de status agora é uma só, fica na página vazia desde o
+  início e não é remontada (ADR-0052). A passada com leitor de tela continua faltando.
 - **O brief dizia que o projeto não usa `autoFocus`.** Usa: o `NewTaskForm` foca o título ao
   abrir, com o `eslint-disable` justificado. A convenção de foco programático que existe é a do
   `WeekScreen` — focar o título da linha pelo id —, e foi essa que a PR 5 seguiu.
