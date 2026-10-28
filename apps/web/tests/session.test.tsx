@@ -94,6 +94,23 @@ it("no cookie means signed out", async () => {
   });
 });
 
+it("an unreachable server at boot is not a signed-out user", async () => {
+  // Whether there is a session is unknown, so the sign-in screen would be a guess (ADR-0021).
+  // The signed-in side shows the server could not be reached, and its retry settles it.
+  fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+  render(
+    <SessionProvider>
+      <Probe />
+    </SessionProvider>,
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText("Signed in.")).toBeDefined();
+  });
+  expect(screen.queryByText("Signed out.")).toBeNull();
+});
+
 it("the signed-out interface is never shown to a user who is signed in", async () => {
   // The flash. Asserted by watching every render rather than by sampling, because the bug
   // is one frame long and a sampled assertion would miss it exactly when it mattered.

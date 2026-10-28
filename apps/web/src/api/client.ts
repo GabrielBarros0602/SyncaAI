@@ -82,7 +82,10 @@ async function exchangeRefreshToken(): Promise<string | null> {
     credentials: "same-origin",
   });
 
-  if (!response.ok) return null;
+  // Only the server's refusal means the session is over. A 502 from the proxy while the API
+  // restarts says nothing about the cookie, so it is an error to show, not a sign-out.
+  if (response.status === 401) return null;
+  if (!response.ok) throw new ApiError(response.status, await detailOf(response));
 
   const body = (await response.json()) as { access_token: string };
   return body.access_token;
@@ -90,18 +93,15 @@ async function exchangeRefreshToken(): Promise<string | null> {
 
 /**
  * Renew the access token, sharing one exchange between concurrent callers.
+ *
+ * Null means the session is over. A network failure or a server error rejects instead: it is
+ * not a lost session, and treating it as one signed people out for walking into a lift.
  */
 export function refreshSession(): Promise<string | null> {
   refreshInFlight ??= exchangeRefreshToken()
     .then((token) => {
       setAccessToken(token);
       return token;
-    })
-    .catch(() => {
-      // A network failure is not a lost session. Report it as "no token now" and let the
-      // caller surface an error rather than silently logging the user out.
-      setAccessToken(null);
-      return null;
     })
     .finally(() => {
       refreshInFlight = null;
