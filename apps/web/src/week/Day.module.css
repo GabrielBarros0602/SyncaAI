@@ -547,6 +547,112 @@
   color: inherit;
 }
 
+/* The edit form: a field per line, each with its label, its hint and its own error. */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.input,
+.select {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: var(--field);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.select {
+  padding: 0 var(--space-2);
+  font-size: var(--text-2);
+  line-height: var(--leading-2);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* A field that stopped the save is ringed in the accent, which means trouble. */
+.inputBad {
+  box-shadow: inset 0 0 0 2px var(--alert);
+}
+
+.fieldError {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--alert-ink);
+}
+
+.fieldError:empty {
+  display: none;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-2);
+  background: var(--raised);
+  box-shadow:
+    var(--shadow-raised),
+    inset 0 0 0 1px var(--line);
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  min-height: max(32px, var(--target));
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-1);
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.optionActive,
+.option:hover {
+  background: var(--tag);
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--sunken);
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  text-wrap: pretty;
+}
+
+.notice .secondary {
+  align-self: flex-start;
+  min-height: max(32px, var(--target));
+}
+
 .reasons {
   display: flex;
   flex-direction: column;
@@ -591,8 +697,14 @@
 .primary,
 .secondary,
 .danger {
+  min-width: 0;
+  max-width: 100%;
   min-height: max(40px, var(--target));
   padding: 0 var(--space-3);
+  /* "save and create tag “faculdade”" at 200% text is wider than a 155px column. Broken, it
+     is still read; cut, it is not. */
+  text-align: left;
+  overflow-wrap: anywhere;
   border-radius: var(--radius-2);
   font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
   cursor: pointer;

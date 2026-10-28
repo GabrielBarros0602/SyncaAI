@@ -116,13 +116,13 @@ interface When {
 function renderDay(
   capacity: DayCapacity,
   when: When = {},
-  grid: { focusedCell?: number | null } = {},
+  grid: { focusedCell?: number | null; days?: DayCapacity[] | undefined } = {},
 ): HTMLElement {
   const { container } = render(
     <DayColumn
       capacity={capacity}
       tasks={when.tasks ?? []}
-      week={[capacity]}
+      week={grid.days ?? [capacity]}
       allTasks={when.tasks ?? []}
       carried={when.carried ?? []}
       onGoToOwner={when.onGoToOwner === undefined ? () => undefined : when.onGoToOwner}
@@ -537,16 +537,19 @@ describe("the two verbs an opened row offers", () => {
     tag: { id: "g1", name: "college" },
   });
 
-  function openWith(panel: Panel, over: Partial<When> = {}): (changes: TaskChanges) => void {
+  function openWith(
+    panel: Panel,
+    over: Partial<When> = {},
+    days?: DayCapacity[],
+  ): (changes: TaskChanges) => void {
     const saved = vi.fn<(taskId: string, changes: TaskChanges) => Promise<void>>(() =>
       Promise.resolve(),
     );
-    renderDay(aDay({ task_count: 1 }), {
-      tasks: [TASK],
-      openTask: { id: "lecture", panel },
-      onSaveTask: saved,
-      ...over,
-    });
+    renderDay(
+      aDay({ task_count: 1 }),
+      { tasks: [TASK], openTask: { id: "lecture", panel }, onSaveTask: saved, ...over },
+      { days },
+    );
     return (changes) => {
       expect(saved).toHaveBeenCalledWith("lecture", changes);
     };
@@ -591,13 +594,86 @@ describe("the two verbs an opened row offers", () => {
     expectSaved({ start_at: "2026-08-24T14:00:00.000Z" });
   });
 
-  it("refuses a clock time it cannot read, before asking the server", () => {
-    openWith("edit");
+  it("refuses a clock time it cannot read, at the field, before asking the server", () => {
+    const saved = vi.fn<(taskId: string, changes: TaskChanges) => Promise<void>>(() =>
+      Promise.resolve(),
+    );
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [TASK],
+      openTask: { id: "lecture", panel: "edit" },
+      onSaveTask: saved,
+    });
+    const start = screen.getByLabelText("Start");
 
-    fireEvent.change(screen.getByLabelText("Start"), { target: { value: "half nine" } });
+    fireEvent.change(start, { target: { value: "half nine" } });
     fireEvent.click(screen.getByRole("button", { name: /save/ }));
 
-    expect(screen.getByRole("alert").textContent).toBe("Start needs 24-hour time, like 14:30.");
+    // Beside the field that is wrong, and focus taken there, so nobody hunts for it.
+    expect(start.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Use 24-hour time, like 14:30.")).toBeDefined();
+    expect(document.activeElement).toBe(start);
+    expect(saved).not.toHaveBeenCalled();
+  });
+
+  it("reads a duration back the way the screen writes it", () => {
+    // The field starts holding `1h30`. Read as digits it would be 130 minutes.
+    const expectSaved = openWith("edit");
+    expect(screen.getByLabelText<HTMLInputElement>("Duration").value).toBe("1h30");
+
+    fireEvent.change(screen.getByLabelText("Duration"), { target: { value: "2h" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    expectSaved({ duration_minutes: 120 });
+  });
+
+  it("moves the start to another day of the week from the same panel", () => {
+    const expectSaved = openWith("edit", {}, [
+      aDay(),
+      aDay({ day: "2026-08-26", weekday: 3 }),
+    ]);
+
+    fireEvent.change(screen.getByLabelText("Start day"), { target: { value: "2026-08-26" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+
+    // Wednesday, at the same 09:00 in São Paulo.
+    expectSaved({ start_at: "2026-08-26T12:00:00.000Z" });
+  });
+
+  describe("saying what the start can be before it is refused", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("gives a task that has begun a day to be corrected back to", () => {
+      // Monday 14:20: the lecture began at 09:00 today, so its start can go back a day.
+      vi.setSystemTime(new Date(instant("2026-08-24T14:20:00")));
+      openWith("edit");
+
+      expect(
+        screen.getByText("Started 09:00 today. The start can go back to 14:20 yesterday, not earlier."),
+      ).toBeDefined();
+    });
+
+    it("holds a task that has not begun to now", () => {
+      vi.setSystemTime(new Date(instant("2026-08-24T08:15:00")));
+      openWith("edit");
+
+      expect(screen.getByText("Not before now: 08:15 today.")).toBeDefined();
+    });
+
+    it("says when the task will end, as it is typed", () => {
+      vi.setSystemTime(new Date(instant("2026-08-24T08:15:00")));
+      openWith("edit");
+
+      fireEvent.change(screen.getByLabelText("Duration"), { target: { value: "16h" } });
+
+      // 09:00 plus sixteen hours is past midnight: the day is named.
+      expect(screen.getByText("From 1m to 24h, like 2h30. Ends Tue 01:00.")).toBeDefined();
+    });
   });
 
   it("keeps what was typed when the server refuses the change", () => {

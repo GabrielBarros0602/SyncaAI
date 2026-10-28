@@ -32,7 +32,7 @@ export interface EditedTask {
  * also a redundant `start_at` away from the refusal above, and keeping the two rules in step
  * is cheaper than reasoning about which fields are safe to resend.
  */
-function normaliseTag(value: string): string | null {
+export function normaliseTag(value: string): string | null {
   const normalised = value.split(/\s+/).filter(Boolean).join(" ").toLowerCase();
   return normalised === "" ? null : normalised;
 }
