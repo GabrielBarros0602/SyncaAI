@@ -674,6 +674,11 @@
   color: var(--faint);
 }
 
+.taskSaving {
+  font: 500 12px/1 var(--sans);
+  color: var(--dim);
+}
+
 /*
  * When it was finished, how long it took, and the difference from the plan.
  *

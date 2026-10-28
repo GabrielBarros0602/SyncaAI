@@ -123,6 +123,7 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       carried={when.carried ?? []}
       onGoToOwner={when.onGoToOwner === undefined ? () => undefined : when.onGoToOwner}
       openTask={typeof when.openTask === "string" ? { id: when.openTask, panel: "open" } : (when.openTask ?? null)}
+      saving={new Set()}
       onOpenTask={when.onOpenTask ?? (() => undefined)}
       onSaveTask={when.onSaveTask ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}

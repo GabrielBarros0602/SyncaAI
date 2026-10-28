@@ -82,6 +82,8 @@ interface Props {
   days: DayCapacity[];
   allTasks: Task[];
   open: Panel | null;
+  /** A write about this task has not reached the screen yet. */
+  saving: boolean;
   onOpen: (panel: Panel | null) => void;
   onSave: (changes: TaskChanges) => Promise<void>;
   onToggle: (task: Task) => void;
@@ -116,6 +118,7 @@ export function TaskRow({
   days,
   allTasks,
   open,
+  saving,
   onOpen,
   onSave,
   onToggle,
@@ -148,6 +151,7 @@ export function TaskRow({
       // to. The task id rather than the position: the row moves when its neighbours change.
       id={`task-${task.id}`}
       role="group"
+      aria-busy={saving}
       data-open={open !== null ? "1" : undefined}
       className={cx(styles.task, done && styles.taskDone)}
       onMouseEnter={onMouseEnter}
@@ -212,6 +216,9 @@ export function TaskRow({
             {checked}/{task.items.length} checked
           </span>
         )}
+        {/* The word is the whole signal: the row keeps what it showed until the server has
+            answered and the week has been read again, so nothing on it is a guess. */}
+        {saving && <span className={styles.taskSaving}>saving…</span>}
       </span>
 
       {doneLine !== null && <span className={styles.taskDoneLine}>{doneLine}</span>}

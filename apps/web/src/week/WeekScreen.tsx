@@ -61,11 +61,11 @@ export function WeekScreen(): React.ReactNode {
   // would each be offering to act on a different task with nothing saying which is in front.
   const [openTask, setOpenTask] = useState<{ id: string; panel: Panel } | null>(null);
   const hovered = useRef<string | null>(null);
-  // Every write reloads the week, and the reload puts the skeleton up in between, so the
-  // control somebody pressed is gone by the time the answer lands. Focus is put back on the
-  // screen that arrives after the write — `after` is the load it has to be newer than, so it
-  // is never applied to the old screen a moment before that screen is torn down. A ref, not
-  // state: nothing renders from it, and it is the arrival of the week that has to trigger it.
+  // Every write reloads the week, and the row somebody acted on may not be where it was when
+  // the new week arrives: moved to another day, deleted, or brought back under a new id. Focus
+  // is put on the week that arrives after the write — `after` is the load it has to be newer
+  // than, so it is never applied to the week the write was made on. A ref, not state: nothing
+  // renders from it, and it is the arrival of the week that has to trigger it.
   const pendingFocus = useRef<{ target: FocusTarget; after: number } | null>(null);
   const { loaded, status } = week;
   // The last restorable delete, for as long as it can be undone. One across the week, like the
@@ -345,6 +345,7 @@ export function WeekScreen(): React.ReactNode {
               // is no row on this screen to send anybody to.
               onGoToOwner={index === 0 ? null : focusTask}
               openTask={openTask}
+              saving={week.saving}
               onOpenTask={setOpenTask}
               onSaveTask={async (taskId, changes) => {
                 await week.update(taskId, changes);
