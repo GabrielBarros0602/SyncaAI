@@ -93,6 +93,8 @@ interface Props {
   onGoToOwner: ((taskId: string) => void) | null;
   /** The one row open anywhere on the screen, or null. One at a time, like the design. */
   openTask: { id: string; panel: Panel } | null;
+  /** The tasks whose last write the screen does not show yet. */
+  saving: ReadonlySet<string>;
   onOpenTask: (open: { id: string; panel: Panel } | null) => void;
   onSaveTask: (taskId: string, changes: TaskChanges) => Promise<void>;
   onDeleteTask: (task: Task, snapshot: NewTask | null) => Promise<void>;
@@ -123,6 +125,7 @@ export function DayColumn({
   carried,
   onGoToOwner,
   openTask,
+  saving,
   onOpenTask,
   onSaveTask,
   onDeleteTask,
@@ -294,6 +297,7 @@ export function DayColumn({
           days={week}
           allTasks={allTasks}
           open={openTask?.id === task.id ? openTask.panel : null}
+          saving={saving.has(task.id)}
           onOpen={(panel) => {
             onOpenTask(panel === null ? null : { id: task.id, panel });
           }}

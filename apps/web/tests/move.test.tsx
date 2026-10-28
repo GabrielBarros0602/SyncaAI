@@ -83,6 +83,7 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
       carried={[]}
       onGoToOwner={null}
       openTask={panel === null ? null : { id: task.id, panel }}
+      saving={new Set()}
       onOpenTask={onOpen ?? (() => undefined)}
       onSaveTask={onSave ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}

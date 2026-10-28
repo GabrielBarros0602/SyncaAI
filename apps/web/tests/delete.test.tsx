@@ -338,7 +338,11 @@ describe("deleting a task that can come back", () => {
     });
     expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
     expect(screen.getByRole("button", { name: "undo" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Thesis chapter", expanded: false })).toBeNull();
+    // The notice is the server's answer to the DELETE; the row goes when the week is read
+    // again, which is a moment later now that the week stays on screen through the reload.
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Thesis chapter", expanded: false })).toBeNull();
+    });
   });
 
   it("recreates exactly the snapshot taken before the delete", async () => {
