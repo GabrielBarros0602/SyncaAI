@@ -137,11 +137,6 @@ function isoWeekdayOf(date: Date): number {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** `Aug 24`, the short stamp the loading and unreachable weeks use. */
-export function stamp(date: Date): string {
-  return `${MONTHS[date.getMonth()] ?? ""} ${pad(date.getDate())}`;
-}
-
 /** `Aug 24` for an instant, read in a named zone rather than in the browser's. */
 export function zonedStamp(iso: string, timeZone: string): string {
   const parts = partsInZone(iso, timeZone);
