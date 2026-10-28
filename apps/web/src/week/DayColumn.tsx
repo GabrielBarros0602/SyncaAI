@@ -1,12 +1,12 @@
 import {
-  MINUTES_IN_A_DAY,
   clock,
   formatCompact,
   minutesBetween,
   weekdayLong,
   weekdayName,
+  weekdayOf,
+  zonedDay,
   zonedMinutes,
-  zonedStamp,
 } from "../lib/time";
 import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
 import { type Carried, splitOf } from "./carried";
@@ -52,30 +52,25 @@ function splitText(task: Task, timeZone: string, own: string, next: string): str
  *
  * In the neutral ink either way. The accent means trouble, and taking longer than you
  * guessed is not trouble.
+ *
+ * A task ticked days after it ran names the day it was ticked (item 22 of the round): forget
+ * Monday's task, tick it on Wednesday, and the line reads `done Wed 22:22 · 56h22 of 2h30 ·
+ * +53h52`. The second round dropped the comparison there, as true about the clock and false
+ * about the work; the round keeps it and lets the day say why it is what it is.
  */
 function doneText(task: Task, timeZone: string): string | null {
   if (task.completed_at === null) return null;
 
   const at = clock(zonedMinutes(task.completed_at, timeZone));
+  const day = zonedDay(task.completed_at, timeZone);
+  const when = day === zonedDay(task.start_at, timeZone) ? at : `${weekdayOf(day)} ${at}`;
   const actual = minutesBetween(task.start_at, task.completed_at);
-
-  // A task ticked days after it ran measures when somebody remembered, not how long it took.
-  // The design never meets this case — it works in minutes since midnight and wraps once, so
-  // it cannot produce more than a day — but the box makes it a click away: forget Monday's
-  // task, tick it on Wednesday, and the comparison reads `56h22 of 2h30 · +53h52`. True about
-  // the clock and false about the work, on the row the planner reads plan-versus-actual from.
-  //
-  // A day is the bound because the schema already uses it: no task may exceed 1440 minutes,
-  // so a completion further out than that cannot be describing the task's own run.
-  if (actual < 0 || actual > MINUTES_IN_A_DAY) {
-    return `done ${zonedStamp(task.completed_at, timeZone)} ${at}`;
-  }
+  if (actual < 0) return `done ${when} · before its start`;
 
   const delta = actual - task.duration_minutes;
-  const against =
-    delta === 0 ? "to the minute" : `${delta < 0 ? "−" : "+"}${formatCompact(Math.abs(delta))}`;
+  const against = delta === 0 ? "±0" : `${delta < 0 ? "−" : "+"}${formatCompact(Math.abs(delta))}`;
 
-  return `done ${at} · ${formatCompact(actual)} of ${formatCompact(task.duration_minutes)} · ${against}`;
+  return `done ${when} · ${formatCompact(actual)} of ${formatCompact(task.duration_minutes)} · ${against}`;
 }
 
 interface Props {
@@ -153,7 +148,6 @@ export function DayColumn({
   onCreate,
   onToggle,
 }: Props): React.ReactNode {
-  const dayNumber = String(index + 1).padStart(2, "0");
   const over = capacity.over_capacity;
   // Against the budget, the same thing `over_capacity` is measured against. Against the
   // calendar day this would be negative on every day that flag is ever true.
@@ -260,39 +254,41 @@ export function DayColumn({
         )}
       </div>
 
-      {carried.length > 0 && (
+      {carried[0] !== undefined && (
         <CarriedBand
-          carried={carried}
+          entry={carried[0]}
           fromWeekday={previousWeekday}
           timezone={timezone}
-          bookedMinutes={capacity.occupied_minutes}
           onGoToOwner={onGoToOwner}
           {...cellProps(1)}
         />
       )}
 
-      {tasks.map((task, position) => (
-        <TaskRow
-          key={task.id}
-          task={task}
-          index={`${dayNumber}.${String(position + 1).padStart(2, "0")}`}
-          minutesFromMidnight={zonedMinutes(task.start_at, timezone)}
-          split={splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday)}
-          doneLine={doneText(task, timezone)}
-          timezone={timezone}
-          days={week}
-          allTasks={allTasks}
-          open={openTask?.id === task.id ? openTask.panel : null}
-          {...cellProps(1 + band + position)}
-          saving={saving.has(task.id)}
-          onOpen={(panel) => {
-            onOpenTask(panel === null ? null : { id: task.id, panel });
-          }}
-          onSave={(changes) => onSaveTask(task.id, changes)}
-          onToggle={onToggle}
-          onDelete={(snapshot) => onDeleteTask(task, snapshot)}
-        />
-      ))}
+      {tasks.map((task, position) => {
+        const split = splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday);
+        return (
+          <TaskRow
+            key={task.id}
+            task={task}
+            minutesFromMidnight={zonedMinutes(task.start_at, timezone)}
+            crosses={split !== null}
+            // One line under the title: how it went once done, how it divides until then.
+            doneLine={doneText(task, timezone) ?? split}
+            timezone={timezone}
+            days={week}
+            allTasks={allTasks}
+            open={openTask?.id === task.id ? openTask.panel : null}
+            {...cellProps(1 + band + position)}
+            saving={saving.has(task.id)}
+            onOpen={(panel) => {
+              onOpenTask(panel === null ? null : { id: task.id, panel });
+            }}
+            onSave={(changes) => onSaveTask(task.id, changes)}
+            onToggle={onToggle}
+            onDelete={(snapshot) => onDeleteTask(task, snapshot)}
+          />
+        );
+      })}
 
       {(formOpen || foot !== null) && (
         <div role="gridcell">

@@ -148,6 +148,13 @@ export function weekdayName(isoWeekday: number): string {
   return WEEKDAYS[isoWeekday - 1] ?? "";
 }
 
+/** `Thu`, for a local date: the weekday a `YYYY-MM-DD` falls on, whatever the browser's zone. */
+export function weekdayOf(localDate: string): string {
+  // Noon UTC, so no zone can move the date the weekday is read from.
+  const weekday = new Date(`${localDate}T12:00:00Z`).getUTCDay();
+  return weekdayName(weekday === 0 ? 7 : weekday);
+}
+
 const LONG_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 /** The weekday in full, for an ISO weekday where Monday is 1: what a day's header is called. */

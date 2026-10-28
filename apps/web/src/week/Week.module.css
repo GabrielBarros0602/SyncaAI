@@ -1,7 +1,7 @@
 /*
- * The week's rows, carried bands, panels and the new task form.
+ * The week's panels, its read-only checklist and the new task form.
  *
- * What is left of the second round's stylesheet. The page, its header, each day's header and
+ * What is left of the second round's stylesheet. The page, the days, their rows and bands, and
  * the loading and unreachable weeks moved to the round's tokens in WeekScreen, WeekHeader and
  * Day.module.css (ADR-0052); the rest moves as each part is rebuilt, and this file goes with
  * the last of them.
@@ -17,207 +17,6 @@
   color: var(--faint);
 }
 
-/* The directional fill. It starts flat and grows from whichever edge the pointer crossed,
-   which is the one interaction worth keeping from the references — a list that answers
-   without asking for attention. */
-.fill {
-  position: absolute;
-  inset: 0;
-  background: var(--hover);
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform var(--dur) cubic-bezier(0.2, 0.75, 0.2, 1);
-  pointer-events: none;
-}
-
-/*
- * What the day before is still holding.
- *
- * Every value here is one step quieter than the task rows below it, and that is the whole
- * design: it has to be legible and it must not be mistaken for a row somebody can act on.
- * The tint separates it from the column without spending the accent, which means trouble.
- */
-.carried {
-  border-top: 1px solid var(--rule2);
-  background: var(--hover);
-  padding: var(--rowpad) var(--pad);
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.carriedHead {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.carriedArrow {
-  font: 500 12px/1 var(--mono);
-  color: var(--dim);
-}
-
-.carriedFrom {
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
-}
-
-.carriedTotal {
-  margin-left: auto;
-  font: 500 12px/1 var(--mono);
-  color: var(--dim);
-}
-
-.carriedItem {
-  border-top: 1px solid var(--rule);
-  padding-top: 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.carriedWhen {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
-}
-
-/* Dimmed even at title weight. The row that owns this task shows it in full ink one column
-   to the left, and only one of the two should read as the thing itself. */
-.carriedTitle {
-  font: 500 12px/1.35 var(--sans);
-  color: var(--dim);
-  text-wrap: pretty;
-}
-
-.carriedFoot {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.carriedMinutes {
-  font: 400 12px/1.4 var(--mono);
-  color: var(--faint);
-}
-
-.carriedGoTo {
-  flex: none;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  font: 400 12px/1.4 var(--mono);
-  color: var(--dim);
-  border-bottom: 1px solid var(--rule2);
-  transition: color var(--dur), border-color var(--dur);
-}
-
-.carriedGoTo:hover {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-/* The band otherwise reads as an addition to the figure above it. These minutes are already
-   inside that figure, and a reader who adds them twice gets a number wrong in the direction
-   that overbooks. */
-.carriedNote {
-  margin: 0;
-  font: 400 12px/1.45 var(--sans);
-  color: var(--faint);
-  text-wrap: pretty;
-}
-
-/* No cursor here any more. The row is not clickable; the box and the title are, and each
-   carries its own pointer — a whole row that looks pressable and mostly is not is worse
-   than one that shows exactly where it answers. */
-.task {
-  position: relative;
-  border-top: 1px solid var(--rule);
-  padding: var(--rowpad) var(--pad);
-  overflow: hidden;
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-}
-
-/* Inside the edge, like every cell of the grid; outside once the row has opened into a panel,
-   where an inner ring would sit on its controls (item 6 of the round). */
-.task:focus-visible,
-.carried:focus-visible {
-  outline-offset: -2px;
-}
-
-.task[data-open="1"]:focus-visible {
-  outline-offset: var(--focus-offset);
-}
-
-/* A shut row opens from a press anywhere on it, not only on its title. */
-.task:not([data-open="1"]) {
-  cursor: pointer;
-}
-
-/* An open row keeps the hover tint after the pointer has gone, so it stays findable while
-   the reader is inside the panel it opened. */
-.task[data-open="1"] {
-  background: var(--hover);
-}
-
-/* The fill is the same tint, and in the design the two are one background on one element, so
-   pointing at an open row changes nothing. Here they are two layers, and stacked they doubled
-   the tint under exactly the small text the contrast of --faint is measured against. */
-.task[data-open="1"] .fill {
-  background: transparent;
-}
-
-.taskLine {
-  position: relative;
-  margin-top: 8px;
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-}
-
-/*
- * The one verb promoted out of the opened set.
- *
- * Sixteen pixels and a hairline: it is pressed more than everything else on this screen put
- * together, and it still must not be the loudest thing in a column of seven. The hairline is
- * --field-border rather than a rule, because it is the only thing that says a control is
- * there, and a control's edge is held to 3:1.
- */
-.check {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 1px;
-  padding: 0;
-  position: relative;
-  background: transparent;
-  border: 1px solid var(--field-border);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: border-color var(--dur);
-}
-
-/* What answers a press is larger than what is drawn. Insets count from inside the 1px
-   border, so -5px is four pixels past the drawn edge on each side: 24 by 24. The title,
-   the row's other button, starts nine pixels to the right, so the two never overlap. */
-.check::before {
-  content: "";
-  position: absolute;
-  inset: -5px;
-}
-
-.check:hover {
-  border-color: var(--ink);
-}
-
 .checkMark {
   position: absolute;
   inset: 3px;
@@ -225,199 +24,8 @@
   background: var(--ink);
 }
 
-/* Index, range and duration do not fit one line of a column at 12px, and none of them may
-   break inside itself, so the line breaks between them: the duration drops under the range,
-   still flush right. */
-.taskTop {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
-}
-
-.taskIndex {
-  font: 400 12px/1 var(--mono);
-  color: var(--faint);
-}
-
-/* A time is one token. Broken across two lines `19:00 –` reads as a start with no end, and
-   tabular figures keep the colons of a column of rows in one vertical line. */
-.taskRange {
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.taskDuration {
-  margin-left: auto;
-  font: 500 12px/1 var(--mono);
-  color: var(--dim);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Full ink, unlike everything around it in the range. It is the one character on the row
-   that changes which day the end time belongs to. */
-.taskNextDay {
-  font: 500 12px/1 var(--mono);
-  vertical-align: super;
-  color: var(--ink);
-}
-
-.taskSplit {
-  position: relative;
-  display: block;
-  margin-top: 7px;
-  font: 400 12px/1.45 var(--mono);
-  color: var(--dim);
-}
-
-/* A button that has to look like a title: the disclosure is the words themselves, so every
-   affordance a button brings with it has to be taken back off. */
-.taskTitle {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  font: 500 13px/1.35 var(--sans);
-  letter-spacing: -0.005em;
-  text-wrap: pretty;
-}
-
-.taskDone .taskTitle {
-  color: var(--dim);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-
-/* The minimum height holds the row still. Without it a row gains and loses eleven pixels
-   as a tag or a note appears, and a column of them jitters on every change. */
-.taskFoot {
-  position: relative;
-  margin-top: 8px;
-  min-height: 13px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/*
- * A filled pill rather than a ruled box, in the case it was typed in. A tag is a word somebody
- * chose; set in capitals inside a border it read as a system label, and the border was one
- * more frame in a row that already has a box, a title and a range.
- *
- * --dim, not --faint: the pill lays --fill under its own text, and on that ground inside an
- * opened row of an overbooked day --faint reads 4.0:1. --dim reads 5.4.
- */
-.tag {
-  font: 400 12px/1 var(--mono);
-  color: var(--dim);
-  background: var(--fill);
-  border: 0;
-  border-radius: 999px;
-  padding: 3px 8px;
-}
-
 .taskNote {
   font: 400 12px/1 var(--mono);
-  color: var(--faint);
-}
-
-.taskSaving {
-  font: 500 12px/1 var(--sans);
-  color: var(--dim);
-}
-
-/*
- * When it was finished, how long it took, and the difference from the plan.
- *
- * In the neutral ink at every value, including a large overrun. The accent means trouble on
- * this screen and only trouble; taking longer than you guessed is information, and colouring
- * it would turn a datum the planner wants into a reprimand.
- */
-.taskDoneLine {
-  position: relative;
-  display: block;
-  margin-top: 8px;
-  font: 400 12px/1.45 var(--mono);
-  color: var(--dim);
-}
-
-/*
- * What an opened row shows. In this pull request that is the note and the checklist and
- * nothing else; the five verbs arrive with the panels they act through.
- */
-.panel {
-  position: relative;
-  margin-top: 11px;
-  border-top: 1px solid var(--rule);
-  padding-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  cursor: default;
-}
-
-/*
- * The verbs. Two of five today; `move`, `delete` and `list` join them as they land.
- *
- * At rest they are dim with a faint underline, and the one whose panel is showing takes the
- * full ink. That is the only state marker they get — a row that is already tinted, already
- * expanded and already showing a form does not need a fourth thing saying so.
- */
-.panelTop {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  flex-wrap: wrap;
-}
-
-.verb {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.verbLabel {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  font: 400 12px/1.3 var(--sans);
-  color: var(--dim);
-  border-bottom: 1px solid var(--rule2);
-  transition: color var(--dur), border-color var(--dur);
-}
-
-.verbLabel:hover {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-.verbActive {
-  font-weight: 500;
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-/* Delete answers the pointer in the accent, as the design draws it: the one verb that can lose
-   something is the one verb allowed to look like trouble before it is pressed. */
-.verbDanger:hover {
-  color: var(--chip-ink);
-  border-bottom-color: var(--accent);
-}
-
-.verbKey {
-  font: 500 11px/1 var(--mono);
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  padding: 2px 3px;
   color: var(--faint);
 }
 
@@ -493,33 +101,12 @@
   color: var(--faint);
 }
 
-.panelClose {
-  margin-left: auto;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  font: 400 12px/1.3 var(--mono);
-  color: var(--faint);
-}
-
-.panelClose:hover {
-  color: var(--ink);
-}
-
 .panelNote {
   margin: 0;
   font: 400 12px/1.6 var(--sans);
   color: var(--dim);
   text-wrap: pretty;
   white-space: pre-wrap;
-}
-
-.panelBlank {
-  margin: 0;
-  font: 400 12px/1.5 var(--sans);
-  color: var(--faint);
-  text-wrap: pretty;
 }
 
 .checklist {
@@ -556,17 +143,6 @@
 .checkLabelDone {
   color: var(--faint);
   text-decoration: line-through;
-}
-
-/*
- * What was just deleted, below the day's rows, with the way back. Quieter than a row — it is
- * not something to act on except in one way — and ruled like one, so it reads as a place in
- * the column the task used to occupy.
- */
-/* A refusal shown on the row itself, when the panel it would otherwise sit in is shut. */
-.rowError {
-  position: relative;
-  margin-top: 8px;
 }
 
 .form {
@@ -758,7 +334,6 @@
    pointer there is almost certainly no keyboard, so the shortcuts go. */
 @media (hover: none) and (pointer: coarse) {
   .key,
-  .verbKey,
   .submitKey {
     display: none;
   }
