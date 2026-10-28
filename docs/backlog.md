@@ -427,6 +427,15 @@ As telas mostraram três problemas que são do servidor, não do desenho:
 E uma pergunta para a implementação: o botão "Plan · 3 of 5" mostra o progresso de qual plano
 quando há mais de um aprovado.
 
+**Decidido em 2026-10-28:**
+- **O código do e-mail é o próprio token.** O e-mail repete, embaixo do link, o token que já está
+  na URL, para copiar e colar no modo "I have a code" (o desenho diz "Copy it here" e aceita 128
+  caracteres). Nenhuma mudança na API nem no ADR-0019. Um código curto e digitável pediria
+  migração, limite de tentativas no `/verify` e um ADR emendando o 0019.
+- **"Plan · 3 of 5" conta o plano aprovado mais recente que ainda tem tarefas em aberto.** Os
+  outros ficam na lista de planos (ADR-0050). Somar todos misturaria planos que a pessoa vê
+  separados; seguir a semana na tela mudaria o número a cada navegação.
+
 ---
 
 ## Rodada 2 — os verbos que faltam
