@@ -1,6 +1,6 @@
 /*
  * The page around a signed-in screen, at the round's breakpoints (ADR-0052): 1100px, where
- * seven day columns of at least 140px fit, and 640px, below which one day fills the screen.
+ * the week turns into seven columns, and 640px, below which one day fills the screen.
  *
  * It replaces the inline padding App.tsx used to write and the !important rule tokens.css
  * needed to beat it (ADR-0024), which is why the two went together.
