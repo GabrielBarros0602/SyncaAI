@@ -5,6 +5,7 @@ import { useSession } from "../auth/useSession";
 import { daysFrom, formatMinutes, isoWeek, stamp, weekdayName, zonedDay } from "../lib/time";
 import type { NewTask, Task } from "../api/types";
 import { Menu } from "../ui/Menu";
+import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayColumn } from "./DayColumn";
 import { WeekSkeleton } from "./WeekSkeleton";
@@ -22,6 +23,28 @@ import styles from "./Week.module.css";
  * and by day rather than by element: the element that had focus does not survive the reload.
  */
 type FocusTarget = { task: string } | { newTaskOn: string };
+
+/**
+ * The keys that do something today, in the design's order and words.
+ *
+ * The round's legend has fifteen. The arrows, Home and End, `C` and Alt with the arrows wait
+ * for the row grid and the checklist panel; Space waits too, because on a row's title today it
+ * presses the button and opens the row, which is the opposite of what the legend would say. A
+ * legend that promises a key is a worse guide than a short one, so each joins when it works.
+ * `N` reaches the day under the pointer until the grid gives the week a focused day.
+ */
+const SHORTCUTS: Shortcut[] = [
+  { keys: ["Enter"], label: "open or close a row" },
+  { keys: ["E"], label: "edit" },
+  { keys: ["M"], label: "move" },
+  { keys: ["O"], label: "note" },
+  { keys: ["⌫"], label: "delete" },
+  { keys: ["N"], label: "new task on the day under the pointer" },
+  { keys: ["[", "]"], label: "previous or next week" },
+  { keys: ["T"], label: "back to this week" },
+  { keys: ["Ctrl", "Z"], label: "undo a delete" },
+  { keys: ["Esc"], label: "close" },
+];
 
 /** `Thu 22`, for a local date: what the status region calls the day a task was on. */
 function dayLabel(localDate: string): string {
@@ -301,26 +324,10 @@ export function WeekScreen(): React.ReactNode {
               </span>
             )}
           </div>
-          {/* Only the keys that do something today, in the design's order. Its legend lists
-              nine; the one missing is `L` for `list`, which has no API to save to yet, and a
-              legend that promises it is a worse guide than a short one. */}
-          <div className={styles.legend}>
-            {[
-              { key: "space", word: "complete" },
-              { key: "⏎", word: "open" },
-              { key: "E", word: "edit" },
-              { key: "M", word: "move" },
-              { key: "O", word: "note" },
-              { key: "⌫", word: "delete" },
-              { key: "N", word: "new" },
-              { key: "T", word: "this week" },
-            ].map((entry) => (
-              <span key={entry.key} className={styles.legendItem}>
-                <span className={styles.key}>{entry.key}</span>
-                <span className={styles.legendWord}>{entry.word}</span>
-              </span>
-            ))}
-          </div>
+        </div>
+
+        <div className={styles.legendSlot}>
+          <ShortcutLegend shortcuts={SHORTCUTS} />
         </div>
 
         <div className={styles.grid}>
