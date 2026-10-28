@@ -227,7 +227,7 @@ it("drops the mark at once when the server refuses the write", async () => {
     expect(check()).toBeDefined();
   });
 
-  fireEvent.keyDown(screen.getByRole("button", { name: "Thesis", expanded: false }), {
+  fireEvent.keyDown(row(), {
     key: "Delete",
   });
 

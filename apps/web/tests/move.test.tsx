@@ -95,7 +95,8 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
       formOpen={false}
       submitting={false}
       serverError={null}
-      onHover={() => undefined}
+      focusedCell={0}
+      onFocusCell={() => undefined}
       onOpenForm={() => undefined}
       onCancelForm={() => undefined}
       onCreate={() => undefined}
@@ -234,7 +235,7 @@ describe("moving a task to another day", () => {
 
     expect(screen.queryByRole("button", { name: "move" })).toBeNull();
 
-    fireEvent.keyDown(screen.getByRole("button", { expanded: true }), { key: "m" });
+    fireEvent.keyDown(screen.getByRole("gridcell", { expanded: true }), { key: "m" });
     expect(opened).not.toHaveBeenCalled();
   });
 });

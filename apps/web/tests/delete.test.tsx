@@ -7,7 +7,7 @@
  * asked, rather than against what the screen happens to render, is what keeps these about the
  * requests that leave the browser.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
@@ -153,8 +153,19 @@ function renderWeek(): void {
   );
 }
 
+/** The row whose title is `text`: a cell of the week's grid, and its own disclosure. */
+function row(text: string, expanded = false): HTMLElement | null {
+  return (
+    screen
+      .queryAllByRole("gridcell", { expanded })
+      .find((cell) => within(cell).queryByText(text) !== null) ?? null
+  );
+}
+
 function title(text: string): HTMLElement {
-  return screen.getByRole("button", { name: text, expanded: false });
+  const found = row(text);
+  if (found === null) throw new Error(`no shut row titled ${text}`);
+  return found;
 }
 
 async function openRow(text: string): Promise<void> {
@@ -163,7 +174,7 @@ async function openRow(text: string): Promise<void> {
   });
   fireEvent.click(title(text));
   await waitFor(() => {
-    expect(screen.getByRole("button", { name: text, expanded: true })).toBeDefined();
+    expect(row(text, true)).not.toBeNull();
   });
 }
 
@@ -206,7 +217,7 @@ describe("deleting a task that cannot come back", () => {
       expect(deletes(server)).toEqual([{ method: "DELETE", path: "/tasks/Standup", body: undefined }]);
     });
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "Standup", expanded: false })).toBeNull();
+      expect(row("Standup")).toBeNull();
     });
   });
 
@@ -220,7 +231,7 @@ describe("deleting a task that cannot come back", () => {
     fireEvent.click(screen.getByRole("button", { name: "keep it" }));
 
     expect(screen.queryByText(/There is no undo for this one\./)).toBeNull();
-    expect(screen.getByRole("button", { name: "Standup", expanded: true })).toBeDefined();
+    expect(row("Standup", true)).not.toBeNull();
     expect(deletes(server)).toHaveLength(0);
   });
 
@@ -237,7 +248,7 @@ describe("deleting a task that cannot come back", () => {
     fireEvent.click(screen.getByRole("button", { name: "delete for good" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /Standup/ })).toBeNull();
+      expect(document.getElementById("task-Standup")).toBeNull();
     });
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -341,7 +352,7 @@ describe("deleting a task that can come back", () => {
     // The notice is the server's answer to the DELETE; the row goes when the week is read
     // again, which is a moment later now that the week stays on screen through the reload.
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "Thesis chapter", expanded: false })).toBeNull();
+      expect(row("Thesis chapter")).toBeNull();
     });
   });
 
