@@ -87,17 +87,23 @@ export function parseClock(value: string): number | null {
 }
 
 /**
- * Read a duration the way people type it: `90`, `90 min`, `90m`.
+ * Read a duration the way the screen writes it and people type it: `2h30`, `1h`, `45m`, `90`.
  *
- * Anything past a day is refused here rather than at the server, so the message names the
- * bound instead of arriving as a validation error with no number in it.
+ * The screen shows durations as `2h30`, so a field holding one has to read it back. Stripping
+ * everything but the digits read `2h30` as 230 minutes. Anything past a day is refused here
+ * rather than at the server, so the message names the bound.
  */
 export function parseDuration(value: string): number | null {
-  const digits = value.replace(/\D/g, "");
-  if (digits === "") return null;
-
-  const minutes = Number(digits);
-  if (minutes <= 0 || minutes > MINUTES_IN_A_DAY) return null;
+  const typed = value.trim().toLowerCase().replace(/\s+/g, "");
+  const hours = /^(\d{1,2})h(?:(\d{1,2})m?)?$/.exec(typed);
+  const plain = /^(\d{1,4})(?:m|min)?$/.exec(typed);
+  const minutes =
+    hours !== null
+      ? Number(hours[1]) * MINUTES_IN_AN_HOUR + Number(hours[2] ?? 0)
+      : plain !== null
+        ? Number(plain[1])
+        : null;
+  if (minutes === null || minutes <= 0 || minutes > MINUTES_IN_A_DAY) return null;
 
   return minutes;
 }

@@ -180,6 +180,21 @@ describe("parseDuration", () => {
     expect(parseDuration("90m")).toBe(90);
   });
 
+  it("reads back what the screen writes, hours and minutes together", () => {
+    // `2h30` is how a duration is shown, so an edit field starts holding it. Digits alone
+    // would read it as 230 minutes.
+    expect(parseDuration("2h30")).toBe(150);
+    expect(parseDuration("1h")).toBe(60);
+    expect(parseDuration("1h 30m")).toBe(90);
+    expect(parseDuration("24h")).toBe(1440);
+  });
+
+  it("refuses what it cannot read rather than guessing", () => {
+    expect(parseDuration("two hours")).toBeNull();
+    expect(parseDuration("1:30")).toBeNull();
+    expect(parseDuration("25h")).toBeNull();
+  });
+
   it("refuses nothing, zero, and more than a day", () => {
     // The bound matches the CHECK constraint on the column, so the message can name the
     // limit instead of arriving as a validation error with no number in it.
