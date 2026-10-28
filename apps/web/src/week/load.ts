@@ -8,19 +8,23 @@
  * The figure is measured against the whole twenty-four hours, not against the sixteen-hour
  * budget. Past sixteen hours booked the budget is already spent, so a figure against it
  * would read `0h` at every level that shows one.
+ *
+ * The level is the server's `load`, never recomputed here: the round's first drawing used
+ * thresholds of its own and was sent back for it, because 18h and 20h are fixed in
+ * capacity.py and a screen with other numbers would disagree with the API about the same day.
  */
-import { formatMinutes } from "../lib/time";
+import { formatCompact } from "../lib/time";
 import type { DayCapacity, Load } from "../api/types";
 
 export interface Warning {
   /** The sentence, or null when the day needs nothing said about it. */
   message: string | null;
-  /** How loud to be. Only the last two get the accent's full weight. */
   level: Load;
 }
 
 export function warningFor(day: DayCapacity): Warning {
-  const unbooked = formatMinutes(day.unbooked_minutes);
+  // Compact, like every other figure in the header it sits in.
+  const unbooked = formatCompact(day.unbooked_minutes);
 
   switch (day.load) {
     case "heavy":
@@ -34,21 +38,4 @@ export function warningFor(day: DayCapacity): Warning {
     default:
       return { message: null, level: "fine" };
   }
-}
-
-/**
- * The day in the week with the most room, when there is one worth naming.
- *
- * Deterministic, and available today: the screen already fetches all seven days' capacity,
- * so "Tuesday has 9h free" is data rather than a model. The AI improves this later by
- * choosing *which* task should move — it is not needed for the sentence to be true.
- */
-export function lightestDay(days: DayCapacity[], exclude: string): DayCapacity | null {
-  const others = days.filter((day) => day.day !== exclude && day.free_minutes > 0);
-  if (others.length === 0) return null;
-
-  const lightest = others.reduce((best, day) =>
-    day.free_minutes > best.free_minutes ? day : best,
-  );
-  return lightest;
 }

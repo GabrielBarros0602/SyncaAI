@@ -2,19 +2,18 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
-import { daysFrom, formatMinutes, isoWeek, stamp, weekdayName, zonedDay } from "../lib/time";
+import { dayMonth, daysFrom, weekRange, weekdayName, zonedDay } from "../lib/time";
 import type { NewTask, Task } from "../api/types";
-import { Menu } from "../ui/Menu";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayColumn } from "./DayColumn";
+import { WeekHeader } from "./WeekHeader";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
-import { lightestDay } from "./load";
 import type { Panel } from "./TaskRow";
 import type { Trash } from "./Trash";
 import { useWeek } from "./useWeek";
-import styles from "./Week.module.css";
+import styles from "./WeekScreen.module.css";
 
 /**
  * Where focus goes once a write has come back.
@@ -200,20 +199,11 @@ export function WeekScreen(): React.ReactNode {
   }
 
   const dates = daysFrom(week.monday);
-  // Against the usable budget, so the week's headline figure means the same thing as each
-  // day's. Summing the calendar days here would put 168h on a screen whose columns say 16h.
-  const usableMinutes = week.days.reduce((sum, day) => sum + day.usable_minutes, 0);
-  const bookedMinutes = week.days.reduce((sum, day) => sum + day.occupied_minutes, 0);
-  const taskCount = week.days.reduce((sum, day) => sum + day.task_count, 0);
-  const overDays = week.days.filter((day) => day.over_capacity).length;
 
   // In the zone the *server* stores, not the browser's. The two can differ, and a screen that
-  // marked today from the browser would put the rail on the wrong column for a user who
-  // travelled — silently, which is the worst way to be wrong about which day it is.
+  // marked today from the browser would mark the wrong day for a user who travelled —
+  // silently, which is the worst way to be wrong about which day it is.
   const todayKey = zonedDay(new Date().toISOString(), week.me.timezone);
-  const todayIndex = week.days.findIndex((day) => day.day === todayKey);
-  const { week: weekNumber, year } = isoWeek(week.monday);
-  const distance = Math.abs(week.offset);
 
   // Focus rather than scroll: moving the keyboard there is what makes the way back usable by
   // somebody who is not holding a mouse. `scrollIntoView` would move the eye and leave the
@@ -242,100 +232,25 @@ export function WeekScreen(): React.ReactNode {
 
   return (
     <>
-      <div className={styles.frame}>
-        <div className={styles.chrome}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-            <span className={styles.wordmark}>SyncaAI</span>
-            <span className={styles.meta}>
-              week {String(weekNumber).padStart(2, "0")} · {String(year)}
-            </span>
-          </div>
-          <div className={styles.nav}>
-            <button
-              type="button"
-              className={styles.ghost}
-              onClick={() => {
-                week.goTo(week.offset - 1);
-              }}
-            >
-              <span>previous</span>
-              <span className={styles.key}>&#91;</span>
-            </button>
-            <span className={styles.range}>
-              {stamp(week.monday)} — {stamp(dates[6] as Date)}
-            </span>
-            <button
-              type="button"
-              className={styles.ghost}
-              onClick={() => {
-                week.goTo(week.offset + 1);
-              }}
-            >
-              <span>next</span>
-              <span className={styles.key}>&#93;</span>
-            </button>
-            <button
-              type="button"
-              className={styles.home}
-              disabled={week.offset === 0}
-              onClick={() => {
-                week.goTo(0);
-              }}
-            >
-              <span>this week</span>
-              <span className={styles.key}>T</span>
-            </button>
-            {/*
-             * How far from now, in words. `[` and `]` move a week at a time and the date range
-             * alone does not say how many of them have been pressed — three weeks out reads as
-             * a plausible set of dates unless something counts them.
-             */}
-            {week.offset !== 0 && (
-              <span data-away className={styles.away}>
-                {week.offset > 0 ? "+" : "-"}
-                {String(distance)} {distance === 1 ? "week" : "weeks"}
-              </span>
-            )}
-          </div>
-          <Menu
-            email={week.me.email}
-            timezone={week.me.timezone}
-            onSignOut={() => {
-              void signOut();
-            }}
-          />
-        </div>
+      <main className={styles.page}>
+        <WeekHeader
+          range={weekRange(week.monday, dates[6] as Date)}
+          offset={week.offset}
+          email={week.me.email}
+          timezone={week.me.timezone}
+          onGoTo={week.goTo}
+          onSignOut={() => {
+            void signOut();
+          }}
+        />
 
-        <div className={styles.summary}>
-          {/* Booked leads here for the same reason it leads in a column: free floors at zero,
-              and a week that reads `0m free` at the top says nothing about how full it is. */}
-          <div className={styles.summaryFigures}>
-            <span className={styles.figureStrong}>{formatMinutes(bookedMinutes)} booked</span>
-            <span className={styles.figure}>
-              {formatMinutes(Math.max(0, usableMinutes - bookedMinutes))} free of{" "}
-              {formatMinutes(usableMinutes)} budget
-            </span>
-            <span className={styles.figure}>
-              {taskCount} {taskCount === 1 ? "task" : "tasks"}
-            </span>
-            {overDays > 0 && (
-              <span className={styles.chip}>
-                {overDays} {overDays === 1 ? "day" : "days"} over budget
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.legendSlot}>
-          <ShortcutLegend shortcuts={SHORTCUTS} />
-        </div>
+        <ShortcutLegend shortcuts={SHORTCUTS} />
 
         <div className={styles.grid}>
           {week.days.map((capacity, index) => (
             <DayColumn
               key={capacity.day}
               capacity={capacity}
-              lighter={capacity.load === "fine" ? null : lightestDay(week.days, capacity.day)}
               tasks={week.byDay.get(capacity.day) ?? []}
               week={week.days}
               allTasks={week.tasks}
@@ -376,12 +291,10 @@ export function WeekScreen(): React.ReactNode {
               }}
               index={index}
               weekday={weekdayName(capacity.weekday)}
-              date={stamp(dates[index] as Date)}
-              today={index === todayIndex}
-              // Only inside the week that holds today. A week entirely in the past would
-              // otherwise render seven greyed dates, which is a lot of recessive ink to say
-              // one thing the header already says.
-              past={todayIndex >= 0 && index < todayIndex}
+              date={dayMonth(dates[index] as Date)}
+              today={capacity.day === todayKey}
+              // Local dates as YYYY-MM-DD compare as strings in calendar order.
+              past={capacity.day < todayKey}
               timezone={week.me?.timezone ?? "UTC"}
               formOpen={openDay === capacity.day}
               submitting={week.creating}
@@ -415,19 +328,7 @@ export function WeekScreen(): React.ReactNode {
             />
           ))}
         </div>
-
-        {taskCount === 0 && (
-          <div className={styles.emptyWeek}>
-            <span className={styles.emptyWeekHead}>Nothing booked this week.</span>
-            <span className={styles.emptyWeekFigure}>
-              {formatMinutes(usableMinutes)} free across seven days.
-            </span>
-            <span className={styles.emptyWeekNote}>
-              Capacity is known before anything is on it.
-            </span>
-          </div>
-        )}
-      </div>
+      </main>
       {region}
     </>
   );

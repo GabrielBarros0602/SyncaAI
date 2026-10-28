@@ -7,7 +7,7 @@
  * belongs to the database, so its refusal has to arrive from the server rather than from a
  * check this client is not in a position to make.
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, resetClientForTests } from "../src/api/client";
@@ -19,6 +19,7 @@ import { toLocalDate } from "../src/lib/time";
 import { DayColumn } from "../src/week/DayColumn";
 import { WeekScreen } from "../src/week/WeekScreen";
 import { SessionProvider } from "../src/auth/session";
+import { expectNoViolations } from "./a11y";
 
 const SAO_PAULO = "America/Sao_Paulo";
 
@@ -107,7 +108,6 @@ interface When {
   onOpenTask?: (open: { id: string; panel: Panel } | null) => void;
   onSaveTask?: (taskId: string, changes: TaskChanges) => Promise<void>;
   onToggle?: (task: Task) => void;
-  lighter?: DayCapacity | null;
   today?: boolean;
   past?: boolean;
 }
@@ -116,7 +116,6 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
   const { container } = render(
     <DayColumn
       capacity={capacity}
-      lighter={when.lighter ?? null}
       tasks={when.tasks ?? []}
       week={[capacity]}
       allTasks={when.tasks ?? []}
@@ -129,7 +128,7 @@ function renderDay(capacity: DayCapacity, when: When = {}): HTMLElement {
       onDeleteTask={() => Promise.resolve()}
       index={0}
       weekday="Mon"
-      date="Aug 24"
+      date="24 Aug"
       today={when.today ?? false}
       past={when.past ?? false}
       timezone={SAO_PAULO}
@@ -166,27 +165,30 @@ it("a day that gained an hour is visibly longer", () => {
   expect(trackWidth(renderDay(aDay({ total_minutes: 1500 })))).toBe("100%");
 });
 
-it("a daylight saving day says why it is a different size", () => {
-  renderDay(aDay({ total_minutes: 1380 }));
+it("tells a screen reader how long the day is, in place of the drawing", () => {
+  renderDay(booked(2 * 60, { total_minutes: 1380 }));
 
-  expect(screen.getByText("1380 min · DST")).toBeDefined();
+  expect(screen.getByRole("img", { name: "23-hour day, 2h booked against a 16h budget" })).toBeDefined();
 });
 
-it("an ordinary day does not shout about being ordinary", () => {
-  renderDay(aDay({ total_minutes: 1440 }));
+it("carries no caption about the day's length, whatever it is", () => {
+  // Item 17 of the round: each number once. The trail shows the length and its label says it;
+  // "1440 min" or "DST" under the date was a third way of saying the same thing.
+  const ordinary = renderDay(aDay({ total_minutes: 1440 }));
+  const short = renderDay(aDay({ total_minutes: 1380 }));
 
-  expect(screen.getByText("1440 min")).toBeDefined();
-  expect(screen.queryByText(/DST/)).toBeNull();
+  expect(ordinary.textContent).not.toMatch(/min|DST/);
+  expect(short.textContent).not.toMatch(/min|DST/);
 });
 
 it("a day booked past the usable budget reports zero and says by how much", () => {
   // Against sixteen hours, not against the calendar day. Measured against the day this flag
   // would be unreachable now that minutes are clipped at midnight (ADR-0022).
-  const container = renderDay(booked(18 * 60, { task_count: 12 }));
+  const container = renderDay(booked(18 * 60 + 30, { task_count: 12 }));
 
   expect(at(container, "[data-free]").textContent).toBe("0m free of 16h");
   expect(container.textContent).not.toContain("-");
-  expect(screen.getByText("over by 2h")).toBeDefined();
+  expect(screen.getByText("over by 2h30")).toBeDefined();
 });
 
 it("the big number is what is booked, so three different days do not read alike", () => {
@@ -203,30 +205,45 @@ it("the big number is what is booked, so three different days do not read alike"
 
 it("a full day is measured against sixteen hours, not twenty-four", () => {
   // The complaint that started ADR-0022: "why is it only full at 24 hours — doesn't he
-  // sleep?". Read off the figure rather than off the column, because the meta line now
-  // reports what is left of the calendar day and legitimately says 24h there.
+  // sleep?".
   const container = renderDay(booked(0));
 
   expect(at(container, "[data-free]").textContent).toBe("16h free of 16h");
 });
 
-it("the meta line counts what is left of the whole day, not of the budget", () => {
-  // Past sixteen hours booked the budget is spent, so a figure against it would read `0m`
-  // on every day heavy enough for anybody to be reading this line.
-  renderDay(booked(19 * 60, { task_count: 12 }));
+it("measures free against the person's own budget, not a fixed sixteen hours", () => {
+  // The usable day is a setting (ADR-0032). A header that printed 16h for everybody would be
+  // right for most and wrong, confidently, for whoever changed it.
+  const container = renderDay(aDay({ usable_minutes: 12 * 60, occupied_minutes: 2 * 60, free_minutes: 10 * 60 }));
 
-  expect(screen.getByText("12 tasks · 5h of the day unbooked")).toBeDefined();
+  expect(at(container, "[data-free]").textContent).toBe("10h free of 12h");
 });
 
-it("the track marks where the budget falls inside the day", () => {
-  // Without this the track is a second drawing of the free figure. The bar says how much of
-  // the day is gone; the tick says where the line it is measured against sits.
+it("says each number once: no task count and no unbooked figure on an ordinary day", () => {
+  // Item 17 of the round. The rows count themselves, and the trail shows what is unbooked;
+  // the figure only comes back in words at the two loudest levels, where it is the news.
+  const container = renderDay(booked(8 * 60, { task_count: 3 }));
+
+  expect(container.textContent).not.toMatch(/tasks?\b|unbooked/);
+});
+
+it("puts every day's budget and end on one ruler", () => {
+  // The longest day there is, 25 hours, is the whole width. A 23-hour day ends visibly short of
+  // a 24-hour one, and the budget sits at the same place on both, because it is the same
+  // sixteen hours.
   const ordinary = renderDay(booked(8 * 60));
   const short = renderDay(booked(8 * 60, { total_minutes: 1380 }));
 
-  // Sixteen hours of a 1440-minute day, and of a 1380-minute one.
-  expect(at(ordinary, "[data-budget-mark]").style.left).toBe("66.7%");
-  expect(at(short, "[data-budget-mark]").style.left).toBe("69.6%");
+  expect(at(ordinary, "[data-budget-mark]").style.left).toBe("calc(64% - 1px)");
+  expect(at(short, "[data-budget-mark]").style.left).toBe("calc(64% - 1px)");
+  expect(at(ordinary, "[data-day-end]").style.left).toBe("calc(96% - 2px)");
+  expect(at(short, "[data-day-end]").style.left).toBe("calc(92% - 2px)");
+});
+
+it("moves the budget tick with the person's own budget", () => {
+  const container = renderDay(booked(8 * 60, { usable_minutes: 12 * 60 }));
+
+  expect(at(container, "[data-budget-mark]").style.left).toBe("calc(48% - 1px)");
 });
 
 it("a day booked past the budget cuts the mark out of the fill instead of drawing over it", () => {
@@ -236,19 +253,29 @@ it("a day booked past the budget cuts the mark out of the fill instead of drawin
   expect(over).not.toBe(under);
 });
 
-it("today is named rather than numbered, and carries the rail", () => {
-  const container = renderDay(aDay(), { today: true });
+it("today is named in the header", () => {
+  renderDay(aDay(), { today: true });
 
   expect(screen.getByText("today")).toBeDefined();
-  expect(at(container, '[data-today="1"]')).not.toBeNull();
+  expect(screen.getByText("Monday")).toBeDefined();
 });
 
-it("any other day keeps its index and no rail", () => {
+it("any other day is named and nothing more", () => {
   const container = renderDay(aDay());
 
   expect(screen.queryByText("today")).toBeNull();
-  expect(screen.getByText("01")).toBeDefined();
-  expect(at(container, '[data-today="1"]')).toBeNull();
+  // The 01–07 index went with item 17: the weekday already says which day it is.
+  expect(container.textContent).not.toContain("01");
+});
+
+it("offers a new task from today on, and nothing on a day that has gone", () => {
+  // The server refuses a start in the past (ADR-0012), so on a past day the button would be
+  // an offer refused every time it was taken.
+  renderDay(aDay(), { past: true });
+  expect(screen.queryByRole("button", { name: /new task/ })).toBeNull();
+
+  renderDay(aDay(), { today: true });
+  expect(screen.getByRole("button", { name: /new task/ }).getAttribute("aria-keyshortcuts")).toBe("N");
 });
 
 it("a heavy day names the consequence rather than the day", () => {
@@ -259,8 +286,8 @@ it("a heavy day names the consequence rather than the day", () => {
 
 it("the two loudest levels count what is left of the whole day", () => {
   // Against the budget the figure would read zero at both levels and say nothing.
-  renderDay(booked(19 * 60));
-  expect(screen.getByText("Extremely heavy day. 5h unbooked.")).toBeDefined();
+  renderDay(booked(19 * 60 + 30));
+  expect(screen.getByText("Extremely heavy day. 4h30 unbooked.")).toBeDefined();
 
   renderDay(booked(21 * 60));
   expect(screen.getByText("Unsustainable. 3h unbooked.")).toBeDefined();
@@ -270,15 +297,6 @@ it("an ordinary day says nothing about its load", () => {
   const container = renderDay(booked(8 * 60));
 
   expect(container.textContent).not.toMatch(/margin|heavy|unsustainable/i);
-});
-
-it("a heavy day points at the lightest day in the week", () => {
-  // Deterministic and true today: the screen already has all seven days' capacity, so this
-  // is data rather than a model.
-  renderDay(booked(19 * 60), { lighter: aDay({ weekday: 2, free_minutes: 9 * 60 }) });
-
-  expect(screen.getByText(/This day is heavier than the rest of your week/)).toBeDefined();
-  expect(screen.getByText("Tue has 9h free.")).toBeDefined();
 });
 
 describe("what the day before is still holding", () => {
@@ -305,12 +323,6 @@ describe("what the day before is still holding", () => {
     expect(
       screen.getByText("Not this day’s task. Its minutes are already inside the 4h booked above."),
     ).toBeDefined();
-  });
-
-  it("counts the inheritance in the header, where the figures are", () => {
-    renderDay(booked(4 * 60, { task_count: 0 }), { carried: carriedFor([OVERNIGHT]) });
-
-    expect(screen.getByText("incl. 4h carried from Sun")).toBeDefined();
   });
 
   it("a day holding only inherited minutes is not empty", () => {
@@ -718,11 +730,10 @@ it("a day whose tasks failed to arrive does not claim to be empty", () => {
   expect(container.textContent).not.toContain("Nothing booked");
 });
 
-it("an empty day says the whole day is open, in minutes", () => {
-  const container = renderDay(aDay({ occupied_minutes: 0, free_minutes: 1440, task_count: 0 }));
+it("an empty day says so, and leaves the figures to the header", () => {
+  renderDay(aDay({ occupied_minutes: 0, free_minutes: USABLE, task_count: 0 }));
 
-  expect(screen.getByText(/Nothing booked/)).toBeDefined();
-  expect(container.textContent).toContain("24h");
+  expect(screen.getByText("Nothing booked.")).toBeDefined();
 });
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -833,20 +844,19 @@ function routeWeek(days: Partial<DayCapacity>[], me: typeof ME = ME, tasks: Task
 
 const SEVEN: Partial<DayCapacity>[] = [{}, {}, {}, {}, {}, {}, {}];
 
-/** The date stamp on whichever column carries the today rail, or null if none does. */
-function markedToday(container: HTMLElement): string | null {
-  const column = container.querySelector('[data-today="1"]');
-  return /[A-Z][a-z]{2} \d{2}/.exec(column?.textContent ?? "")?.[0] ?? null;
+/** The local date of whichever day is named today, or null if none is. */
+function markedToday(): string | null {
+  const pill = screen.queryByText("today");
+  return pill?.closest("[data-day]")?.getAttribute("data-day") ?? null;
 }
 
-/** How far from now the header says it is, or null when it says nothing. */
-function awayText(container: HTMLElement): string | null {
-  return container.querySelector("[data-away]")?.textContent ?? null;
+function heading(): string | null {
+  return screen.queryByRole("heading", { level: 1 })?.textContent ?? null;
 }
 
-function homeButton(): HTMLButtonElement {
-  // By role, because `this week` is also a word in the keyboard legend below it.
-  return screen.getByRole("button", { name: /this week/ });
+function backButton(): HTMLElement | null {
+  // By role, because the same words are in the keyboard legend below it.
+  return screen.queryByRole("button", { name: /back to this week/ });
 }
 
 it("shows the zone the server stores, not the browser's", async () => {
@@ -866,9 +876,9 @@ it("shows the zone the server stores, not the browser's", async () => {
   });
 });
 
-it("an empty week still reports its capacity", async () => {
-  // Capacity is known before anything is on it — which is the product's whole claim, and
-  // the empty state is where it is most visible.
+it("an empty week still reports every day's capacity", async () => {
+  // Capacity is known before anything is on it, which is the product's whole claim, and the
+  // empty week is where it is most visible.
   route({
     "/auth/refresh": () => json(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 }),
     "/me": () => json(200, ME),
@@ -879,13 +889,12 @@ it("an empty week still reports its capacity", async () => {
   renderWeek();
 
   await waitFor(() => {
-    expect(screen.getByText("Nothing booked this week.")).toBeDefined();
+    expect(screen.getAllByText("Nothing booked.")).toHaveLength(7);
   });
-  // Seven days of sixteen usable hours, not seven calendar days.
-  expect(screen.getByText(/112h free across seven days/)).toBeDefined();
+  expect(screen.getAllByText((_, element) => element?.textContent === "16h free of 16h")).toHaveLength(7);
 });
 
-it("a week with a day over capacity says so in the summary", async () => {
+it("puts the alert on the day over budget, and only on it", async () => {
   route({
     "/auth/refresh": () => json(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 }),
     "/me": () => json(200, ME),
@@ -915,8 +924,11 @@ it("a week with a day over capacity says so in the summary", async () => {
   renderWeek();
 
   await waitFor(() => {
-    expect(screen.getByText("1 day over budget")).toBeDefined();
+    expect(screen.getByText("over by 2h")).toBeDefined();
   });
+  const wednesday = document.querySelector('[data-day="2026-08-26"]') as HTMLElement;
+  expect(wednesday.textContent).toContain("over by 2h");
+  expect(screen.getAllByText(/^over by/)).toHaveLength(1);
 });
 
 describe("the week you are looking at", () => {
@@ -933,75 +945,74 @@ describe("the week you are looking at", () => {
   it("marks today in the zone the server stores, not in the browser's", async () => {
     // 20:00 UTC is the 26th in São Paulo and already the 27th in Tokyo. Rendering the same
     // instant under both zones is what makes this independent of wherever the tests run: if
-    // the browser's clock decided, both would land on the same column.
+    // the browser's clock decided, both would land on the same day.
     vi.setSystemTime(new Date("2026-08-26T20:00:00Z"));
 
     routeWeek(SEVEN);
-    const inSaoPaulo = renderWeek();
+    renderWeek();
     await waitFor(() => {
-      expect(markedToday(inSaoPaulo)).not.toBeNull();
+      expect(markedToday()).toBe("2026-08-26");
     });
+    cleanup();
 
     routeWeek(SEVEN, { ...ME, timezone: "Asia/Tokyo" });
-    const inTokyo = renderWeek();
+    renderWeek();
     await waitFor(() => {
-      expect(markedToday(inTokyo)).not.toBeNull();
+      expect(markedToday()).toBe("2026-08-27");
     });
-
-    expect(markedToday(inSaoPaulo)).toBe("Aug 26");
-    expect(markedToday(inTokyo)).toBe("Aug 27");
   });
 
-  it("names the week it is showing", async () => {
+  it("names the week it is showing in the page's heading", async () => {
     vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
     routeWeek(SEVEN);
 
     renderWeek();
 
     await waitFor(() => {
-      expect(screen.getByText("week 35 · 2026")).toBeDefined();
+      expect(heading()).toBe("24 – 30 Aug 2026");
     });
   });
 
-  it("offers no way back while there is nothing to come back from", async () => {
+  it("labels this week, and offers no way back while there is nothing to come back from", async () => {
     vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
     routeWeek(SEVEN);
 
-    const container = renderWeek();
+    renderWeek();
 
     await waitFor(() => {
-      expect(markedToday(container)).toBe("Aug 26");
+      expect(markedToday()).toBe("2026-08-26");
     });
-    expect(homeButton().disabled).toBe(true);
-    expect(awayText(container)).toBeNull();
+    expect(backButton()).toBeNull();
+    expect(screen.getAllByText("this week").length).toBeGreaterThan(0);
   });
 
-  it("says how far away it has been walked, and walks back in one press", async () => {
-    // `[` and `]` move one week each and the dates alone do not say how many times they were
-    // pressed: three weeks out is a plausible-looking set of dates.
+  it("walks a week at a time, and back in one press", async () => {
     vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
     routeWeek(SEVEN);
-    const container = renderWeek();
+    renderWeek();
     await waitFor(() => {
-      expect(markedToday(container)).toBe("Aug 26");
+      expect(markedToday()).toBe("2026-08-26");
     });
 
     fireEvent.keyDown(window, { key: "]" });
-    fireEvent.keyDown(window, { key: "]" });
+    await waitFor(() => {
+      expect(heading()).toBe("31 Aug – 6 Sep 2026");
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
 
     await waitFor(() => {
-      expect(awayText(container)).toBe("+2 weeks");
+      expect(heading()).toBe("7 – 13 Sep 2026");
     });
-    // Two weeks out, no column is today, so nothing wears the rail.
-    expect(markedToday(container)).toBeNull();
-    expect(homeButton().disabled).toBe(false);
+    // Two weeks out, no day is today.
+    expect(markedToday()).toBeNull();
+    expect(backButton()?.getAttribute("aria-keyshortcuts")).toBe("T");
 
     fireEvent.keyDown(window, { key: "T" });
 
     await waitFor(() => {
-      expect(markedToday(container)).toBe("Aug 26");
+      expect(markedToday()).toBe("2026-08-26");
     });
-    expect(awayText(container)).toBeNull();
+    expect(backButton()).toBeNull();
   });
 
   it("offers the way back only when the owning row is on the screen", async () => {
@@ -1115,20 +1126,30 @@ describe("the week you are looking at", () => {
     });
   });
 
-  it("counts a single week in the singular", async () => {
-    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
-    routeWeek(SEVEN);
-    const container = renderWeek();
-    await waitFor(() => {
-      expect(markedToday(container)).toBe("Aug 26");
-    });
+});
 
-    fireEvent.keyDown(window, { key: "[" });
+it("has nothing an automated accessibility check can find", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+  const heavy = {
+    occupied_minutes: 19 * 60,
+    free_minutes: 0,
+    unbooked_minutes: 5 * 60,
+    task_count: 1,
+    over_capacity: true,
+    load: "strained" as const,
+  };
+  routeWeek([{}, {}, {}, heavy, {}, {}, {}], ME, [
+    aTask("Thesis", "2026-08-27T09:00:00", "2026-08-27T10:00:00", { tag: { id: "t", name: "faculdade" } }),
+  ]);
 
-    await waitFor(() => {
-      expect(awayText(container)).toBe("-1 week");
-    });
+  const container = renderWeek();
+  await waitFor(() => {
+    expect(heading()).toBe("24 – 30 Aug 2026");
   });
+  vi.useRealTimers();
+
+  await expectNoViolations(container);
 });
 
 it("shows nothing rather than stale minutes when the server cannot be reached", async () => {

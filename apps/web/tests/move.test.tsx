@@ -76,7 +76,6 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
   render(
     <DayColumn
       capacity={own}
-      lighter={null}
       tasks={[task]}
       week={days}
       allTasks={[task, ...others]}

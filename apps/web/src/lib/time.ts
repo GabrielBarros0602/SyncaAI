@@ -129,40 +129,15 @@ export function daysFrom(monday: Date): Date[] {
   });
 }
 
-const MILLISECONDS_IN_A_DAY = MINUTES_IN_A_DAY * MILLISECONDS_IN_A_MINUTE;
-
 /** ISO weekday for a local date, where Monday is 1 and Sunday is 7. */
 function isoWeekdayOf(date: Date): number {
   return date.getDay() === 0 ? 7 : date.getDay();
 }
 
-/**
- * The ISO week a date belongs to, and the year that week belongs to.
- *
- * The two are returned together because they can disagree with the calendar, which is the
- * whole reason this is not `getMonth`-style arithmetic: ISO puts a week in the year holding
- * its **Thursday**, so the 1st of January can be week 53 of the year before and the 31st of
- * December can be week 1 of the year after. Reading the year off the date instead of off the
- * week would print `week 53 · 2027` for a week that is entirely in 2026.
- */
-export function isoWeek(date: Date): { week: number; year: number } {
-  const thursday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  thursday.setDate(thursday.getDate() + 4 - isoWeekdayOf(thursday));
-
-  // Week 1 is the one holding 4 January, by definition, so its Thursday is the origin.
-  const firstThursday = new Date(thursday.getFullYear(), 0, 4);
-  firstThursday.setDate(firstThursday.getDate() + 4 - isoWeekdayOf(firstThursday));
-
-  // Rounded rather than divided exactly: both ends are local midnights, and a daylight
-  // saving transition between them makes the span 23 or 25 hours short of a whole number.
-  const days = Math.round((thursday.getTime() - firstThursday.getTime()) / MILLISECONDS_IN_A_DAY);
-  return { week: 1 + Math.round(days / 7), year: thursday.getFullYear() };
-}
-
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** `Aug 24`, the short stamp the day header uses. */
+/** `Aug 24`, the short stamp the loading and unreachable weeks use. */
 export function stamp(date: Date): string {
   return `${MONTHS[date.getMonth()] ?? ""} ${pad(date.getDate())}`;
 }
@@ -176,6 +151,36 @@ export function zonedStamp(iso: string, timeZone: string): string {
 /** The three-letter weekday for an ISO weekday, where Monday is 1. */
 export function weekdayName(isoWeekday: number): string {
   return WEEKDAYS[isoWeekday - 1] ?? "";
+}
+
+const LONG_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** The weekday in full, for an ISO weekday where Monday is 1: what a day's header is called. */
+export function weekdayLong(isoWeekday: number): string {
+  return LONG_WEEKDAYS[isoWeekday - 1] ?? "";
+}
+
+/** `22 Oct`: the day before the month, as the round's week writes a date. */
+export function dayMonth(date: Date): string {
+  return `${String(date.getDate())} ${MONTHS[date.getMonth()] ?? ""}`;
+}
+
+/**
+ * `19 – 25 Oct 2026`, the week's name in its heading.
+ *
+ * The month is written once when both ends share it, and the year once, at the end. A week
+ * that crosses into a new year names both years: left off the first date, December would read
+ * as the December of the year printed after it.
+ */
+export function weekRange(first: Date, last: Date): string {
+  const year = String(last.getFullYear());
+  if (first.getFullYear() !== last.getFullYear()) {
+    return `${dayMonth(first)} ${String(first.getFullYear())} – ${dayMonth(last)} ${year}`;
+  }
+  if (first.getMonth() === last.getMonth()) {
+    return `${String(first.getDate())} – ${dayMonth(last)} ${year}`;
+  }
+  return `${dayMonth(first)} – ${dayMonth(last)} ${year}`;
 }
 
 /**

@@ -1,0 +1,221 @@
+/*
+ * A day of the week and its header, as week-desktop.dc.html draws them (item 17 of the round:
+ * each number once). The rows inside still wear Week.module.css until they are rebuilt.
+ */
+
+.day {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-rows);
+  padding: var(--space-1);
+  border-radius: var(--radius-4);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* The whole day carries the trouble, not only its figures: the accent means trouble and only
+   trouble, and a day past its budget is the trouble this screen exists to show. */
+.dayOver {
+  background: var(--alert-surface);
+  box-shadow: none;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--pad-row-y) var(--pad-row-x);
+  border-radius: var(--radius-3);
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+}
+
+.name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  min-width: 0;
+}
+
+.weekday {
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+  color: var(--ink);
+  /* "Wednesday" at 200% text is wider than a 140px column. Broken, it is still read; cut, it
+     is not. `anywhere` rather than `break-word`, because a flex item will not shrink below a
+     word that only `break-word` is allowed to break. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.weekdayPast {
+  color: var(--ink-2);
+}
+
+.date {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.today {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--weight-strong) var(--text-1) / var(--leading-1) var(--font-sans);
+}
+
+.figures {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.booked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+}
+
+.bookedValue {
+  min-width: 0;
+  font: var(--weight-strong) var(--text-6) / var(--leading-6) var(--font-mono);
+  letter-spacing: var(--tracking-figure);
+  font-variant-numeric: tabular-nums;
+  /* The same at 200%: `17h30` at the largest size is wider than the column. */
+  overflow-wrap: anywhere;
+}
+
+.bookedWord,
+.free {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.figure {
+  font-family: var(--font-mono);
+}
+
+.over {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--alert);
+  color: var(--alert-ink);
+  font: var(--weight-strong) var(--text-1) / var(--leading-1) var(--font-mono);
+}
+
+/* Every day on one ruler, the longest a day can be: a 23-hour day is visibly shorter and a
+   25-hour one longer, with no caption needed to say so. */
+.trail {
+  position: relative;
+  height: 12px;
+}
+
+.track,
+.bar {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  height: 6px;
+  border-radius: var(--radius-full);
+}
+
+.track {
+  background: var(--track);
+}
+
+.bar {
+  background: var(--bar);
+}
+
+.barOver {
+  background: var(--alert);
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--tick);
+}
+
+/* Past the budget the tick is drawn in the day's own ground, a notch cut out of the fill
+   rather than a mark on top of it: the line that was crossed stays visible. */
+.tickCut {
+  border-radius: 0;
+  background: var(--alert-surface);
+}
+
+.level {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--alert-ink);
+}
+
+.empty {
+  padding: 0 var(--pad-row-x) var(--pad-row-y);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-3);
+}
+
+.newTask {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: max(36px, var(--target));
+  padding: 0 var(--pad-row-x);
+  border: 0;
+  border-radius: var(--radius-3);
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+.newTask:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.newTask:active {
+  background: var(--pressed);
+}
+
+.dayOver .newTask:hover {
+  background: var(--alert-hover);
+}
+
+.dayOver .newTask:active {
+  background: var(--alert-pressed);
+}
+
+.key {
+  margin-left: auto;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-mono);
+  color: var(--ink-3);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .key {
+    display: none;
+  }
+}
