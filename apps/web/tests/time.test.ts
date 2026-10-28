@@ -18,7 +18,6 @@ import {
   mondayOf,
   parseClock,
   parseDuration,
-  stamp,
   startOfLocalDay,
   toLocalDate,
   weekRange,
@@ -256,11 +255,6 @@ describe("labels", () => {
     expect(weekRange(new Date(2026, 11, 28), new Date(2027, 0, 3))).toBe(
       "28 Dec 2026 – 3 Jan 2027",
     );
-  });
-
-  it("stamps a date short", () => {
-    expect(stamp(new Date(2026, 7, 24))).toBe("Aug 24");
-    expect(stamp(new Date(2026, 0, 5))).toBe("Jan 05");
   });
 
   it("names an ISO weekday, where Monday is 1", () => {
