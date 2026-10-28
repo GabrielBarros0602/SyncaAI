@@ -11,7 +11,7 @@
  */
 import type { DayCapacity, Task } from "../api/types";
 import { instantAt, zonedDay, zonedMinutes } from "../lib/time";
-import { isFree } from "./occupancy";
+import { takenBy } from "./occupancy";
 
 /** Why a day is not on offer: the task is already there, the time has gone, or it is taken. */
 export type MoveBlocker = "own" | "past" | "taken";
@@ -22,6 +22,8 @@ export interface MoveOption {
   /** The instant the task would start, already in the user's zone and repaired across DST. */
   startAt: string;
   blocker: MoveBlocker | null;
+  /** What is in the way, when the blocker is `taken`. */
+  takenBy: Task | null;
 }
 
 /**
@@ -42,12 +44,19 @@ export function moveOptions(
 
   return days.map((day) => {
     const start = instantAt(day.day, clockMinutes, timeZone);
+    const inTheWay = takenBy(tasks, start, task.duration_minutes, task.id);
     let blocker: MoveBlocker | null = null;
     if (day.day === ownDay) blocker = "own";
     else if (start.getTime() <= now.getTime()) blocker = "past";
-    else if (!isFree(tasks, start, task.duration_minutes, task.id)) blocker = "taken";
+    else if (inTheWay !== null) blocker = "taken";
 
-    return { day: day.day, weekday: day.weekday, startAt: start.toISOString(), blocker };
+    return {
+      day: day.day,
+      weekday: day.weekday,
+      startAt: start.toISOString(),
+      blocker,
+      takenBy: blocker === "taken" ? inTheWay : null,
+    };
   });
 }
 

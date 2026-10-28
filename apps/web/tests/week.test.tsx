@@ -671,13 +671,16 @@ describe("the two verbs an opened row offers", () => {
     expect(saved).toHaveBeenCalledWith("lecture", { notes: "first line" });
   });
 
-  it("counts down only once the bound is close", () => {
+  it("counts beside its label from the first character, and stops at the bound", () => {
+    // The round shows the count throughout (its noteCount), and the field holds no more than
+    // the server keeps, so there is no "over the limit" left to say.
     renderDay(aDay({ task_count: 1 }), { tasks: [TASK], openTask: { id: "lecture", panel: "note" } });
-    expect(screen.queryByText(/characters left/)).toBeNull();
+    expect(screen.getByText("0/4000")).toBeDefined();
+    expect(screen.getByLabelText("Note").getAttribute("maxlength")).toBe("4000");
 
     fireEvent.change(screen.getByLabelText("Note"), { target: { value: "n".repeat(3900) } });
 
-    expect(screen.getByText("100 characters left")).toBeDefined();
+    expect(screen.getByText("3900/4000")).toBeDefined();
   });
 });
 

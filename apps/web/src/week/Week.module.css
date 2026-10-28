@@ -1,5 +1,5 @@
 /*
- * The week's panels, its read-only checklist and the new task form.
+ * The edit panel, the read-only checklist and the new task form.
  *
  * What is left of the second round's stylesheet. The page, the days, their rows and bands, and
  * the loading and unreachable weeks moved to the round's tokens in WeekScreen, WeekHeader and
@@ -40,73 +40,6 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
-}
-
-/*
- * The days a task can move to. Each is a real control with a field's edge, because a day that
- * is open and one that is not must read apart without relying on colour alone — the disabled
- * ones also lose their edge and their pointer.
- */
-.moveDays {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.moveDay {
-  min-height: 32px;
-  min-width: 44px;
-  padding: 6px 8px;
-  background: transparent;
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font: 500 12px/1 var(--mono);
-  color: var(--ink);
-  transition: background var(--dur), border-color var(--dur);
-}
-
-.moveDay:hover:not(:disabled) {
-  background: var(--hover);
-}
-
-.moveDay:disabled {
-  color: var(--faint);
-  border-color: var(--rule);
-  cursor: default;
-}
-
-/* The lightest open day, in full ink rather than the accent: a suggestion is not trouble. */
-.moveDayLightest {
-  border-color: var(--ink);
-}
-
-.textarea {
-  width: 100%;
-  min-height: 44px;
-  background: var(--field);
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius-md);
-  padding: 8px;
-  font: 400 12px/1.55 var(--sans);
-  caret-color: var(--ink);
-  resize: vertical;
-}
-
-/* Absent until the bound is close. A note is a place to think out loud, and a counter
-   standing over it from the first keystroke changes what it feels like to write in. */
-.panelCount {
-  font: 400 12px/1 var(--mono);
-  color: var(--faint);
-}
-
-.panelNote {
-  margin: 0;
-  font: 400 12px/1.6 var(--sans);
-  color: var(--dim);
-  text-wrap: pretty;
-  white-space: pre-wrap;
 }
 
 .checklist {
@@ -187,8 +120,7 @@
 
 /* A field already has an edge, so focus moves the edge rather than drawing a second ring
    two pixels outside it. */
-.input:focus-visible,
-.textarea:focus-visible {
+.input:focus-visible {
   outline: none;
   border-color: var(--ink);
   box-shadow: 0 0 0 3px var(--fill);
@@ -301,33 +233,6 @@
   cursor: pointer;
   font: 400 12px/1 var(--sans);
   color: var(--dim);
-}
-
-/*
- * The confirming press of a delete that cannot be undone. Ruled in the accent rather than
- * filled with it: it has to read as the dangerous one of the pair without becoming the
- * loudest thing in the column. It is the error band's pairing — accent text on the accent
- * tint — and so it shares that band's open contrast question: under 4.5:1 inside an
- * overbooked day and in the light theme (backlog, ADR-0024).
- */
-.danger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  background: var(--accent-tint);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-  cursor: pointer;
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.03em;
-  color: var(--chip-ink);
-}
-
-.danger:disabled {
-  opacity: 0.55;
-  cursor: progress;
 }
 
 /* A key nobody can press is a label for nothing. On a device with no hover and a coarse

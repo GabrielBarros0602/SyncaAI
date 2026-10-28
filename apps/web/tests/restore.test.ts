@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Task } from "../src/api/types";
-import { canBeRestored, restoreBlocker, snapshotOf } from "../src/week/restore";
+import { canBeRestored, restoreBlocker, restoreBlockers, snapshotOf } from "../src/week/restore";
 
 const NOW = new Date("2026-08-26T15:00:00.000Z");
 
@@ -44,6 +44,24 @@ describe("canBeRestored", () => {
 
     expect(canBeRestored(soon, NOW)).toBe(true);
     expect(canBeRestored(soon, new Date("2026-08-26T15:05:00.000Z"))).toBe(false);
+  });
+});
+
+describe("restoreBlockers", () => {
+  it("lists every loss, so the row can name them all", () => {
+    const doneAndTicked = aTask({ completed_at: "2026-08-26T14:00:00.000Z", items: [ticked] });
+
+    expect(restoreBlockers(doneAndTicked, NOW)).toEqual(["done", "checked"]);
+  });
+
+  it("says done rather than started for a finished task: its start is no longer the news", () => {
+    const finished = aTask({ start_at: "2026-08-26T12:00:00.000Z", completed_at: "2026-08-26T14:00:00.000Z" });
+
+    expect(restoreBlockers(finished, NOW)).toEqual(["done"]);
+  });
+
+  it("is empty for a task that can come back", () => {
+    expect(restoreBlockers(aTask({ items: [unticked] }), NOW)).toEqual([]);
   });
 });
 

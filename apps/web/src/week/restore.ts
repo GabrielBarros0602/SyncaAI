@@ -25,6 +25,18 @@ export function restoreBlocker(task: Task, now: Date): RestoreBlocker | null {
   return null;
 }
 
+/**
+ * Every reason this task could not come back as it is, for the row that asks before deleting.
+ * Done and started exclude each other, as a finished task's start is no longer the news.
+ */
+export function restoreBlockers(task: Task, now: Date): RestoreBlocker[] {
+  const blockers: RestoreBlocker[] = [];
+  if (task.completed_at !== null) blockers.push("done");
+  else if (Date.parse(task.start_at) <= now.getTime()) blockers.push("started");
+  if (task.items.some((item) => item.completed_at !== null)) blockers.push("checked");
+  return blockers;
+}
+
 /** Whether recreating this task, at this instant, would bring back the same task. */
 export function canBeRestored(task: Task, now: Date): boolean {
   return restoreBlocker(task, now) === null;

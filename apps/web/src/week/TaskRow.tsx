@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
-import { clock, formatCompact } from "../lib/time";
+import { clock, formatCompact, relativeDay, zonedDay, zonedMinutes } from "../lib/time";
 import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
 import { DeletePanel } from "./DeletePanel";
-import { type RestoreBlocker, restoreBlocker, snapshotOf } from "./restore";
+import { restoreBlocker, restoreBlockers, snapshotOf } from "./restore";
 import { EditPanel } from "./EditPanel";
 import { MovePanel } from "./MovePanel";
 import { NotePanel } from "./NotePanel";
@@ -58,16 +58,21 @@ function verbsFor(task: Task): Verb[] {
   return task.completed_at === null ? [EDIT, MOVE, NOTE, DELETE] : [EDIT, NOTE, DELETE];
 }
 
-/** Why the in-row confirmation says this one will not come back. Each names what is lost. */
-const WHY_NOT: Record<RestoreBlocker, string> = {
-  done: "It is done, and a task brought back would come back open.",
-  started: "It has already started, and the server will not book a start in the past.",
-  checked: "Part of its checklist is ticked, and it would come back unticked.",
-};
-
-function whyNot(task: Task): string | null {
-  const blocker = restoreBlocker(task, new Date());
-  return blocker === null ? null : WHY_NOT[blocker];
+/**
+ * Why the row asks before deleting, one sentence per reason (item 21 of the round): what the
+ * undo could not bring back, named in the person's own day and time.
+ */
+function whyNot(task: Task, timezone: string, now: Date): string[] {
+  const today = zonedDay(now.toISOString(), timezone);
+  return restoreBlockers(task, now).map((blocker) => {
+    if (blocker === "done") return "It is done.";
+    if (blocker === "started") {
+      const at = clock(zonedMinutes(task.start_at, timezone));
+      return `It has started — ${at} ${relativeDay(zonedDay(task.start_at, timezone), today)}.`;
+    }
+    const ticked = task.items.filter((item) => item.completed_at !== null).length;
+    return `${String(ticked)} of ${String(task.items.length)} checklist items ${ticked === 1 ? "is" : "are"} ticked, and would come back unticked.`;
+  });
 }
 
 interface Props {
@@ -319,7 +324,7 @@ export function TaskRow({
 
           {open === "delete" && (
             <DeletePanel
-              reason={whyNot(task)}
+              reasons={whyNot(task, timezone, new Date())}
               onConfirm={() => onDelete(null)}
               onCancel={() => {
                 onOpen("open");

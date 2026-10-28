@@ -155,6 +155,18 @@ export function weekdayOf(localDate: string): string {
   return weekdayName(weekday === 0 ? 7 : weekday);
 }
 
+/**
+ * `today`, `yesterday`, `tomorrow`, or `Wed 22`: a local date as a sentence names it, from the
+ * local date that is today. Both are dates in the same zone, so the difference is whole days.
+ */
+export function relativeDay(localDate: string, today: string): string {
+  const days = Math.round((Date.parse(localDate) - Date.parse(today)) / (MINUTES_IN_A_DAY * 60_000));
+  if (days === 0) return "today";
+  if (days === -1) return "yesterday";
+  if (days === 1) return "tomorrow";
+  return `${weekdayOf(localDate)} ${String(Number(localDate.slice(8, 10)))}`;
+}
+
 const LONG_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 /** The weekday in full, for an ISO weekday where Monday is 1: what a day's header is called. */
