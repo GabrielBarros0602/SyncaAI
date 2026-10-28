@@ -986,6 +986,27 @@ describe("the week you are looking at", () => {
     expect(screen.getAllByText("this week").length).toBeGreaterThan(0);
   });
 
+  it("never aims N at a day that has gone", async () => {
+    // Wednesday 26 August. Monday has no "+ new task", so the key must not open one there
+    // either: the server would refuse whatever was typed into it.
+    vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+    routeWeek(SEVEN);
+    renderWeek();
+    await waitFor(() => {
+      expect(markedToday()).toBe("2026-08-26");
+    });
+    const header = (day: string): HTMLElement =>
+      document.querySelector(`[data-day="${day}"]`)?.firstElementChild as HTMLElement;
+
+    fireEvent.mouseEnter(header("2026-08-24"));
+    fireEvent.keyDown(window, { key: "n" });
+    expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
+
+    fireEvent.mouseEnter(header("2026-08-27"));
+    fireEvent.keyDown(window, { key: "n" });
+    expect(screen.getByRole("textbox", { name: "Title" })).toBeDefined();
+  });
+
   it("walks a week at a time, and back in one press", async () => {
     vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
     routeWeek(SEVEN);

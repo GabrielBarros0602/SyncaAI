@@ -167,7 +167,8 @@ export function DayColumn({
       <div
         className={day.head}
         onMouseEnter={() => {
-          onHover(capacity.day);
+          // A day that has gone is never N's target, as it never shows "+ new task".
+          onHover(past ? null : capacity.day);
         }}
         onMouseLeave={() => {
           onHover(null);
@@ -208,7 +209,6 @@ export function DayColumn({
           <span data-track className={day.track} style={{ width: onRuler(capacity.total_minutes) }} />
           {/* Clipped at the day's end: minutes past midnight belong to the next day's trail. */}
           <span
-            data-bar
             className={cx(day.bar, over && day.barOver)}
             style={{ width: onRuler(Math.min(capacity.occupied_minutes, capacity.total_minutes)) }}
           />
