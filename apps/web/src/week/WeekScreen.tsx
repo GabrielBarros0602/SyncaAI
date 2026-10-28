@@ -5,6 +5,7 @@ import { useSession } from "../auth/useSession";
 import { daysFrom, formatMinutes, isoWeek, stamp, weekdayName, zonedDay } from "../lib/time";
 import type { NewTask, Task } from "../api/types";
 import { Menu } from "../ui/Menu";
+import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayColumn } from "./DayColumn";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
@@ -22,8 +23,12 @@ import styles from "./Week.module.css";
  */
 type FocusTarget = { task: string } | { newTaskOn: string };
 
-/** How long `undo` stays on offer after a delete, as the design draws it. */
-const UNDO_WINDOW_MS = 9000;
+/** `Thu 22`, for a local date: what the status region calls the day a task was on. */
+function dayLabel(localDate: string): string {
+  // Noon UTC, so no zone can move the date the weekday is read from.
+  const weekday = new Date(`${localDate}T12:00:00Z`).getUTCDay();
+  return `${weekdayName(weekday === 0 ? 7 : weekday)} ${String(Number(localDate.slice(8, 10)))}`;
+}
 
 export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
@@ -41,19 +46,10 @@ export function WeekScreen(): React.ReactNode {
   const pendingFocus = useRef<{ target: FocusTarget; after: number } | null>(null);
   const { loaded, status } = week;
   // The last restorable delete, for as long as it can be undone. One across the week, like the
-  // open row: a second delete replaces the first notice, as the design does.
+  // open row: a second delete replaces the first notice, as the design does. The region times
+  // it out; a refusal is a new notice, so its sentence gets its own nine seconds to be read.
   const [trash, setTrash] = useState<Trash | null>(null);
-
-  useEffect(() => {
-    if (trash === null) return;
-    // The design's window. A refusal restarts it, so the sentence is not gone before it is read.
-    const timer = setTimeout(() => {
-      setTrash(null);
-    }, UNDO_WINDOW_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [trash]);
+  const deletes = useRef(0);
 
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -71,6 +67,61 @@ export function WeekScreen(): React.ReactNode {
   function focusOnceReloaded(target: FocusTarget): void {
     pendingFocus.current = { target, after: loaded };
   }
+
+  async function undo(): Promise<void> {
+    if (trash === null || trash.restoring || trash.failure !== null) return;
+    const deleted = trash;
+    setTrash({ ...deleted, restoring: true });
+    // Each answer touches only its own delete: another may have replaced it meanwhile.
+    try {
+      // A recreate, so a new id. Focus follows the task that exists now, found by the id the
+      // server just gave it, never by the one that was deleted.
+      const restored = await week.restore(deleted.snapshot);
+      setTrash((current) => (current?.id === deleted.id ? null : current));
+      focusOnceReloaded({ task: restored.id });
+    } catch (problem) {
+      const failure = problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.";
+      setTrash((current) =>
+        current?.id === deleted.id ? { ...deleted, restoring: false, failure } : current,
+      );
+    }
+  }
+
+  const notice: Notice | null =
+    trash === null
+      ? null
+      : trash.failure !== null
+        ? {
+            id: `${String(trash.id)}:refused`,
+            text: `“${trash.title}” was not brought back. ${trash.failure}`,
+          }
+        : trash.restoring
+          ? {
+              id: `${String(trash.id)}:restoring`,
+              text: `Restoring “${trash.title}”…`,
+              busy: true,
+            }
+          : {
+              id: `${String(trash.id)}:deleted`,
+              text: `Deleted “${trash.title}” from ${dayLabel(trash.day)}.`,
+              action: {
+                label: "undo",
+                run: () => {
+                  void undo();
+                },
+                undoKey: true,
+              },
+            };
+  // In every state the screen can be in, at the same place in the tree, so it is one region
+  // that stays in the page through every reload rather than a new one each time.
+  const region = (
+    <StatusRegion
+      notice={notice}
+      onExpire={() => {
+        setTrash(null);
+      }}
+    />
+  );
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
@@ -108,9 +159,21 @@ export function WeekScreen(): React.ReactNode {
     };
   }, [week]);
 
-  if (week.status === "loading") return <WeekSkeleton />;
+  if (week.status === "loading") {
+    return (
+      <>
+        <WeekSkeleton />
+        {region}
+      </>
+    );
+  }
   if (week.status === "unreachable" || week.me === null) {
-    return <WeekUnreachable onRetry={week.reload} />;
+    return (
+      <>
+        <WeekUnreachable onRetry={week.reload} />
+        {region}
+      </>
+    );
   }
 
   const dates = daysFrom(week.monday);
@@ -155,214 +218,209 @@ export function WeekScreen(): React.ReactNode {
   const timezone = week.me.timezone;
 
   return (
-    <div className={styles.frame}>
-      <div className={styles.chrome}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-          <span className={styles.wordmark}>SyncaAI</span>
-          <span className={styles.meta}>
-            week {String(weekNumber).padStart(2, "0")} · {String(year)}
-          </span>
-        </div>
-        <div className={styles.nav}>
-          <button
-            type="button"
-            className={styles.ghost}
-            onClick={() => {
-              week.goTo(week.offset - 1);
-            }}
-          >
-            <span>previous</span>
-            <span className={styles.key}>&#91;</span>
-          </button>
-          <span className={styles.range}>
-            {stamp(week.monday)} — {stamp(dates[6] as Date)}
-          </span>
-          <button
-            type="button"
-            className={styles.ghost}
-            onClick={() => {
-              week.goTo(week.offset + 1);
-            }}
-          >
-            <span>next</span>
-            <span className={styles.key}>&#93;</span>
-          </button>
-          <button
-            type="button"
-            className={styles.home}
-            disabled={week.offset === 0}
-            onClick={() => {
-              week.goTo(0);
-            }}
-          >
-            <span>this week</span>
-            <span className={styles.key}>T</span>
-          </button>
-          {/*
-           * How far from now, in words. `[` and `]` move a week at a time and the date range
-           * alone does not say how many of them have been pressed — three weeks out reads as
-           * a plausible set of dates unless something counts them.
-           */}
-          {week.offset !== 0 && (
-            <span data-away className={styles.away}>
-              {week.offset > 0 ? "+" : "-"}
-              {String(distance)} {distance === 1 ? "week" : "weeks"}
+    <>
+      <div className={styles.frame}>
+        <div className={styles.chrome}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
+            <span className={styles.wordmark}>SyncaAI</span>
+            <span className={styles.meta}>
+              week {String(weekNumber).padStart(2, "0")} · {String(year)}
             </span>
-          )}
-        </div>
-        <Menu
-          email={week.me.email}
-          timezone={week.me.timezone}
-          onSignOut={() => {
-            void signOut();
-          }}
-        />
-      </div>
-
-      <div className={styles.summary}>
-        {/* Booked leads here for the same reason it leads in a column: free floors at zero,
-            and a week that reads `0m free` at the top says nothing about how full it is. */}
-        <div className={styles.summaryFigures}>
-          <span className={styles.figureStrong}>{formatMinutes(bookedMinutes)} booked</span>
-          <span className={styles.figure}>
-            {formatMinutes(Math.max(0, usableMinutes - bookedMinutes))} free of{" "}
-            {formatMinutes(usableMinutes)} budget
-          </span>
-          <span className={styles.figure}>
-            {taskCount} {taskCount === 1 ? "task" : "tasks"}
-          </span>
-          {overDays > 0 && (
-            <span className={styles.chip}>
-              {overDays} {overDays === 1 ? "day" : "days"} over budget
+          </div>
+          <div className={styles.nav}>
+            <button
+              type="button"
+              className={styles.ghost}
+              onClick={() => {
+                week.goTo(week.offset - 1);
+              }}
+            >
+              <span>previous</span>
+              <span className={styles.key}>&#91;</span>
+            </button>
+            <span className={styles.range}>
+              {stamp(week.monday)} — {stamp(dates[6] as Date)}
             </span>
-          )}
-        </div>
-        {/* Only the keys that do something today, in the design's order. Its legend lists
-            nine; the one missing is `L` for `list`, which has no API to save to yet, and a
-            legend that promises it is a worse guide than a short one. */}
-        <div className={styles.legend}>
-          {[
-            { key: "space", word: "complete" },
-            { key: "⏎", word: "open" },
-            { key: "E", word: "edit" },
-            { key: "M", word: "move" },
-            { key: "O", word: "note" },
-            { key: "⌫", word: "delete" },
-            { key: "N", word: "new" },
-            { key: "T", word: "this week" },
-          ].map((entry) => (
-            <span key={entry.key} className={styles.legendItem}>
-              <span className={styles.key}>{entry.key}</span>
-              <span className={styles.legendWord}>{entry.word}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        {week.days.map((capacity, index) => (
-          <DayColumn
-            key={capacity.day}
-            capacity={capacity}
-            lighter={capacity.load === "fine" ? null : lightestDay(week.days, capacity.day)}
-            tasks={week.byDay.get(capacity.day) ?? []}
-            week={week.days}
-            allTasks={week.tasks}
-            carried={week.carried.get(capacity.day) ?? []}
-            // Null on the first column only. What Monday inherits comes from the Sunday
-            // before the week — fetched so the figures are right, never rendered — so there
-            // is no row on this screen to send anybody to.
-            onGoToOwner={index === 0 ? null : focusTask}
-            openTask={openTask}
-            onOpenTask={setOpenTask}
-            onSaveTask={async (taskId, changes) => {
-              await week.update(taskId, changes);
-              // Back to the resting panel rather than shut. The row stays where the reader
-              // was, and the change they just made is on it — on another column, after a move.
-              setOpenTask({ id: taskId, panel: "open" });
-              focusOnceReloaded({ task: taskId });
-            }}
-            onDeleteTask={async (task, snapshot) => {
-              const target = focusAfterDeleting(task, timezone);
-              // Sent now, not when the window closes: holding the DELETE would keep the slot
-              // taken from somebody deleting precisely to free it (the division of item 2).
-              await week.remove(task.id);
-              setOpenTask(null);
-              // A confirmed delete has no undo, and leaves any notice already showing alone.
-              if (snapshot !== null) {
-                setTrash({ day: zonedDay(task.start_at, timezone), title: task.title, snapshot, failure: null });
-              }
-              focusOnceReloaded(target);
-            }}
-            trash={trash?.day === capacity.day ? trash : null}
-            onUndo={async () => {
-              if (trash === null) return;
-              try {
-                // A recreate, so a new id. Focus follows the task that exists now, found by the
-                // id the server just gave it, never by the one that was deleted.
-                const restored = await week.restore(trash.snapshot);
-                setTrash(null);
-                focusOnceReloaded({ task: restored.id });
-              } catch (problem) {
-                setTrash({
-                  ...trash,
-                  failure: problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.",
-                });
-              }
-            }}
-            index={index}
-            weekday={weekdayName(capacity.weekday)}
-            date={stamp(dates[index] as Date)}
-            today={index === todayIndex}
-            // Only inside the week that holds today. A week entirely in the past would
-            // otherwise render seven greyed dates, which is a lot of recessive ink to say
-            // one thing the header already says.
-            past={todayIndex >= 0 && index < todayIndex}
-            timezone={week.me?.timezone ?? "UTC"}
-            formOpen={openDay === capacity.day}
-            submitting={week.creating}
-            serverError={openDay === capacity.day ? week.createError : null}
-            onHover={(day) => {
-              hovered.current = day;
-            }}
-            onOpenForm={(day) => {
-              week.clearCreateError();
-              setOpenDay(day);
-            }}
-            onCancelForm={() => {
-              week.clearCreateError();
-              setOpenDay(null);
-            }}
-            onCreate={(task: NewTask) => {
-              void week
-                .create(task)
-                .then(() => {
-                  setOpenDay(null);
-                })
-                .catch(() => {
-                  // The form stays open holding the server's message. Closing it here would
-                  // throw away what the person typed for a rule they can still satisfy by
-                  // moving the task an hour.
-                });
-            }}
-            onToggle={(task) => {
-              void week.toggle(task);
+            <button
+              type="button"
+              className={styles.ghost}
+              onClick={() => {
+                week.goTo(week.offset + 1);
+              }}
+            >
+              <span>next</span>
+              <span className={styles.key}>&#93;</span>
+            </button>
+            <button
+              type="button"
+              className={styles.home}
+              disabled={week.offset === 0}
+              onClick={() => {
+                week.goTo(0);
+              }}
+            >
+              <span>this week</span>
+              <span className={styles.key}>T</span>
+            </button>
+            {/*
+             * How far from now, in words. `[` and `]` move a week at a time and the date range
+             * alone does not say how many of them have been pressed — three weeks out reads as
+             * a plausible set of dates unless something counts them.
+             */}
+            {week.offset !== 0 && (
+              <span data-away className={styles.away}>
+                {week.offset > 0 ? "+" : "-"}
+                {String(distance)} {distance === 1 ? "week" : "weeks"}
+              </span>
+            )}
+          </div>
+          <Menu
+            email={week.me.email}
+            timezone={week.me.timezone}
+            onSignOut={() => {
+              void signOut();
             }}
           />
-        ))}
-      </div>
-
-      {taskCount === 0 && (
-        <div className={styles.emptyWeek}>
-          <span className={styles.emptyWeekHead}>Nothing booked this week.</span>
-          <span className={styles.emptyWeekFigure}>
-            {formatMinutes(usableMinutes)} free across seven days.
-          </span>
-          <span className={styles.emptyWeekNote}>
-            Capacity is known before anything is on it.
-          </span>
         </div>
-      )}
-    </div>
+
+        <div className={styles.summary}>
+          {/* Booked leads here for the same reason it leads in a column: free floors at zero,
+              and a week that reads `0m free` at the top says nothing about how full it is. */}
+          <div className={styles.summaryFigures}>
+            <span className={styles.figureStrong}>{formatMinutes(bookedMinutes)} booked</span>
+            <span className={styles.figure}>
+              {formatMinutes(Math.max(0, usableMinutes - bookedMinutes))} free of{" "}
+              {formatMinutes(usableMinutes)} budget
+            </span>
+            <span className={styles.figure}>
+              {taskCount} {taskCount === 1 ? "task" : "tasks"}
+            </span>
+            {overDays > 0 && (
+              <span className={styles.chip}>
+                {overDays} {overDays === 1 ? "day" : "days"} over budget
+              </span>
+            )}
+          </div>
+          {/* Only the keys that do something today, in the design's order. Its legend lists
+              nine; the one missing is `L` for `list`, which has no API to save to yet, and a
+              legend that promises it is a worse guide than a short one. */}
+          <div className={styles.legend}>
+            {[
+              { key: "space", word: "complete" },
+              { key: "⏎", word: "open" },
+              { key: "E", word: "edit" },
+              { key: "M", word: "move" },
+              { key: "O", word: "note" },
+              { key: "⌫", word: "delete" },
+              { key: "N", word: "new" },
+              { key: "T", word: "this week" },
+            ].map((entry) => (
+              <span key={entry.key} className={styles.legendItem}>
+                <span className={styles.key}>{entry.key}</span>
+                <span className={styles.legendWord}>{entry.word}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.grid}>
+          {week.days.map((capacity, index) => (
+            <DayColumn
+              key={capacity.day}
+              capacity={capacity}
+              lighter={capacity.load === "fine" ? null : lightestDay(week.days, capacity.day)}
+              tasks={week.byDay.get(capacity.day) ?? []}
+              week={week.days}
+              allTasks={week.tasks}
+              carried={week.carried.get(capacity.day) ?? []}
+              // Null on the first column only. What Monday inherits comes from the Sunday
+              // before the week — fetched so the figures are right, never rendered — so there
+              // is no row on this screen to send anybody to.
+              onGoToOwner={index === 0 ? null : focusTask}
+              openTask={openTask}
+              onOpenTask={setOpenTask}
+              onSaveTask={async (taskId, changes) => {
+                await week.update(taskId, changes);
+                // Back to the resting panel rather than shut. The row stays where the reader
+                // was, and the change they just made is on it — on another column, after a move.
+                setOpenTask({ id: taskId, panel: "open" });
+                focusOnceReloaded({ task: taskId });
+              }}
+              onDeleteTask={async (task, snapshot) => {
+                const target = focusAfterDeleting(task, timezone);
+                // Sent now, not when the window closes: holding the DELETE would keep the slot
+                // taken from somebody deleting precisely to free it (the division of item 2).
+                await week.remove(task.id);
+                setOpenTask(null);
+                // A confirmed delete has no undo, and leaves any notice already showing alone.
+                if (snapshot !== null) {
+                  deletes.current += 1;
+                  setTrash({
+                    id: deletes.current,
+                    day: zonedDay(task.start_at, timezone),
+                    title: task.title,
+                    snapshot,
+                    restoring: false,
+                    failure: null,
+                  });
+                }
+                focusOnceReloaded(target);
+              }}
+              index={index}
+              weekday={weekdayName(capacity.weekday)}
+              date={stamp(dates[index] as Date)}
+              today={index === todayIndex}
+              // Only inside the week that holds today. A week entirely in the past would
+              // otherwise render seven greyed dates, which is a lot of recessive ink to say
+              // one thing the header already says.
+              past={todayIndex >= 0 && index < todayIndex}
+              timezone={week.me?.timezone ?? "UTC"}
+              formOpen={openDay === capacity.day}
+              submitting={week.creating}
+              serverError={openDay === capacity.day ? week.createError : null}
+              onHover={(day) => {
+                hovered.current = day;
+              }}
+              onOpenForm={(day) => {
+                week.clearCreateError();
+                setOpenDay(day);
+              }}
+              onCancelForm={() => {
+                week.clearCreateError();
+                setOpenDay(null);
+              }}
+              onCreate={(task: NewTask) => {
+                void week
+                  .create(task)
+                  .then(() => {
+                    setOpenDay(null);
+                  })
+                  .catch(() => {
+                    // The form stays open holding the server's message. Closing it here would
+                    // throw away what the person typed for a rule they can still satisfy by
+                    // moving the task an hour.
+                  });
+              }}
+              onToggle={(task) => {
+                void week.toggle(task);
+              }}
+            />
+          ))}
+        </div>
+
+        {taskCount === 0 && (
+          <div className={styles.emptyWeek}>
+            <span className={styles.emptyWeekHead}>Nothing booked this week.</span>
+            <span className={styles.emptyWeekFigure}>
+              {formatMinutes(usableMinutes)} free across seven days.
+            </span>
+            <span className={styles.emptyWeekNote}>
+              Capacity is known before anything is on it.
+            </span>
+          </div>
+        )}
+      </div>
+      {region}
+    </>
   );
 }
