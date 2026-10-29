@@ -1,21 +1,10 @@
 /*
- * The read-only checklist and the new task form.
+ * The read-only checklist an open row shows, until the checklist panel replaces it.
  *
- * What is left of the second round's stylesheet. The page, the days, their rows and bands, and
- * the loading and unreachable weeks moved to the round's tokens in WeekScreen, WeekHeader and
- * Day.module.css (ADR-0052); the rest moves as each part is rebuilt, and this file goes with
- * the last of them.
+ * What is left of the second round's stylesheet. Everything else on the week moved to the
+ * round's tokens in WeekScreen, WeekHeader and Day.module.css (ADR-0052), and this file goes
+ * with the checklist panel.
  */
-
-/* The keyboard hint next to every action. Not decoration: on a screen opened every day, a
-   shortcut is a feature, and showing it is what makes it discoverable. */
-.key {
-  font: 500 11px/1 var(--mono);
-  border: 1px solid var(--rule2);
-  border-radius: 4px;
-  padding: 2px 4px;
-  color: var(--faint);
-}
 
 .checkMark {
   position: absolute;
@@ -65,71 +54,6 @@
   text-decoration: line-through;
 }
 
-.form {
-  border-top: 1px solid var(--rule2);
-  padding: var(--pad);
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.formHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.formTitle {
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-.formWhen {
-  font: 400 12px/1 var(--mono);
-  color: var(--faint);
-}
-
-/* Filled, and 44px tall: the field is where the eye lands, and at 30px it was a target the
-   finger had to aim for. */
-.input {
-  width: 100%;
-  min-height: 44px;
-  background: var(--field);
-  border: 1px solid var(--field-border);
-  border-radius: var(--radius-md);
-  padding: 8px;
-  font: 500 12px/1.2 var(--sans);
-  caret-color: var(--ink);
-}
-
-/* A field already has an edge, so focus moves the edge rather than drawing a second ring
-   two pixels outside it. */
-.input:focus-visible {
-  outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px var(--fill);
-}
-
-.inputMono {
-  composes: input;
-  font: 400 12px/1.2 var(--mono);
-}
-
-.pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.itemRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .itemBox {
   position: relative;
   width: 14px;
@@ -138,95 +62,4 @@
   flex: none;
   border: 1px solid var(--rule2);
   border-radius: 3px;
-}
-
-.itemInput {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--field-border);
-  padding: 5px 0;
-  font: 400 12px/1.2 var(--sans);
-  caret-color: var(--ink);
-}
-
-.addItem {
-  align-self: flex-start;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font: 400 12px/1 var(--sans);
-  color: var(--dim);
-  cursor: pointer;
-  border-bottom: 1px solid var(--rule2);
-}
-
-.error {
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-  background: var(--accent-tint);
-  padding: 8px;
-  font: 400 12px/1.45 var(--sans);
-  color: var(--chip-ink);
-  text-wrap: pretty;
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 2px;
-}
-
-/* 40px, under the 44 of the fields above it: a column is a narrow place, and the button is
-   the end of the form rather than the place it is filled in. */
-.submit {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  background: var(--ink);
-  color: var(--bg);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-  cursor: pointer;
-  font: 600 12px/1 var(--sans);
-  letter-spacing: 0.03em;
-}
-
-.submit:disabled {
-  opacity: 0.55;
-  cursor: progress;
-}
-
-.submitKey {
-  font: 500 11px/1 var(--mono);
-  border-radius: 4px;
-  opacity: 0.65;
-}
-
-/* The same height as the button beside it, or the pair sits on two baselines. */
-.cancel {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  background: transparent;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-  cursor: pointer;
-  font: 400 12px/1 var(--sans);
-  color: var(--dim);
-}
-
-/* A key nobody can press is a label for nothing. On a device with no hover and a coarse
-   pointer there is almost certainly no keyboard, so the shortcuts go. */
-@media (hover: none) and (pointer: coarse) {
-  .key,
-  .submitKey {
-    display: none;
-  }
 }

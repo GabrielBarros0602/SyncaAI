@@ -440,9 +440,8 @@ describe("deleting a task that can come back", () => {
 
       fireEvent.click(document.querySelector('[data-new-task="2026-08-27"]') as HTMLElement);
       fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Read chapter 2" } });
-      fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "15:00" } });
-      fireEvent.change(screen.getByLabelText("Duration in minutes"), { target: { value: "1h" } });
-      fireEvent.keyDown(screen.getByLabelText("Title"), { key: "Enter" });
+      fireEvent.change(screen.getByLabelText("Time"), { target: { value: "15:00" } });
+      fireEvent.click(screen.getByRole("button", { name: "save" }));
 
       await waitFor(() => {
         expect(screen.getByRole("status").textContent).toBe("Added “Read chapter 2” to Thu 27, 15:00.");

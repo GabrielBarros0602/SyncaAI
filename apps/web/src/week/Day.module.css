@@ -1,6 +1,6 @@
 /*
- * A day of the week and its header, as week-desktop.dc.html draws them (item 17 of the round:
- * each number once). The rows inside still wear Week.module.css until they are rebuilt.
+ * A day of the week, its header, its rows and their panels, and the new task dialog, as
+ * week-desktop.dc.html draws them (item 17 of the round: each number once).
  */
 
 .day {
@@ -30,7 +30,7 @@
 }
 
 /* Cells sit 4px apart, so a ring outside one would run into the next: it goes inside the edge
-   (item 6 of the round). An opened row is the exception, in Week.module.css. */
+   (item 6 of the round). An opened row is the exception, below. */
 .head:focus-visible,
 .newTask:focus-visible {
   outline-offset: -2px;
@@ -881,6 +881,99 @@
 
 @media (hover: none) and (pointer: coarse) {
   .key {
+    display: none;
+  }
+}
+
+/* The new task dialog. Native, so the browser keeps focus inside and the week inert. */
+
+.dialog {
+  width: calc(100% - 2 * var(--space-5));
+  max-width: 520px;
+  max-height: 84vh;
+  margin: 8vh auto auto;
+  padding: var(--space-5);
+  overflow-y: auto;
+  border: 0;
+  border-radius: var(--radius-4);
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow:
+    var(--shadow-raised),
+    inset 0 0 0 1px var(--line-strong);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The round draws the week behind still in view, so the backdrop only catches the click that
+   closes it. */
+.dialog::backdrop {
+  background: transparent;
+}
+
+.dialogHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.dialogTitle {
+  margin: 0;
+  font: var(--weight-strong) var(--text-5) / var(--leading-5) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+.dialogKey {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-left: var(--space-2);
+  border-radius: var(--radius-2);
+  background: var(--sunken);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.addRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .dialogKey {
     display: none;
   }
 }

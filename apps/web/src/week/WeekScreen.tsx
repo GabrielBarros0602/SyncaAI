@@ -3,19 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
 import {
-  clock,
   dayMonth,
   daysFrom,
   weekRange,
-  weekdayName,
   weekdayOf,
   zonedDay,
-  zonedMinutes,
 } from "../lib/time";
-import type { NewTask, Task } from "../api/types";
+import type { Task } from "../api/types";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayColumn } from "./DayColumn";
+import { NewTaskDialog } from "./NewTaskDialog";
 import { WeekHeader } from "./WeekHeader";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
@@ -123,7 +121,7 @@ export function WeekScreen(): React.ReactNode {
     try {
       // A recreate, so a new id. Focus follows the task that exists now, found by the id the
       // server just gave it, never by the one that was deleted.
-      const restored = await week.restore(deleted.snapshot);
+      const restored = await week.create(deleted.snapshot);
       // Only while nothing newer has been said: a delete or a move since would be the news.
       if (notices.current === deleted.id) {
         say(`Restored “${deleted.title}” on ${dayLabel(deleted.day)}.`);
@@ -376,45 +374,39 @@ export function WeekScreen(): React.ReactNode {
                 focusOnceReloaded(target);
               }}
               index={index}
-              weekday={weekdayName(capacity.weekday)}
               date={dayMonth(dates[index] as Date)}
               today={capacity.day === todayKey}
               // Local dates as YYYY-MM-DD compare as strings in calendar order.
               past={todayKey !== null && capacity.day < todayKey}
               timezone={week.me?.timezone ?? "UTC"}
-              formOpen={openDay === capacity.day}
-              submitting={week.creating}
-              serverError={openDay === capacity.day ? week.createError : null}
               focusedCell={current.day === index ? current.cell : null}
               onFocusCell={(cell) => {
                 setFocus({ offset: week.offset, day: index, cell });
               }}
-              onOpenForm={(day) => {
-                week.clearCreateError();
-                setOpenDay(day);
-              }}
-              onCancelForm={() => {
-                week.clearCreateError();
-                setOpenDay(null);
-              }}
-              onCreate={(task: NewTask) => {
-                void week
-                  .create(task)
-                  .then(() => {
-                    setOpenDay(null);
-                    const at = clock(zonedMinutes(task.start_at, timezone));
-                    say(`Added “${task.title}” to ${dayLabel(zonedDay(task.start_at, timezone))}, ${at}.`);
-                  })
-                  .catch(() => {
-                    // The form stays open holding the server's message. Closing it here would
-                    // throw away what the person typed for a rule they can still satisfy by
-                    // moving the task an hour.
-                  });
-              }}
+              onOpenForm={setOpenDay}
               onToggle={week.toggle}
             />
           ))}
         </div>
+        {openDay !== null && (
+          <NewTaskDialog
+            key={openDay}
+            startDay={openDay}
+            days={week.days}
+            timezone={timezone}
+            onCreate={async (task, sentence) => {
+              const created = await week.create(task);
+              setOpenDay(null);
+              say(sentence);
+              // On the row it made, which is where somebody looks next, rather than back on
+              // the button that opened the dialog.
+              focusOnceReloaded({ task: created.id });
+            }}
+            onClose={() => {
+              setOpenDay(null);
+            }}
+          />
+        )}
       </main>
       {region}
     </>

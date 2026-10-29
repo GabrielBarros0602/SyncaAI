@@ -87,19 +87,13 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
       onSaveTask={onSave ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}
       index={0}
-      weekday="Mon"
       date="Aug 24"
       today={false}
       past={false}
       timezone={SAO_PAULO}
-      formOpen={false}
-      submitting={false}
-      serverError={null}
       focusedCell={0}
       onFocusCell={() => undefined}
       onOpenForm={() => undefined}
-      onCancelForm={() => undefined}
-      onCreate={() => undefined}
       onToggle={() => Promise.resolve()}
     />,
   );

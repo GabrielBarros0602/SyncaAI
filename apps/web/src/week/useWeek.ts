@@ -61,18 +61,16 @@ export interface Week {
   offset: number;
   goTo: (offset: number) => void;
   reload: () => void;
-  create: (task: NewTask) => Promise<void>;
+  /**
+   * Create a task, or recreate a deleted one from its snapshot. Resolves with the task the
+   * server made, new id and all; rejects with the server's `ApiError`, which its caller shows.
+   */
+  create: (task: NewTask) => Promise<Task>;
   /** Send a partial change. Rejects with the server's `ApiError` so the panel can show it. */
   update: (taskId: string, changes: TaskChanges) => Promise<void>;
   toggle: (task: Task) => Promise<void>;
   /** Delete a task. A 404 counts as done; anything else rejects with the server's `ApiError`. */
   remove: (taskId: string) => Promise<void>;
-  /** Recreate a deleted task from its snapshot. Resolves with the task the server created. */
-  restore: (snapshot: NewTask) => Promise<Task>;
-  /** The server's word on the last create. A conflict is a 409 and the message is the API's. */
-  createError: string | null;
-  clearCreateError: () => void;
-  creating: boolean;
 }
 
 export function useWeek(): Week {
@@ -86,8 +84,6 @@ export function useWeek(): Week {
   // Each task with a write in progress, and the reload that will show it: null until the
   // write itself has answered.
   const [writes, setWrites] = useState<ReadonlyMap<string, number | null>>(new Map());
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
 
   const monday = mondayOf(new Date(), offset);
   const week = daysFrom(monday);
@@ -200,20 +196,11 @@ export function useWeek(): Week {
 
   const create = useCallback(
     async (task: NewTask) => {
-      setCreating(true);
-      setCreateError(null);
-      try {
-        await api.post<Task>("/tasks", task);
-        refetch();
-      } catch (problem) {
-        // The overlap rule lives in the database as an exclusion constraint, so its 409 is
-        // the only authority. This client can only see the week on screen, and a task in an
-        // adjacent week would pass a local check and then be refused anyway.
-        setCreateError(problem instanceof ApiError ? problem.detail : "Couldn't reach the server.");
-        throw problem;
-      } finally {
-        setCreating(false);
-      }
+      // The overlap rule lives in the database as an exclusion constraint, so its 409 is the
+      // only authority, and the dialog or the undo that asked shows it.
+      const created = await api.post<Task>("/tasks", task);
+      refetch();
+      return created;
     },
     [refetch],
   );
@@ -253,21 +240,6 @@ export function useWeek(): Week {
     [tracked],
   );
 
-  const restore = useCallback(
-    async (snapshot: NewTask) => {
-      // Not `create`: that one holds the new-task form's error and busy state, and an undo
-      // belongs to the notice that offered it, which shows its own refusal.
-      const task = await api.post<Task>("/tasks", snapshot);
-      refetch();
-      return task;
-    },
-    [refetch],
-  );
-
-  const clearCreateError = useCallback(() => {
-    setCreateError(null);
-  }, []);
-
   return {
     status,
     // From the last week that arrived, not only the current one: who is signed in does not
@@ -291,9 +263,5 @@ export function useWeek(): Week {
     update,
     toggle,
     remove,
-    restore,
-    createError,
-    clearCreateError,
-    creating,
   };
 }
