@@ -410,7 +410,9 @@ outra volta de design. Os dois só aparecem com o texto a 200%:
 A implementação achou um terceiro em 2026-10-29, conferindo o diálogo de nova tarefa: na semana
 a 1100px, com o texto a 200%, o nome do dia quebra no meio da palavra ("Monda" / "y"). A coluna
 tem 155px e o título aceita quebra em qualquer ponto, o que o mantém dentro da célula mas não
-legível. Fica para o passo da faixa entre 640 e 1099px, que já mexe na largura das colunas.
+legível. Fica para o passo da faixa entre 640 e 1099px, que já mexe na largura das colunas. O
+painel de checklist, conferido no mesmo dia, mostra o mesmo nos rótulos dos itens ("Outl" /
+"ine"): a alça, a caixa e o × levam 72px dos 123 que a linha tem.
 
 ### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 

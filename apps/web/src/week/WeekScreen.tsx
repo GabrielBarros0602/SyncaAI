@@ -44,8 +44,10 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["E"], label: "edit" },
   { keys: ["M"], label: "move" },
   { keys: ["O"], label: "note" },
+  { keys: ["C"], label: "checklist" },
   { keys: ["⌫"], label: "delete" },
   { keys: ["N"], label: "new task on the focused day" },
+  { keys: ["Alt", "↑", "↓"], label: "reorder a checklist item" },
   { keys: ["[", "]"], label: "previous or next week" },
   { keys: ["T"], label: "back to this week" },
   { keys: ["Ctrl", "Z"], label: "undo a delete" },
@@ -385,6 +387,7 @@ export function WeekScreen(): React.ReactNode {
               }}
               onOpenForm={setOpenDay}
               onToggle={week.toggle}
+              onChecklist={week.checklist}
             />
           ))}
         </div>
