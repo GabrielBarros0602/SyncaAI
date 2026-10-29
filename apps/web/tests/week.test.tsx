@@ -65,8 +65,6 @@ const NOOP = {
   focusedCell: 0,
   onFocusCell: () => undefined,
   onOpenForm: () => undefined,
-  onCancelForm: () => undefined,
-  onCreate: () => undefined,
   onToggle: () => Promise.resolve(),
 };
 
@@ -132,14 +130,10 @@ function renderDay(
       onSaveTask={when.onSaveTask ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}
       index={0}
-      weekday="Mon"
       date="24 Aug"
       today={when.today ?? false}
       past={when.past ?? false}
       timezone={SAO_PAULO}
-      formOpen={false}
-      submitting={false}
-      serverError={null}
       {...NOOP}
       focusedCell={grid.focusedCell ?? NOOP.focusedCell}
       onToggle={when.onToggle ?? (() => Promise.resolve())}

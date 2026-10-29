@@ -13,7 +13,6 @@ import { type Carried, splitOf } from "./carried";
 import { CarriedBand } from "./CarriedBand";
 import { warningFor } from "./load";
 import { type Panel, TaskRow } from "./TaskRow";
-import { NewTaskForm } from "./NewTaskForm";
 import { cx } from "../lib/cx";
 import day from "./Day.module.css";
 
@@ -97,8 +96,6 @@ interface Props {
   onSaveTask: (taskId: string, changes: TaskChanges, sentence?: string) => Promise<void>;
   onDeleteTask: (task: Task, snapshot: NewTask | null) => Promise<void>;
   index: number;
-  /** `Wed`, which the new task form names the day by. */
-  weekday: string;
   /** `22 Oct`. */
   date: string;
   /** This column is the day it is now, in the user's zone. */
@@ -106,9 +103,6 @@ interface Props {
   /** Before today, in any week. Nothing new can start on it, so it offers nothing new. */
   past: boolean;
   timezone: string;
-  formOpen: boolean;
-  submitting: boolean;
-  serverError: string | null;
   /**
    * Which of this day's cells holds the week's one tab stop, or null when another day does
    * (ADR-0053). Clamped here, so a stop left past the last cell by a delete lands on it.
@@ -116,8 +110,6 @@ interface Props {
   focusedCell: number | null;
   onFocusCell: (cell: number) => void;
   onOpenForm: (day: string) => void;
-  onCancelForm: () => void;
-  onCreate: (task: NewTask) => void;
   onToggle: (task: Task) => Promise<void>;
 }
 
@@ -134,19 +126,13 @@ export function DayColumn({
   onSaveTask,
   onDeleteTask,
   index,
-  weekday,
   date,
   today,
   past,
   timezone,
-  formOpen,
-  submitting,
-  serverError,
   focusedCell,
   onFocusCell,
   onOpenForm,
-  onCancelForm,
-  onCreate,
   onToggle,
 }: Props): React.ReactNode {
   const over = capacity.over_capacity;
@@ -166,7 +152,7 @@ export function DayColumn({
   // The day's cells, top to bottom: its header, the band it inherits, its rows, and the way to
   // a new task when it can take one. The arrows walk them in this order (ADR-0053).
   const band = carried.length > 0 ? 1 : 0;
-  const footCell = !past && !formOpen ? 1 + band + tasks.length : null;
+  const footCell = !past ? 1 + band + tasks.length : null;
   const last = footCell ?? band + tasks.length;
   const stop = focusedCell === null ? null : Math.min(focusedCell, last);
   const cellProps = (cell: number): { cell: string; tabStop: boolean; onFocusCell: () => void } => ({
@@ -250,7 +236,7 @@ export function DayColumn({
         {/* A day holding only inherited minutes is not empty, and saying it is would
             contradict both the figure above and the band. In the header's cell, since a row
             of the grid holds cells and nothing else. */}
-        {capacity.task_count === 0 && carried.length === 0 && !formOpen && (
+        {capacity.task_count === 0 && carried.length === 0 && (
           <span className={day.empty}>Nothing booked.</span>
         )}
       </div>
@@ -291,45 +277,31 @@ export function DayColumn({
         );
       })}
 
-      {(formOpen || foot !== null) && (
+      {/* From today on, in any week: a day that has gone cannot take a new start, and a button
+          the server would refuse every time is not an offer. The button is the cell's stop
+          rather than its cell, since it is the one thing in it. */}
+      {foot !== null && (
         <div role="gridcell">
-          {formOpen ? (
-            <NewTaskForm
-              weekday={weekday}
-              date={date}
-              day={capacity.day}
-              timezone={timezone}
-              submitting={submitting}
-              serverError={serverError}
-              onSubmit={onCreate}
-              onCancel={onCancelForm}
-            />
-          ) : (
-            foot !== null && (
-              // From today on, in any week: a day that has gone cannot take a new start, and a
-              // button the server would refuse every time is not an offer. The button is the
-              // cell's stop rather than its cell, since it is the one thing in it.
-              <button
-                type="button"
-                // Where focus goes when the last row of this day is deleted: the nearest thing
-                // in the column somebody can still act on.
-                data-new-task={capacity.day}
-                data-cell={foot.cell}
-                tabIndex={foot.tabStop ? 0 : -1}
-                className={day.newTask}
-                aria-keyshortcuts="N"
-                onFocus={foot.onFocusCell}
-                onClick={() => {
-                  onOpenForm(capacity.day);
-                }}
-              >
-                + new task
-                <kbd aria-hidden="true" className={day.key}>
-                  N
-                </kbd>
-              </button>
-            )
-          )}
+          <button
+            type="button"
+            // Where focus goes when the last row of this day is deleted: the nearest thing in the
+            // column somebody can still act on.
+            data-new-task={capacity.day}
+            data-cell={foot.cell}
+            tabIndex={foot.tabStop ? 0 : -1}
+            className={day.newTask}
+            aria-keyshortcuts="N"
+            aria-haspopup="dialog"
+            onFocus={foot.onFocusCell}
+            onClick={() => {
+              onOpenForm(capacity.day);
+            }}
+          >
+            + new task
+            <kbd aria-hidden="true" className={day.key}>
+              N
+            </kbd>
+          </button>
         </div>
       )}
     </div>
