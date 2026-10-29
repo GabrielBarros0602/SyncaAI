@@ -95,6 +95,7 @@ function openMove({ task, others = [], days = theWeek(), onSave, onOpen, panel =
       onFocusCell={() => undefined}
       onOpenForm={() => undefined}
       onToggle={() => Promise.resolve()}
+      onChecklist={() => Promise.resolve()}
     />,
   );
 }

@@ -763,6 +763,149 @@
   cursor: progress;
 }
 
+/* The checklist panel: a line per item, its handle, its box, its label and its remove. */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 calc(var(--space-1) * -1);
+  padding: 0;
+  list-style: none;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: var(--radius-2);
+}
+
+/* Where a dragged item would land. */
+.checkItemOver {
+  background: var(--tag);
+}
+
+.handle,
+.itemBox,
+.itemRemove {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  cursor: pointer;
+}
+
+.handle {
+  color: var(--ink-3);
+  font: var(--weight-regular) var(--text-2) / 1 var(--font-mono);
+  cursor: grab;
+}
+
+.handle:hover {
+  color: var(--ink);
+}
+
+.itemMark {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+
+.itemMarkDone {
+  background: var(--primary);
+  box-shadow: none;
+}
+
+.itemMarkDone::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border-right: 2px solid var(--on-primary);
+  border-bottom: 2px solid var(--on-primary);
+  transform: rotate(45deg);
+}
+
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--target);
+  padding: 2px var(--space-1);
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.itemLabel:hover,
+.itemRemove:hover {
+  background: var(--hover);
+}
+
+.itemLabelDone {
+  color: var(--ink-2);
+  text-decoration: line-through;
+}
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-1);
+  background: var(--field);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--focus);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.itemRemove {
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-3) / 1 var(--font-sans);
+}
+
+.itemRemove:hover {
+  color: var(--ink);
+}
+
+.addLabel {
+  font: var(--weight-strong) var(--text-1) / var(--leading-1) var(--font-sans);
+}
+
+.addInput {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-2);
+  line-height: var(--leading-2);
+}
+
+.addButton {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+}
+
+.said {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
 /* Dashed, with the arrow it came by and no verbs: it cannot be mistaken for a row. */
 .band {
   display: flex;
@@ -966,10 +1109,16 @@
   overflow-wrap: anywhere;
 }
 
+/* The button goes under the field when both do not fit: beside it in a 155px column at 200%
+   text, the field was left 20px wide, inside the cell and no use to anybody. */
 .addRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.addRow .input {
+  flex: 1 1 4em;
 }
 
 @media (hover: none) and (pointer: coarse) {

@@ -13,6 +13,7 @@ import { type Carried, splitOf } from "./carried";
 import { CarriedBand } from "./CarriedBand";
 import { warningFor } from "./load";
 import { type Panel, TaskRow } from "./TaskRow";
+import type { ChecklistChange } from "./useWeek";
 import { cx } from "../lib/cx";
 import day from "./Day.module.css";
 
@@ -111,6 +112,7 @@ interface Props {
   onFocusCell: (cell: number) => void;
   onOpenForm: (day: string) => void;
   onToggle: (task: Task) => Promise<void>;
+  onChecklist: (taskId: string, change: ChecklistChange) => Promise<void>;
 }
 
 export function DayColumn({
@@ -134,6 +136,7 @@ export function DayColumn({
   onFocusCell,
   onOpenForm,
   onToggle,
+  onChecklist,
 }: Props): React.ReactNode {
   const over = capacity.over_capacity;
   // Against the budget, the same thing `over_capacity` is measured against. Against the
@@ -273,6 +276,7 @@ export function DayColumn({
             onSave={(changes, sentence) => onSaveTask(task.id, changes, sentence)}
             onToggle={onToggle}
             onDelete={(snapshot) => onDeleteTask(task, snapshot)}
+            onChecklist={(change) => onChecklist(task.id, change)}
           />
         );
       })}
