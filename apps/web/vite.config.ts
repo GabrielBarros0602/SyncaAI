@@ -35,6 +35,11 @@ export default defineConfig({
     globals: true,
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["tests/setup.ts"],
+    // The timeout is there to catch a hang, not to time anything. The first test of a file
+    // pays its worker's cold start (jsdom, React, the screen's module graph), which already
+    // took 4 to 6 s under the full parallel run on the development machine against the
+    // default of 5 s, so a test would fail or pass by how busy the machine happened to be.
+    testTimeout: 15_000,
     // The contrast test reads tokens.css as text. Vitest empties every stylesheet it is not
     // told to process, `?raw` imports included, and the test would then find no tokens.
     css: { include: [/styles\/tokens\.css/] },
