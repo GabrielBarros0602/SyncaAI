@@ -66,6 +66,7 @@ const NOOP = {
   onFocusCell: () => undefined,
   onOpenForm: () => undefined,
   onToggle: () => Promise.resolve(),
+  onChecklist: () => Promise.resolve(),
 };
 
 /** A task, given a local start and end in São Paulo. */
@@ -487,7 +488,9 @@ describe("the row, and the box that came out of it", () => {
     expect(container.textContent).not.toContain("Rehearse against a copy of prod.");
   });
 
-  it("shows the note and the checklist once it is open", () => {
+  it("shows the note once it is open, and leaves the checklist to its own panel", () => {
+    // The round's resting row has the verbs and the note; the items are the C panel's, where
+    // they can be changed, and the count stays on the meta line.
     const withBoth = aTask("both", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
       notes: "Rehearse against a copy of prod.",
       items: [
@@ -498,21 +501,20 @@ describe("the row, and the box that came out of it", () => {
     renderDay(aDay({ task_count: 1 }), { tasks: [withBoth], openTask: "both" });
 
     expect(screen.getByText("Rehearse against a copy of prod.")).toBeDefined();
-    expect(screen.getByText("Checklist")).toBeDefined();
-    expect(screen.getByText("Migration dry run")).toBeDefined();
-    expect(screen.getByText("Smoke tests")).toBeDefined();
+    expect(screen.getByText("1/2 checked")).toBeDefined();
+    expect(screen.queryByText("Migration dry run")).toBeNull();
   });
 
-  it("does not offer to change a checklist it has no way to save", () => {
-    // Editing items has no API — TaskUpdate has no items field and no route touches
-    // ChecklistItem — so the lines are text. A control that silently does nothing is worse
-    // than one that was never offered.
-    const withItems = aTask("items", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
-      items: [{ id: "i1", label: "Migration dry run", position: 0, completed_at: null }],
+  it("reaches the checklist with C from the row, a finished task's too", () => {
+    const done = aTask("done", "2026-08-24T09:00:00", "2026-08-24T10:30:00", {
+      completed_at: instant("2026-08-24T10:30:00"),
     });
-    renderDay(aDay({ task_count: 1 }), { tasks: [withItems], openTask: "items" });
+    const opened = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
+    renderDay(aDay({ task_count: 1 }), { tasks: [done], onOpenTask: opened });
 
-    expect(screen.queryByRole("button", { name: /Migration dry run/ })).toBeNull();
+    fireEvent.keyDown(screen.getByRole("gridcell", { expanded: false }), { key: "c" });
+
+    expect(opened).toHaveBeenCalledWith({ id: "done", panel: "list" });
   });
 
   it("names its box for what pressing it does", () => {

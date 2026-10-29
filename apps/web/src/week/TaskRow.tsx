@@ -3,22 +3,23 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { clock, formatCompact, relativeDay, zonedDay, zonedMinutes } from "../lib/time";
 import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
+import { ChecklistPanel } from "./ChecklistPanel";
 import { DeletePanel } from "./DeletePanel";
 import { restoreBlocker, restoreBlockers, snapshotOf } from "./restore";
 import { EditPanel } from "./EditPanel";
 import { MovePanel } from "./MovePanel";
 import { NotePanel } from "./NotePanel";
+import type { ChecklistChange } from "./useWeek";
 import { cx } from "../lib/cx";
 import day from "./Day.module.css";
-import styles from "./Week.module.css";
 
 /**
  * What an opened row is showing.
  *
- * `open` is the resting state the disclosure produces: note and checklist, no form. The rest
- * are verbs. `list` joins this when the checklist has an API to save to.
+ * `open` is the resting state the disclosure produces: the verbs and the note. The rest are
+ * verbs; the checklist is shown by its own, `list`, as the round draws it.
  */
-export type Panel = "open" | "edit" | "move" | "note" | "delete";
+export type Panel = "open" | "edit" | "move" | "note" | "list" | "delete";
 
 interface Verb {
   panel: Panel;
@@ -34,6 +35,7 @@ interface Verb {
 const EDIT: Verb = { panel: "edit", label: "edit", key: "E", shortcut: "E", keys: ["e", "E"] };
 const MOVE: Verb = { panel: "move", label: "move", key: "M", shortcut: "M", keys: ["m", "M"] };
 const NOTE: Verb = { panel: "note", label: "note", key: "O", shortcut: "O", keys: ["o", "O"] };
+const LIST: Verb = { panel: "list", label: "checklist", key: "C", shortcut: "C", keys: ["c", "C"] };
 // The design's key is ⌫. Delete is accepted beside Backspace because on a Mac keyboard the
 // key labelled delete sends Backspace, and on a PC the key labelled Delete sends Delete —
 // each person presses the one their keyboard calls delete.
@@ -55,7 +57,7 @@ const DELETE: Verb = {
  * open decision in the backlog; until it is made, the verb is not offered.
  */
 function verbsFor(task: Task): Verb[] {
-  return task.completed_at === null ? [EDIT, MOVE, NOTE, DELETE] : [EDIT, NOTE, DELETE];
+  return task.completed_at === null ? [EDIT, MOVE, NOTE, LIST, DELETE] : [EDIT, NOTE, LIST, DELETE];
 }
 
 /**
@@ -108,6 +110,8 @@ interface Props {
    * confirmed because no faithful recreate exists. Rejects with the server's `ApiError`.
    */
   onDelete: (snapshot: NewTask | null) => Promise<void>;
+  /** Change the checklist. Rejects with the server's `ApiError`. */
+  onChecklist: (change: ChecklistChange) => Promise<void>;
 }
 
 /**
@@ -139,6 +143,7 @@ export function TaskRow({
   onSave,
   onToggle,
   onDelete,
+  onChecklist,
 }: Props): React.ReactNode {
   const done = task.completed_at !== null;
   const verbs = verbsFor(task);
@@ -348,31 +353,15 @@ export function TaskRow({
             />
           )}
 
-          {/* Shown, not editable: the checklist's own panel, C, comes with its controls. */}
-          {open === "open" && task.items.length > 0 && (
-            <div className={styles.checklist}>
-              <div className={styles.checklistHead}>
-                <span className={styles.checklistTitle}>Checklist</span>
-                <span className={styles.taskNote}>
-                  {checked}/{task.items.length} checked
-                </span>
-              </div>
-              {task.items.map((item) => (
-                <span key={item.id} className={styles.checkItem}>
-                  <span className={styles.itemBox}>
-                    {item.completed_at !== null && <span className={styles.checkMark} />}
-                  </span>
-                  <span
-                    className={cx(
-                      styles.checkLabel,
-                      item.completed_at !== null && styles.checkLabelDone,
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                </span>
-              ))}
-            </div>
+          {open === "list" && (
+            <ChecklistPanel
+              task={task}
+              saving={saving}
+              onChange={onChecklist}
+              onCancel={() => {
+                onOpen("open");
+              }}
+            />
           )}
         </>
       )}
