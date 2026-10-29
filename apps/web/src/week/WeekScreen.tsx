@@ -2,7 +2,16 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
-import { dayMonth, daysFrom, weekRange, weekdayName, weekdayOf, zonedDay } from "../lib/time";
+import {
+  clock,
+  dayMonth,
+  daysFrom,
+  weekRange,
+  weekdayName,
+  weekdayOf,
+  zonedDay,
+  zonedMinutes,
+} from "../lib/time";
 import type { NewTask, Task } from "../api/types";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
@@ -78,7 +87,16 @@ export function WeekScreen(): React.ReactNode {
   // open row: a second delete replaces the first notice, as the design does. The region times
   // it out; a refusal is a new notice, so its sentence gets its own nine seconds to be read.
   const [trash, setTrash] = useState<Trash | null>(null);
-  const deletes = useRef(0);
+  // What the region says when there is nothing to undo: a task added, moved or brought back,
+  // or a tag created along the way. The newest notice replaces the last, whichever kind.
+  const [said, setSaid] = useState<{ id: number; text: string } | null>(null);
+  const notices = useRef(0);
+
+  function say(text: string): void {
+    notices.current += 1;
+    setTrash(null);
+    setSaid({ id: notices.current, text });
+  }
 
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -106,7 +124,10 @@ export function WeekScreen(): React.ReactNode {
       // A recreate, so a new id. Focus follows the task that exists now, found by the id the
       // server just gave it, never by the one that was deleted.
       const restored = await week.restore(deleted.snapshot);
-      setTrash((current) => (current?.id === deleted.id ? null : current));
+      // Only while nothing newer has been said: a delete or a move since would be the news.
+      if (notices.current === deleted.id) {
+        say(`Restored “${deleted.title}” on ${dayLabel(deleted.day)}.`);
+      }
       focusOnceReloaded({ task: restored.id });
     } catch (problem) {
       const failure = problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.";
@@ -118,7 +139,9 @@ export function WeekScreen(): React.ReactNode {
 
   const notice: Notice | null =
     trash === null
-      ? null
+      ? said === null
+        ? null
+        : { id: `${String(said.id)}:said`, text: said.text }
       : trash.failure !== null
         ? {
             id: `${String(trash.id)}:refused`,
@@ -148,6 +171,7 @@ export function WeekScreen(): React.ReactNode {
       notice={notice}
       onExpire={() => {
         setTrash(null);
+        setSaid(null);
       }}
     />
   );
@@ -322,8 +346,9 @@ export function WeekScreen(): React.ReactNode {
               openTask={openTask}
               saving={week.saving}
               onOpenTask={setOpenTask}
-              onSaveTask={async (taskId, changes) => {
+              onSaveTask={async (taskId, changes, sentence) => {
                 await week.update(taskId, changes);
+                if (sentence !== undefined) say(sentence);
                 // Back to the resting panel rather than shut. The row stays where the reader
                 // was, and the change they just made is on it — on another column, after a move.
                 setOpenTask({ id: taskId, panel: "open" });
@@ -337,9 +362,10 @@ export function WeekScreen(): React.ReactNode {
                 setOpenTask(null);
                 // A confirmed delete has no undo, and leaves any notice already showing alone.
                 if (snapshot !== null) {
-                  deletes.current += 1;
+                  notices.current += 1;
+                  setSaid(null);
                   setTrash({
-                    id: deletes.current,
+                    id: notices.current,
                     day: zonedDay(task.start_at, timezone),
                     title: task.title,
                     snapshot,
@@ -376,6 +402,8 @@ export function WeekScreen(): React.ReactNode {
                   .create(task)
                   .then(() => {
                     setOpenDay(null);
+                    const at = clock(zonedMinutes(task.start_at, timezone));
+                    say(`Added “${task.title}” to ${dayLabel(zonedDay(task.start_at, timezone))}, ${at}.`);
                   })
                   .catch(() => {
                     // The form stays open holding the server's message. Closing it here would

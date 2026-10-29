@@ -391,8 +391,8 @@ describe("deleting a task that can come back", () => {
     await waitFor(() => {
       expect(title("Thesis chapter")).toBeDefined();
     });
-    // The region stays in the page, empty, once there is nothing left to say.
-    expect(screen.getByRole("status").textContent).toBe("");
+    // The region says it came back, and where: the day may not be the one on screen.
+    expect(screen.getByRole("status").textContent).toBe("Restored “Thesis chapter” on Thu 27.");
   });
 
   it("puts focus on the restored row, which has a new id", async () => {
@@ -426,5 +426,27 @@ describe("deleting a task that can come back", () => {
     });
     expect(screen.queryByRole("button", { name: "undo" })).toBeNull();
     expect(posts(server)).toHaveLength(1);
+  });
+
+  describe("what the status region says beyond deletes", () => {
+    it("says a new task was added, and where, once the server has it", async () => {
+      // The day may be out of view, so the notice names it and the time.
+      const server: Server = { tasks: [], calls: [] };
+      serve(server);
+      renderWeek();
+      await waitFor(() => {
+        expect(document.querySelector('[data-new-task="2026-08-27"]')).not.toBeNull();
+      });
+
+      fireEvent.click(document.querySelector('[data-new-task="2026-08-27"]') as HTMLElement);
+      fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Read chapter 2" } });
+      fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "15:00" } });
+      fireEvent.change(screen.getByLabelText("Duration in minutes"), { target: { value: "1h" } });
+      fireEvent.keyDown(screen.getByLabelText("Title"), { key: "Enter" });
+
+      await waitFor(() => {
+        expect(screen.getByRole("status").textContent).toBe("Added “Read chapter 2” to Thu 27, 15:00.");
+      });
+    });
   });
 });

@@ -31,7 +31,7 @@ interface Props {
   /** The week on screen: the days a start can be moved to from here. */
   days: DayCapacity[];
   timezone: string;
-  onSave: (changes: TaskChanges) => Promise<void>;
+  onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -133,7 +133,8 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
     }
 
     setSaving(true);
-    onSave(changes)
+    // A tag that did not exist before is worth saying: a typo would otherwise pass unseen.
+    onSave(changes, isNew ? `Saved “${title}”, and created the tag “${newTag}”.` : undefined)
       .catch((problem: unknown) => {
         // The panel stays open holding what was typed. Closing it here would throw away an
         // edit over a rule the person can still satisfy by moving the task an hour.
