@@ -15,7 +15,7 @@ interface Props {
   /** Every task the screen holds, including the evening before the week. */
   tasks: Task[];
   timezone: string;
-  onSave: (changes: TaskChanges) => Promise<void>;
+  onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
 }
 
 function span(task: Task, timezone: string): string {
@@ -75,7 +75,11 @@ export function MovePanel({ task, days, tasks, timezone, onSave }: Props): React
   function go(option: MoveOption): void {
     setError(null);
     setSaving(true);
-    onSave(moveTo(task, option.startAt))
+    // Named with its new day and time: the row has left the column it was in, and the day it
+    // went to may be scrolled out of view.
+    const to = `${weekdayName(option.weekday)} ${String(Number(option.day.slice(8, 10)))}`;
+    const at = clock(zonedMinutes(task.start_at, timezone));
+    onSave(moveTo(task, option.startAt), `Moved “${task.title}” to ${to}, ${at}.`)
       .catch((problem: unknown) => {
         setError(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
       })

@@ -139,7 +139,12 @@ describe("moving a task to another day", () => {
     // 09:00 on Wednesday in São Paulo is 12:00 UTC. Exactly this object: a title, a tag or a
     // duration riding along would fail here.
     expect(saved).toHaveBeenCalledTimes(1);
-    expect(saved).toHaveBeenCalledWith("lecture", { start_at: "2026-08-26T12:00:00.000Z" });
+    expect(saved).toHaveBeenCalledWith(
+      "lecture",
+      { start_at: "2026-08-26T12:00:00.000Z" },
+      // What the status region will say, naming the new day: the row has left this column.
+      "Moved “Compilers lecture” to Wed 26, 09:00.",
+    );
   });
 
   it("does not offer the day the task is already on", () => {

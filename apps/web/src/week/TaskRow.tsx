@@ -99,7 +99,8 @@ interface Props {
   /** A write about this task has not reached the screen yet. */
   saving: boolean;
   onOpen: (panel: Panel | null) => void;
-  onSave: (changes: TaskChanges) => Promise<void>;
+  /** `sentence`, when a panel has one, is announced once the change is saved. */
+  onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
   /** Complete or reopen. Rejects with the server's `ApiError` when it refuses. */
   onToggle: (task: Task) => Promise<void>;
   /**

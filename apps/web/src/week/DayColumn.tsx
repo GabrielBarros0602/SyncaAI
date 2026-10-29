@@ -93,7 +93,8 @@ interface Props {
   /** The tasks whose last write the screen does not show yet. */
   saving: ReadonlySet<string>;
   onOpenTask: (open: { id: string; panel: Panel } | null) => void;
-  onSaveTask: (taskId: string, changes: TaskChanges) => Promise<void>;
+  /** `sentence` is what the status region says once the week shows the change. */
+  onSaveTask: (taskId: string, changes: TaskChanges, sentence?: string) => Promise<void>;
   onDeleteTask: (task: Task, snapshot: NewTask | null) => Promise<void>;
   index: number;
   /** `Wed`, which the new task form names the day by. */
@@ -283,7 +284,7 @@ export function DayColumn({
             onOpen={(panel) => {
               onOpenTask(panel === null ? null : { id: task.id, panel });
             }}
-            onSave={(changes) => onSaveTask(task.id, changes)}
+            onSave={(changes, sentence) => onSaveTask(task.id, changes, sentence)}
             onToggle={onToggle}
             onDelete={(snapshot) => onDeleteTask(task, snapshot)}
           />

@@ -551,7 +551,8 @@ describe("the two verbs an opened row offers", () => {
       { days },
     );
     return (changes) => {
-      expect(saved).toHaveBeenCalledWith("lecture", changes);
+      // Nothing to announce for these: no tag was created and nothing moved day.
+      expect(saved).toHaveBeenCalledWith("lecture", changes, undefined);
     };
   }
 
@@ -613,6 +614,36 @@ describe("the two verbs an opened row offers", () => {
     expect(screen.getByText("Use 24-hour time, like 14:30.")).toBeDefined();
     expect(document.activeElement).toBe(start);
     expect(saved).not.toHaveBeenCalled();
+  });
+
+  it("says, once saved, that a new tag was created", async () => {
+    // A tag that did not exist is how a typo becomes a second tag nobody meant; the region
+    // says so once the save is in, beside the save button's own warning before it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(json(200, [{ id: "g1", name: "college" }]))),
+    );
+    const saved = vi.fn<(taskId: string, changes: TaskChanges, sentence?: string) => Promise<void>>(
+      () => Promise.resolve(),
+    );
+    renderDay(aDay({ task_count: 1 }), {
+      tasks: [TASK],
+      openTask: { id: "lecture", panel: "edit" },
+      onSaveTask: saved,
+    });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Tag" }), { target: { value: "colege" } });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "save and create tag “colege”" })).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "save and create tag “colege”" }));
+
+    expect(saved).toHaveBeenCalledWith(
+      "lecture",
+      { tag: "colege" },
+      "Saved “lecture”, and created the tag “colege”.",
+    );
+    vi.unstubAllGlobals();
   });
 
   it("reads a duration back the way the screen writes it", () => {
@@ -723,7 +754,7 @@ describe("the two verbs an opened row offers", () => {
     fireEvent.change(screen.getByLabelText("Note"), { target: { value: "   " } });
     fireEvent.click(screen.getByRole("button", { name: /save/ }));
 
-    expect(saved).toHaveBeenCalledWith("noted", { notes: null });
+    expect(saved).toHaveBeenCalledWith("noted", { notes: null }, undefined);
   });
 
   it("leaves Enter to the text in a note, and saves on the modifier", () => {
@@ -744,7 +775,7 @@ describe("the two verbs an opened row offers", () => {
     expect(saved).not.toHaveBeenCalled();
 
     fireEvent.keyDown(box, { key: "Enter", metaKey: true });
-    expect(saved).toHaveBeenCalledWith("lecture", { notes: "first line" });
+    expect(saved).toHaveBeenCalledWith("lecture", { notes: "first line" }, undefined);
   });
 
   it("counts beside its label from the first character, and stops at the bound", () => {
