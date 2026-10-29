@@ -407,6 +407,11 @@ outra volta de design. Os dois só aparecem com o texto a 200%:
 - a linha de conclusão tardia passa da borda no celular a 320, 375 e 667px;
 - o seletor de dia, ao editar um passo do plano, passa da borda a 320px.
 
+A implementação achou um terceiro em 2026-10-29, conferindo o diálogo de nova tarefa: na semana
+a 1100px, com o texto a 200%, o nome do dia quebra no meio da palavra ("Monda" / "y"). A coluna
+tem 155px e o título aceita quebra em qualquer ponto, o que o mantém dentro da célula mas não
+legível. Fica para o passo da faixa entre 640 e 1099px, que já mexe na largura das colunas.
+
 ### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 
 As telas mostraram três problemas que são do servidor, não do desenho:
