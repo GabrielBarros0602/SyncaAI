@@ -28,6 +28,14 @@ import { type Carried, carriedInto } from "./carried";
 
 export type WeekStatus = "loading" | "ready" | "unreachable";
 
+/** One change to a task's checklist, each its own route (ADR-0028). */
+export type ChecklistChange =
+  | { kind: "add"; label: string }
+  | { kind: "rename"; itemId: string; label: string }
+  | { kind: "tick"; itemId: string; completed: boolean }
+  | { kind: "remove"; itemId: string }
+  | { kind: "order"; itemIds: string[] };
+
 interface Snapshot {
   window: string;
   /** The reload it answers. A write is on screen once a snapshot this recent has arrived. */
@@ -71,6 +79,8 @@ export interface Week {
   toggle: (task: Task) => Promise<void>;
   /** Delete a task. A 404 counts as done; anything else rejects with the server's `ApiError`. */
   remove: (taskId: string) => Promise<void>;
+  /** Change a task's checklist. Rejects with the server's `ApiError` so the panel can show it. */
+  checklist: (taskId: string, change: ChecklistChange) => Promise<void>;
 }
 
 export function useWeek(): Week {
@@ -207,9 +217,8 @@ export function useWeek(): Week {
 
   const update = useCallback(
     async (taskId: string, changes: TaskChanges) => {
-      // The error is not held here, unlike `create`'s. A create belongs to a day and there is
-      // one form open at a time; an update belongs to a row, and the panel showing the
-      // message is the one that has to keep what was typed while the message is on screen.
+      // The error is not held here: the panel showing the message is the one that has to
+      // keep what was typed while the message is on screen.
       await tracked(taskId, () => api.patch<Task>(`/tasks/${taskId}`, changes));
     },
     [tracked],
@@ -240,6 +249,32 @@ export function useWeek(): Week {
     [tracked],
   );
 
+  const checklist = useCallback(
+    async (taskId: string, change: ChecklistChange) => {
+      const items = `/tasks/${taskId}/items`;
+      await tracked(taskId, () => {
+        switch (change.kind) {
+          case "add":
+            return api.post(items, { label: change.label });
+          case "rename":
+            return api.patch(`${items}/${change.itemId}`, { label: change.label });
+          case "tick":
+            return api.patch(`${items}/${change.itemId}`, { completed: change.completed });
+          case "remove":
+            // Already gone, from another tab: removed all the same, as a deleted task is.
+            return api.delete(`${items}/${change.itemId}`).catch((problem: unknown) => {
+              if (!(problem instanceof ApiError && problem.status === 404)) throw problem;
+            });
+          case "order":
+            // The whole list, so a list that changed since it was read is refused with a 409
+            // rather than merged into an order nobody chose (ADR-0028).
+            return api.put(`${items}/order`, { item_ids: change.itemIds });
+        }
+      });
+    },
+    [tracked],
+  );
+
   return {
     status,
     // From the last week that arrived, not only the current one: who is signed in does not
@@ -263,5 +298,6 @@ export function useWeek(): Week {
     update,
     toggle,
     remove,
+    checklist,
   };
 }
