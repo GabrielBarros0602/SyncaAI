@@ -36,7 +36,7 @@
   outline-offset: -2px;
 }
 
-.title {
+.headTop {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -60,6 +60,22 @@
      word that only `break-word` is allowed to break. */
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Words a 155px column can be narrower than at 200% text. Hyphenated at a syllable they are
+   still read, "Wednes-day"; broken anywhere they were not, "Monda-y". `anywhere` stays under
+   each as the fallback for a word with no syllable to break at. English patterns, from the
+   page's `lang`, so a Portuguese title may break at a syllable English would choose. */
+.weekday,
+.title,
+.tag,
+.itemLabel,
+.offerLabel,
+.option,
+.primary,
+.secondary,
+.danger {
+  hyphens: auto;
 }
 
 .weekdayPast {

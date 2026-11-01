@@ -1,4 +1,4 @@
-import { dayMonth, daysFrom, mondayOf, weekRange, weekdayLong } from "../lib/time";
+import { dayMonth, daysFrom, mondayOf, weekRange, weekdayDrawn } from "../lib/time";
 import { cx } from "../lib/cx";
 import day from "./Day.module.css";
 import page from "./WeekScreen.module.css";
@@ -35,7 +35,7 @@ export function WeekSkeleton({ monday = mondayOf(new Date()) }: Props): React.Re
           <div key={date.toISOString()} className={day.day}>
             <div className={day.head}>
               <div className={day.name}>
-                <span className={day.weekday}>{weekdayLong(index + 1)}</span>
+                <span className={day.weekday}>{weekdayDrawn(index + 1)}</span>
                 <span className={day.date}>{dayMonth(date)}</span>
               </div>
               <span className={cx(day.placeholder, "skeleton")} />

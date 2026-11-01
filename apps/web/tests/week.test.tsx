@@ -258,7 +258,9 @@ it("today is named in the header", () => {
   renderDay(aDay(), { today: true });
 
   expect(screen.getByText("today")).toBeDefined();
-  expect(screen.getByText("Monday")).toBeDefined();
+  // Drawn with soft hyphens where it may break; the row's label keeps the plain name.
+  expect(screen.getByText("Mon­day")).toBeDefined();
+  expect(screen.getByRole("row").getAttribute("aria-label")).toBe("Monday 24 Aug, today");
 });
 
 it("any other day is named and nothing more", () => {

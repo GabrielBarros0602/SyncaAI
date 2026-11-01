@@ -2,6 +2,7 @@ import {
   clock,
   formatCompact,
   minutesBetween,
+  weekdayDrawn,
   weekdayLong,
   weekdayName,
   weekdayOf,
@@ -189,10 +190,10 @@ export function DayColumn({
         className={day.head}
         onFocus={head.onFocusCell}
       >
-        <div className={day.title}>
+        <div className={day.headTop}>
           <div className={day.name}>
             <span className={cx(day.weekday, past && day.weekdayPast)}>
-              {weekdayLong(capacity.weekday)}
+              {weekdayDrawn(capacity.weekday)}
             </span>
             <span className={day.date}>{date}</span>
           </div>
