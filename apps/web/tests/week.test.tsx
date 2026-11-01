@@ -1122,6 +1122,28 @@ describe("the week you are looking at", () => {
     });
   });
 
+  it("shows the person's week when their zone is already in the next one", async () => {
+    // Noon UTC on Sunday 30 August: still Sunday for a browser anywhere west of UTC+12, and
+    // already Monday 31 in Kiritimati, UTC+14. The week is the person's, and the browser's is
+    // never asked for (backlog item 7).
+    vi.setSystemTime(new Date("2026-08-30T12:00:00Z"));
+    routeWeek(SEVEN, { ...ME, timezone: "Pacific/Kiritimati" });
+
+    renderWeek();
+
+    await waitFor(() => {
+      expect(heading()).toBe("31 Aug – 6 Sep 2026");
+    });
+    expect(markedToday()).toBe("2026-08-31");
+    const asked = fetchMock.mock.calls
+      .map(([input]) => input)
+      .filter((input) => input.includes("/capacity") || input.includes("/tasks"));
+    expect(asked.length).toBeGreaterThan(0);
+    for (const input of asked) {
+      expect(input).toContain("last_day=2026-09-06");
+    }
+  });
+
   it("names the week it is showing in the page's heading", async () => {
     vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
     routeWeek(SEVEN);

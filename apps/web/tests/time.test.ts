@@ -21,6 +21,7 @@ import {
   parseDuration,
   startOfLocalDay,
   toLocalDate,
+  todayIn,
   weekRange,
   weekdayDrawn,
   weekdayLong,
@@ -242,6 +243,14 @@ describe("the week", () => {
     expect(week).toHaveLength(7);
     expect(toLocalDate(week[0] as Date)).toBe("2026-08-24");
     expect(toLocalDate(week[6] as Date)).toBe("2026-08-30");
+  });
+
+  it("takes today from the person's zone, not the browser's", () => {
+    // Noon UTC on a Sunday is already Monday in Kiritimati, UTC+14, and still Sunday in Pago
+    // Pago, UTC−11, wherever this runs.
+    const noon = new Date("2026-08-30T12:00:00Z");
+    expect(toLocalDate(todayIn("Pacific/Kiritimati", noon))).toBe("2026-08-31");
+    expect(toLocalDate(todayIn("Pacific/Pago_Pago", noon))).toBe("2026-08-30");
   });
 
   it("formats a local date without drifting through UTC", () => {

@@ -5,7 +5,6 @@ import { useSession } from "../auth/useSession";
 import {
   dayMonth,
   daysFrom,
-  mondayOf,
   toLocalDate,
   weekRange,
   weekdayOf,
@@ -118,17 +117,18 @@ export function WeekScreen(): React.ReactNode {
   /**
    * The week holding a local date, with focus on that day's header.
    *
-   * Counted from the Monday the week on screen is counted from, so the offset means what `[`
-   * and `]` mean. Rounded, because a week across a daylight saving change is an hour short or
-   * long.
+   * Counted from the Monday on screen, which is already the person's and not the browser's, so
+   * the offset means what `[` and `]` mean. Rounded, because a week across a daylight saving
+   * change is an hour short or long.
    */
   function goToDate(localDate: string): void {
     const [year = 1970, month = 1, date = 1] = localDate.split("-").map(Number);
     const days = Math.round(
-      (new Date(year, month - 1, date).getTime() - mondayOf(new Date()).getTime()) / 86_400_000,
+      (new Date(year, month - 1, date).getTime() - week.monday.getTime()) / 86_400_000,
     );
-    const offset = Math.floor(days / 7);
-    const day = days - offset * 7;
+    const weeks = Math.floor(days / 7);
+    const offset = week.offset + weeks;
+    const day = days - weeks * 7;
     const cell = `${String(day)}:0`;
     setOpenTask(null);
     setFocus({ offset, day, cell: 0 });
