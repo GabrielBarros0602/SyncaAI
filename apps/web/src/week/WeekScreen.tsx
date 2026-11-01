@@ -5,6 +5,8 @@ import { useSession } from "../auth/useSession";
 import {
   dayMonth,
   daysFrom,
+  mondayOf,
+  toLocalDate,
   weekRange,
   weekdayOf,
   zonedDay,
@@ -23,19 +25,15 @@ import { useWeek } from "./useWeek";
 import styles from "./WeekScreen.module.css";
 
 /**
- * Where focus goes once a write has come back.
+ * Where focus goes once the week has come back.
  *
- * A task's title, or a day's `new task` button when the day has no row left to land on. By id
- * and by day rather than by element: the element that had focus does not survive the reload.
+ * A task's title, a day's `new task` button when the day has no row left to land on, or a cell
+ * of the grid by its place, which is where "go to date" lands. By id, day and place rather than
+ * by element: the element that had focus does not survive the reload.
  */
-type FocusTarget = { task: string } | { newTaskOn: string };
+type FocusTarget = { task: string } | { newTaskOn: string } | { cell: string };
 
-/**
- * The keys that do something today, in the design's order and words.
- *
- * The round's legend has fifteen. `C` and Alt with the arrows wait for the checklist panel: a
- * legend that promises a key is a worse guide than a short one, so each joins when it works.
- */
+/** The keys the week answers to: the round's fifteen, in its order and words. */
 const SHORTCUTS: Shortcut[] = [
   { keys: ["←", "→", "↑", "↓"], label: "move between days and rows" },
   { keys: ["Home", "End"], label: "first or last in a day" },
@@ -107,12 +105,40 @@ export function WeekScreen(): React.ReactNode {
     const element =
       "task" in target
         ? document.getElementById(`task-${target.task}`)
-        : document.querySelector<HTMLElement>(`[data-new-task="${target.newTaskOn}"]`);
+        : "newTaskOn" in target
+          ? document.querySelector<HTMLElement>(`[data-new-task="${target.newTaskOn}"]`)
+          : document.querySelector<HTMLElement>(`[data-cell="${target.cell}"]`);
     element?.focus();
   }, [loaded, status]);
 
   function focusOnceReloaded(target: FocusTarget): void {
     pendingFocus.current = { target, after: loaded };
+  }
+
+  /**
+   * The week holding a local date, with focus on that day's header.
+   *
+   * Counted from the Monday the week on screen is counted from, so the offset means what `[`
+   * and `]` mean. Rounded, because a week across a daylight saving change is an hour short or
+   * long.
+   */
+  function goToDate(localDate: string): void {
+    const [year = 1970, month = 1, date = 1] = localDate.split("-").map(Number);
+    const days = Math.round(
+      (new Date(year, month - 1, date).getTime() - mondayOf(new Date()).getTime()) / 86_400_000,
+    );
+    const offset = Math.floor(days / 7);
+    const day = days - offset * 7;
+    const cell = `${String(day)}:0`;
+    setOpenTask(null);
+    setFocus({ offset, day, cell: 0 });
+    // The same week does not reload, so there is no arrival to wait for.
+    if (offset === week.offset) {
+      document.querySelector<HTMLElement>(`[data-cell="${cell}"]`)?.focus();
+      return;
+    }
+    focusOnceReloaded({ cell });
+    week.goTo(offset);
   }
 
   async function undo(): Promise<void> {
@@ -226,7 +252,9 @@ export function WeekScreen(): React.ReactNode {
         range={weekRange(week.monday, dates[6] as Date)}
         offset={week.offset}
         me={week.me}
+        today={todayKey ?? toLocalDate(new Date())}
         onGoTo={week.goTo}
+        onGoToDate={goToDate}
         onSignOut={() => {
           void signOut();
         }}

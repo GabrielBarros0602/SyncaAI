@@ -1144,6 +1144,54 @@ describe("the week you are looking at", () => {
     expect(screen.getAllByText("this week").length).toBeGreaterThan(0);
   });
 
+  describe("going to a date", () => {
+    async function goTo(localDate: string): Promise<void> {
+      vi.setSystemTime(new Date("2026-08-26T15:00:00Z"));
+      routeWeek(SEVEN);
+      renderWeek();
+      await waitFor(() => {
+        expect(markedToday()).toBe("2026-08-26");
+      });
+      fireEvent.click(screen.getByRole("button", { name: "go to date" }));
+      fireEvent.change(screen.getByLabelText("Date"), { target: { value: localDate } });
+      fireEvent.click(screen.getByRole("button", { name: "go" }));
+    }
+
+    function headerOf(day: string): Element | null | undefined {
+      return document.querySelector(`[data-day="${day}"]`)?.firstElementChild;
+    }
+
+    it("opens the week holding a later date, with focus on that day", async () => {
+      await goTo("2026-09-10");
+
+      await waitFor(() => {
+        expect(heading()).toBe("7 – 13 Sep 2026");
+      });
+      await waitFor(() => {
+        expect(document.activeElement).toBe(headerOf("2026-09-10"));
+      });
+      expect(headerOf("2026-09-10")?.getAttribute("tabindex")).toBe("0");
+    });
+
+    it("counts back to an earlier week the same way", async () => {
+      await goTo("2026-08-16");
+
+      await waitFor(() => {
+        expect(heading()).toBe("10 – 16 Aug 2026");
+      });
+      await waitFor(() => {
+        expect(document.activeElement).toBe(headerOf("2026-08-16"));
+      });
+    });
+
+    it("moves focus within this week without reloading it", async () => {
+      await goTo("2026-08-28");
+
+      expect(heading()).toBe("24 – 30 Aug 2026");
+      expect(document.activeElement).toBe(headerOf("2026-08-28"));
+    });
+  });
+
   it("never aims N at a day that has gone", async () => {
     // Wednesday 26 August. Monday has no "+ new task", so the key must not open one there
     // either: the server would refuse whatever was typed into it.
