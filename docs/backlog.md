@@ -421,6 +421,14 @@ painel de checklist, conferido no mesmo dia, mostra o mesmo nos rótulos dos ite
 "ine"): a alça, a caixa e o × levam 72px dos 123 que a linha tem. A oferta do dia pesado, em
 2026-11-01, também ("Earl" / "y").
 
+**Decidido em 2026-11-01: hifenizar.** As outras opções eram colunas que crescem com o texto,
+com a semana rolando de lado a 200%, e deixar como estava. A coluna continua com 155px:
+- Os nomes dos dias levam hífens opcionais nas sílabas ("Wed-nes-day"), que todo navegador
+  respeita.
+- Títulos, tags, rótulos e botões levam `hyphens: auto`, que depende do dicionário do
+  navegador. Firefox e Safari trazem o seu, e o Chrome o baixa à parte. Sem ele, como no
+  navegador embutido do app, a quebra em qualquer ponto continua valendo.
+
 ### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 
 As telas mostraram três problemas que são do servidor, não do desenho:

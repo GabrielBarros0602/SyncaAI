@@ -1,4 +1,4 @@
-import { dayMonth, daysFrom, weekdayLong } from "../lib/time";
+import { dayMonth, daysFrom, weekdayDrawn } from "../lib/time";
 import day from "./Day.module.css";
 import page from "./WeekScreen.module.css";
 
@@ -32,7 +32,7 @@ export function WeekUnreachable({ monday, onRetry }: Props): React.ReactNode {
           <div key={date.toISOString()} className={day.day}>
             <div className={day.head}>
               <div className={day.name}>
-                <span className={day.weekday}>{weekdayLong(index + 1)}</span>
+                <span className={day.weekday}>{weekdayDrawn(index + 1)}</span>
                 <span className={day.date}>{dayMonth(date)}</span>
               </div>
               <span className={day.bookedValue}>&#8212;</span>

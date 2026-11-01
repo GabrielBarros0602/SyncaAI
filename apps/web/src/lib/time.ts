@@ -180,6 +180,27 @@ export function weekdayLong(isoWeekday: number): string {
   return LONG_WEEKDAYS[isoWeekday - 1] ?? "";
 }
 
+const DRAWN_WEEKDAYS = [
+  "Mon­day",
+  "Tues­day",
+  "Wed­nes­day",
+  "Thurs­day",
+  "Fri­day",
+  "Sat­ur­day",
+  "Sun­day",
+];
+
+/**
+ * The weekday in full, with soft hyphens where it may break: for drawing, never for a label.
+ *
+ * At 200% text a 155px column is narrower than "Wednesday". A soft hyphen shows only where the
+ * line breaks, and every browser honours one, while `hyphens: auto` needs a dictionary not all
+ * of them ship. Two in the longest names, since "Wednes-" alone is still wider than the column.
+ */
+export function weekdayDrawn(isoWeekday: number): string {
+  return DRAWN_WEEKDAYS[isoWeekday - 1] ?? "";
+}
+
 /** `22 Oct`: the day before the month, as the round's week writes a date. */
 export function dayMonth(date: Date): string {
   return `${String(date.getDate())} ${MONTHS[date.getMonth()] ?? ""}`;

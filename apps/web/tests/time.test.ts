@@ -22,6 +22,7 @@ import {
   startOfLocalDay,
   toLocalDate,
   weekRange,
+  weekdayDrawn,
   weekdayLong,
   weekdayName,
   zonedStamp,
@@ -256,6 +257,13 @@ describe("labels", () => {
     expect(dayMonth(new Date(2026, 9, 2))).toBe("2 Oct");
     expect(weekdayLong(3)).toBe("Wednesday");
     expect(weekdayLong(7)).toBe("Sunday");
+  });
+
+  it("draws each weekday as its full name, breakable only at a syllable", () => {
+    for (let weekday = 1; weekday <= 7; weekday += 1) {
+      expect(weekdayDrawn(weekday).replaceAll("­", "")).toBe(weekdayLong(weekday));
+    }
+    expect(weekdayDrawn(3)).toBe("Wed­nes­day");
   });
 
   it("names a day from today the way a sentence does", () => {
