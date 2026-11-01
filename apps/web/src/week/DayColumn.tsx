@@ -11,7 +11,9 @@ import {
 import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
 import { type Carried, splitOf } from "./carried";
 import { CarriedBand } from "./CarriedBand";
+import { HeavyDayOffer } from "./HeavyDayOffer";
 import { warningFor } from "./load";
+import { heavyDayOffer } from "./move";
 import { type Panel, TaskRow } from "./TaskRow";
 import type { ChecklistChange } from "./useWeek";
 import { cx } from "../lib/cx";
@@ -167,6 +169,9 @@ export function DayColumn({
   });
   const head = cellProps(0);
   const foot = footCell === null ? null : cellProps(footCell);
+  // Read at render, like the move panel's: the clock can pass a start while the week is open.
+  const now = new Date();
+  const offer = heavyDayOffer(capacity, tasks, week, allTasks, timezone, now);
 
   return (
     // A row of the grid drawn as a column: its name is what a screen reader says on arriving
@@ -236,6 +241,19 @@ export function DayColumn({
           />
         </div>
         {warning.message !== null && <span className={day.level}>{warning.message}</span>}
+        {offer !== null && (
+          <HeavyDayOffer
+            // A fresh offer is a fresh button: a refusal shown for one task is not about the next.
+            key={`${offer.task.id}:${offer.to.day}`}
+            offer={offer}
+            weekday={weekdayName(capacity.weekday)}
+            free={week.find((other) => other.day === offer.to.day)?.free_minutes ?? 0}
+            thisWeek={week.some((other) => other.day === zonedDay(now.toISOString(), timezone))}
+            timezone={timezone}
+            tabbable={head.tabStop}
+            onSave={onSaveTask}
+          />
+        )}
         {/* A day holding only inherited minutes is not empty, and saying it is would
             contradict both the figure above and the band. In the header's cell, since a row
             of the grid holds cells and nothing else. */}

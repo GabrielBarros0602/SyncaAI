@@ -5,7 +5,7 @@ import type { DayCapacity, Task, TaskChanges } from "../api/types";
 import { clock, formatCompact, weekdayName, zonedMinutes } from "../lib/time";
 import { cx } from "../lib/cx";
 import { moveTo } from "./changes";
-import { lightestOpen, moveOptions, type MoveOption } from "./move";
+import { clockSpan, lightestOpen, moveOptions, type MoveOption } from "./move";
 import day from "./Day.module.css";
 
 interface Props {
@@ -16,11 +16,6 @@ interface Props {
   tasks: Task[];
   timezone: string;
   onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
-}
-
-function span(task: Task, timezone: string): string {
-  const start = zonedMinutes(task.start_at, timezone);
-  return `${clock(start)}–${clock(start + task.duration_minutes)}`;
 }
 
 /**
@@ -35,7 +30,7 @@ function whyNot(options: MoveOption[], lightest: DayCapacity | null, timezone: s
   }
   for (const option of options) {
     if (option.takenBy !== null) {
-      said.push(`${weekdayName(option.weekday)}: ${option.takenBy.title} is there, ${span(option.takenBy, timezone)}.`);
+      said.push(`${weekdayName(option.weekday)}: ${option.takenBy.title} is there, ${clockSpan(option.takenBy, timezone)}.`);
     }
   }
   if (lightest !== null) said.push(`${weekdayName(lightest.weekday)} is the lightest.`);
@@ -92,7 +87,7 @@ export function MovePanel({ task, days, tasks, timezone, onSave }: Props): React
     <div role="group" aria-label="Move to another day" className={day.panel}>
       <span className={day.panelHead}>Move to</span>
       <span className={day.panelHint}>
-        Same clock time, <span className={day.figure}>{span(task, timezone)}</span>, on another day of
+        Same clock time, <span className={day.figure}>{clockSpan(task, timezone)}</span>, on another day of
         this week.
       </span>
       <div className={day.moveDays}>
