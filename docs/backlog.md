@@ -223,7 +223,7 @@ anterior e podem entrar em qualquer ponto.
 | 3 | ✅ A caixa sai do conjunto e vira permanente; a linha vira grupo que abre; a linha de conclusão | — | não |
 | 4 | ✅ Verbos `edit` e `note` | 3 | não |
 | 5 | ✅ Verbos `move` e `delete` com undo — o undo é recriação, só onde ela é fiel ([ADR-0025](adr/0025-undo-is-a-recreate.md)) | 3 | não |
-| 6 | ⏸ A oferta de mover, do dia pesado — pausada até a terceira rodada de design | 5 | não |
+| 6 | ✅ A oferta de mover, do dia pesado — feita na terceira rodada ([ADR-0054](adr/0054-the-heavy-day-offer-picks-its-task-by-arithmetic.md)) | 5 | não |
 | 7 | ⏸ Confirmar endereço, três estados — pausada até a terceira rodada de design | — | não |
 | 8 | ⏸ Configurações — endereço, fuso, sair — pausada até a terceira rodada de design | — | `PATCH /me` |
 
@@ -292,6 +292,8 @@ plano-contra-real que o S6 vai ler deixa de significar alguma coisa. As opções
   "Mon has 16h free". O `lightestDay` do `load.ts` não olha o relógio. É a PR 6, que vai
   transformar a frase em botão — e um botão para mover algo para segunda-feira passada seria
   recusado pelo servidor.
+
+  **Resolvido em 2026-11-01 (ADR-0054):** a oferta só considera os dias depois de hoje.
 - **Região viva inserida já com texto.** O aviso `deleted · título` é `role="status"` e
   `aria-live="polite"`, e nasce junto com o texto, porque a semana inteira é remontada depois da
   recarga. Leitores de tela anunciam esse caso de forma inconsistente. O jsdom confirma o papel e
@@ -364,6 +366,10 @@ decididas:
   ainda não começada que, sozinha, tira o dia do excesso, levada para o dia mais leve depois de
   hoje. Ela vale até o S6, quando a escolha passa para a IA, a quem o ADR-0022 a tinha
   reservado. A regra vira ADR quando a tela for implementada.
+
+  **Revisto em 2026-11-01, no ADR-0054:** a aritmética fica de vez. O S6 construiu a UC2, o
+  plano inteiro, e o ADR-0002 não tem caso de uso que escolha uma tarefa para mover. A oferta
+  aparece também nas semanas seguintes, não só na atual.
 - **Concluir continua sendo Espaço, e a legenda de atalhos continua visível.** A tela tinha
   trocado para X e escondido a legenda, o que deixava os atalhos invisíveis para quem não usa
   leitor de tela. Entra a tecla C, que abre a checklist.
