@@ -155,9 +155,11 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
    termine em `_test` é recusado.
 6. ~~**Um teste de sobreposição aceita qualquer `IntegrityError`.**~~ ✅ Feito em 2026-10-26:
    ele confere `ex_tasks_no_overlap_per_user` pelo nome.
-7. **A semana começa na segunda-feira do navegador** (`mondayOf(new Date())`), não na do fuso
+7. ~~**A semana começa na segunda-feira do navegador** (`mondayOf(new Date())`), não na do fuso
    da pessoa. Em viagem, a tela e `/capacity` podem discordar sobre que semana é esta. É
-   front, e espera o descongelamento.
+   front, e espera o descongelamento.~~ ✅ Feito em 2026-11-01: a janela da semana é calculada
+   depois do `/me`, com o hoje do fuso da pessoa. O do navegador fica só para o esqueleto
+   antes da sessão.
 8. ~~**O CLAUDE.md diz que os testes de integração pulam sem banco.**~~ ✅ Feito em
    2026-10-26: sem PostgreSQL a execução para na hora e diz por quê, e o texto diz isso.
 

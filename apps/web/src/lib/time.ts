@@ -313,3 +313,12 @@ export function zonedDay(iso: string, timeZone: string): string {
   const parts = partsInZone(iso, timeZone);
   return `${String(parts.year ?? 0)}-${pad(parts.month ?? 1)}-${pad(parts.day ?? 1)}`;
 }
+
+/**
+ * Today in `timeZone`, as a browser-local `Date` at its midnight: the date the person's own
+ * calendar shows, in the form the week arithmetic here takes.
+ */
+export function todayIn(timeZone: string, now: Date = new Date()): Date {
+  const [year = 1970, month = 1, day = 1] = zonedDay(now.toISOString(), timeZone).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import { everyPage } from "../api/pages";
 import type { DayCapacity, Me, NewTask, Task, TaskChanges } from "../api/types";
-import { daysFrom, mondayOf, toLocalDate, zonedDay } from "../lib/time";
+import { daysFrom, mondayOf, toLocalDate, todayIn, zonedDay } from "../lib/time";
 import { type Carried, carriedInto } from "./carried";
 
 /**
@@ -27,6 +27,37 @@ import { type Carried, carriedInto } from "./carried";
  */
 
 export type WeekStatus = "loading" | "ready" | "unreachable";
+
+interface Window {
+  monday: Date;
+  /** The day before Monday, whose tasks can still be running on it. */
+  eve: string;
+  firstDay: string;
+  lastDay: string;
+  /** What a snapshot is stamped with. */
+  key: string;
+}
+
+/**
+ * The week `offset` weeks from the one holding today, today read in `timeZone`.
+ *
+ * The person's zone, not the browser's: away from home, or near midnight, the two can be in
+ * different weeks, and the server reads every date in the person's (backlog item 7). The
+ * browser's is used only while the zone is not known yet, to draw the skeleton's dates.
+ */
+function windowOf(offset: number, timeZone: string | null): Window {
+  const monday = mondayOf(timeZone === null ? new Date() : todayIn(timeZone), offset);
+  const week = daysFrom(monday);
+  const firstDay = toLocalDate(week[0] as Date);
+  const lastDay = toLocalDate(week[6] as Date);
+  return {
+    monday,
+    eve: toLocalDate(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 1)),
+    firstDay,
+    lastDay,
+    key: `${firstDay}:${lastDay}`,
+  };
+}
 
 /** One change to a task's checklist, each its own route (ADR-0028). */
 export type ChecklistChange =
@@ -95,18 +126,10 @@ export function useWeek(): Week {
   // write itself has answered.
   const [writes, setWrites] = useState<ReadonlyMap<string, number | null>>(new Map());
 
-  const monday = mondayOf(new Date(), offset);
-  const week = daysFrom(monday);
-  const firstDay = toLocalDate(week[0] as Date);
-  const lastDay = toLocalDate(week[6] as Date);
-
-  // Tasks are fetched from the day *before* the week. Monday can be holding minutes from a
-  // Sunday task that ran past midnight, and the aggregate already counts them — without this
-  // day, Monday would show a booked figure with nothing on screen accounting for it. One day
-  // is enough and not a guess: the CHECK constraint caps a task at 1440 minutes, so nothing
-  // starting earlier can still be running on Monday.
-  const eve = toLocalDate(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 1));
-  const currentWindow = `${firstDay}:${lastDay}`;
+  // In the zone of the last week that arrived. Once it is known the window is the person's; a
+  // change of zone reloads the week, which is when this catches up with it.
+  const shown = windowOf(offset, snapshot?.me.timezone ?? null);
+  const { monday, key: currentWindow } = shown;
 
   const status: WeekStatus =
     failed?.window === currentWindow && failed.attempt === attempt
@@ -122,16 +145,23 @@ export function useWeek(): Week {
       // `/me` first and alone: everything after it needs the zone, and asking for a window
       // before knowing which zone reads it would be asking about the wrong days.
       const me = await api.get<Me>("/me");
+      const window = windowOf(offset, me.timezone);
       // Every page of the window, not the first: the capacity counts every task, and a week
       // that stopped at one page would show fewer than its own figures say it holds.
+      //
+      // Tasks are fetched from the day *before* the week. Monday can be holding minutes from a
+      // Sunday task that ran past midnight, and the aggregate already counts them — without
+      // this day, Monday would show a booked figure with nothing on screen accounting for it.
+      // One day is enough and not a guess: the CHECK constraint caps a task at 1440 minutes, so
+      // nothing starting earlier can still be running on Monday.
       const [days, tasks] = await Promise.all([
-        api.get<DayCapacity[]>(`/capacity?first_day=${firstDay}&last_day=${lastDay}`),
-        everyPage<Task>(`/tasks?first_day=${eve}&last_day=${lastDay}`),
+        api.get<DayCapacity[]>(`/capacity?first_day=${window.firstDay}&last_day=${window.lastDay}`),
+        everyPage<Task>(`/tasks?first_day=${window.eve}&last_day=${window.lastDay}`),
       ]);
 
       if (cancelled) return;
       setSnapshot((previous) => ({
-        window: currentWindow,
+        window: window.key,
         attempt,
         sequence: (previous?.sequence ?? 0) + 1,
         me,
@@ -156,7 +186,10 @@ export function useWeek(): Week {
     return () => {
       cancelled = true;
     };
-  }, [eve, firstDay, lastDay, currentWindow, attempt]);
+    // `currentWindow` too, so a week left open past the person's Sunday midnight moves on to
+    // the next on its next render, as it did when the window was the browser's. It also means a
+    // first load whose zone lands in another week than the browser's is read twice.
+  }, [offset, currentWindow, attempt]);
 
   const ready = status === "ready" ? snapshot : null;
   const byDay = new Map<string, Task[]>();
