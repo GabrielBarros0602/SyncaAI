@@ -30,7 +30,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0019](0019-account-verification.md) | Verify addresses, and make every authentication response generic | Accepted |
 | [0020](0020-domain-surface-choices.md) | Tags, checklist ordering and pagination | Accepted |
 | [0021](0021-browser-session-and-origin.md) | Browser session handling and origin strategy | Accepted |
-| [0022](0022-capacity-against-a-usable-day.md) | Capacity is real occupancy, measured against a usable day | Accepted; decision 3 superseded by 0029 |
+| [0022](0022-capacity-against-a-usable-day.md) | Capacity is real occupancy, measured against a usable day | Accepted; decision 3 superseded by 0029; decision 4's offer amended by 0054 |
 | [0023](0023-a-budget-you-choose-under-a-ceiling-you-do-not.md) | A budget you choose, under a ceiling you do not | Accepted; items 7–9 redefined by 0029 |
 | [0024](0024-soften-the-visual-language-in-stylesheets-only.md) | Soften the visual language, in stylesheets only | Superseded by [0052](0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md) |
 | [0025](0025-undo-is-a-recreate.md) | Undo is a recreate, so it is offered only where recreating is faithful | Accepted |
@@ -62,6 +62,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0051](0051-a-password-change-keeps-this-session-and-a-reset-keeps-none.md) | A password change keeps this session, a reset keeps none, and both are told | Accepted |
 | [0052](0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md) | The third design round is the specification, and the front end opens | Accepted |
 | [0053](0053-the-week-is-one-grid-with-one-tab-stop.md) | The week is one grid with one tab stop | Accepted |
+| [0054](0054-the-heavy-day-offer-picks-its-task-by-arithmetic.md) | The heavy-day offer picks its task by arithmetic, and keeps doing so | Accepted |
 
 ## Template
 
