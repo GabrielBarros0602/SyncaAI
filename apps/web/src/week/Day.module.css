@@ -172,6 +172,55 @@
   color: var(--alert-ink);
 }
 
+/* The heavy day's offer: a button naming the task and the day, the arithmetic under it. */
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.offerButton {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: max(40px, var(--target));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--raised);
+  color: var(--ink);
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    transform var(--dur-2) var(--ease-spring);
+}
+
+.offerButton:hover {
+  background: var(--hover);
+}
+
+.offerButton:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.offerButton[aria-busy="true"] {
+  cursor: progress;
+}
+
+.offerLabel {
+  min-width: 0;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.offerArrow {
+  margin-left: auto;
+}
+
 .empty {
   padding: 0 var(--pad-row-x) var(--pad-row-y);
   font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
