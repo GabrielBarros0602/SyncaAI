@@ -72,10 +72,12 @@ def register_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(InvalidLinkTokenError)
-    async def _bad_verification(_: Request, __: InvalidLinkTokenError) -> JSONResponse:
+    async def _bad_link(_: Request, error: InvalidLinkTokenError) -> JSONResponse:
+        # One handler for both links, so their status cannot drift apart; only the sentence
+        # is each one's own.
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": "That confirmation link is not valid. Request a new one."},
+            content={"detail": error.sentence},
         )
 
     @app.exception_handler(NotAuthenticatedError)

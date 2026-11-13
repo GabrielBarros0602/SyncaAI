@@ -439,10 +439,11 @@ As telas mostraram três problemas que são do servidor, não do desenho:
   pessoa.** O validador escreve "it depends on items[6], which does not come before it", para a
   mensagem de reparo, e o rascunho guarda o mesmo texto. A revisão mostraria `items[6]` a quem
   só vê "step 7". Os outros motivos servem às duas leituras.
-- **Um link de reset inválido responde com a frase do link de confirmação:** "That confirmation
+- ~~**Um link de reset inválido responde com a frase do link de confirmação:** "That confirmation
   link is not valid. Request a new one." Os dois links compartilham o erro; a frase tem que ser
   a de cada um. O brief do passo 6 já pede "That link to set a new password is not valid.
-  Request a new one."
+  Request a new one."~~ ✅ Feito em 2026-11-13: o status continua um só, 400, e cada link
+  responde com a sua frase.
 - **O e-mail de confirmação não traz o código que o modo "I have a code" pede.** O token está só
   dentro da URL. O modo já existe no app atual, e quem abre o e-mail em outro aparelho não tem
   como usá-lo sem tirar o token da URL na mão. O desenho do passo 6 diz "The email also has a

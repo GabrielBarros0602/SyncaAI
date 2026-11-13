@@ -16,7 +16,7 @@ from syncaai.api.dependencies import limit_password_reset
 from syncaai.api.routes.auth import get_password_reset_service
 from syncaai.config import Settings
 from syncaai.db import get_session
-from syncaai.errors import InvalidLinkTokenError
+from syncaai.errors import InvalidResetTokenError
 from syncaai.mail import RecordingMailer
 from syncaai.models import PasswordResetToken, RefreshToken
 from syncaai.security.opaque import hash_token
@@ -25,6 +25,7 @@ from syncaai.services.password_reset import PasswordResetService
 from tests.test_auth_service import A_PASSWORD, AN_EMAIL, FakeSessions, FakeUsers, _existing
 
 FORGOT = "/api/v1/auth/forgot-password"
+RESET = "/api/v1/auth/reset-password"
 A_NEW_PASSWORD = "a brand new password"
 
 
@@ -162,7 +163,7 @@ def test_a_reset_token_works_only_once(settings: Settings, mailer: RecordingMail
     raw = _take_link(mailer, AN_EMAIL)
     service.reset(raw, A_NEW_PASSWORD)
 
-    with pytest.raises(InvalidLinkTokenError):
+    with pytest.raises(InvalidResetTokenError):
         service.reset(raw, "yet another password")
 
 
@@ -171,15 +172,31 @@ def test_an_expired_reset_token_is_refused(settings: Settings, mailer: Recording
     service.request(AN_EMAIL)
     tokens.rows[0].expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
 
-    with pytest.raises(InvalidLinkTokenError):
+    with pytest.raises(InvalidResetTokenError):
         service.reset(_take_link(mailer, AN_EMAIL), A_NEW_PASSWORD)
 
 
 def test_an_unknown_reset_token_is_refused(settings: Settings, mailer: RecordingMailer) -> None:
     service, _, _ = _service(FakeUsers(_existing()), mailer, settings)
 
-    with pytest.raises(InvalidLinkTokenError):
+    with pytest.raises(InvalidResetTokenError):
         service.reset("never issued", A_NEW_PASSWORD)
+
+
+def test_a_reset_link_that_is_not_valid_is_refused_in_its_own_words(
+    app: FastAPI, client: TestClient, settings: Settings, mailer: RecordingMailer
+) -> None:
+    """It used to borrow the confirmation link's sentence, for a link that confirms nothing."""
+    service, _, _ = _service(FakeUsers(_existing()), mailer, settings)
+    app.dependency_overrides[get_session] = lambda: _NoOpSession()
+    app.dependency_overrides[get_password_reset_service] = lambda: service
+
+    refused = client.post(RESET, json={"token": "never issued", "password": A_NEW_PASSWORD})
+
+    assert refused.status_code == 400
+    assert refused.json()["detail"] == (
+        "That link to set a new password is not valid. Request a new one."
+    )
 
 
 def test_the_reset_response_does_not_talk_about_signing_up(
