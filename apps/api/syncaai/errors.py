@@ -22,12 +22,30 @@ class InvalidLinkTokenError(DomainError):
     """Raised for a token from a mailed link that is unknown, expired or already spent.
 
     Covers confirmation and password reset alike: both arrive the same way, fail the same
-    way, and answer the same way. Naming it after only one of them sent whoever debugged a
-    reset failure looking in the wrong place.
+    way, and answer with the same status. Naming it after only one of them sent whoever
+    debugged a reset failure looking in the wrong place.
 
     One error for all three conditions, so presenting a token cannot be used to learn which
     of them it hit.
+
+    The sentence is each link's own, because a person reads it: sharing one told somebody
+    setting a new password that their confirmation link was not valid. Raise a subclass,
+    never this, so a third kind of link cannot borrow a sentence written for another.
     """
+
+    sentence: str
+
+
+class InvalidConfirmationTokenError(InvalidLinkTokenError):
+    """The token of a link that confirms an address (ADR-0019)."""
+
+    sentence = "That confirmation link is not valid. Request a new one."
+
+
+class InvalidResetTokenError(InvalidLinkTokenError):
+    """The token of a link that sets a new password (ADR-0051)."""
+
+    sentence = "That link to set a new password is not valid. Request a new one."
 
 
 class InvalidCredentialsError(DomainError):
