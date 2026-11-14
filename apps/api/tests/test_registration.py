@@ -167,6 +167,21 @@ def test_a_valid_token_confirms_the_account(settings: Settings, mailer: Recordin
     assert users.rows[0].verified_at is not None
 
 
+def test_the_code_under_the_link_confirms_the_account(
+    settings: Settings, mailer: RecordingMailer
+) -> None:
+    """The app asks for a code, and the mail only had it inside the URL. Found here as a
+    person finds it: the one thing under the link that stands alone on its line."""
+    users = FakeUsers()
+    service = _service(users, mailer, settings)
+    service.register(AN_EMAIL, A_PASSWORD, "America/Sao_Paulo")
+
+    under_the_link = mailer.to(AN_EMAIL)[0].text.split("/verify?token=")[1].split("\n")[1:]
+    code = next(line for line in under_the_link if line and " " not in line)
+
+    assert service.verify(code).verified_at is not None
+
+
 def test_a_token_works_only_once(settings: Settings, mailer: RecordingMailer) -> None:
     service = _service(FakeUsers(), mailer, settings)
     raw = _register_and_take_token(service, mailer)

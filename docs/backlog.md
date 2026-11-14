@@ -444,10 +444,12 @@ As telas mostraram três problemas que são do servidor, não do desenho:
   a de cada um. O brief do passo 6 já pede "That link to set a new password is not valid.
   Request a new one."~~ ✅ Feito em 2026-11-13: o status continua um só, 400, e cada link
   responde com a sua frase.
-- **O e-mail de confirmação não traz o código que o modo "I have a code" pede.** O token está só
+- ~~**O e-mail de confirmação não traz o código que o modo "I have a code" pede.** O token está só
   dentro da URL. O modo já existe no app atual, e quem abre o e-mail em outro aparelho não tem
   como usá-lo sem tirar o token da URL na mão. O desenho do passo 6 diz "The email also has a
-  code under the link", e é o e-mail que tem que passar a dizer isso.
+  code under the link", e é o e-mail que tem que passar a dizer isso.~~ ✅ Feito em 2026-11-14:
+  o e-mail repete o token numa linha própria, embaixo do link, e diz que os dois são a mesma
+  chave.
 
 E uma pergunta para a implementação: o botão "Plan · 3 of 5" mostra o progresso de qual plano
 quando há mais de um aprovado.
