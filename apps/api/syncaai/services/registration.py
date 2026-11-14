@@ -83,6 +83,6 @@ class RegistrationService:
         send_or_log(
             self._mailer,
             verification_requested(
-                user.email, f"{self._settings.app_base_url.rstrip('/')}/verify?{query}"
+                user.email, f"{self._settings.app_base_url.rstrip('/')}/verify?{query}", raw
             ),
         )

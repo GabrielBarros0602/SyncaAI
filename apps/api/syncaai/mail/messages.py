@@ -8,15 +8,23 @@ is sent, the *response* the caller saw was identical (ADR-0019).
 from syncaai.mail.base import Message
 
 
-def verification_requested(to: str, verify_url: str) -> Message:
-    """Sent when an address that had no account has just been registered."""
+def verification_requested(to: str, verify_url: str, code: str) -> Message:
+    """Sent when an address that had no account has just been registered.
+
+    The code is the token the link carries, on a line of its own. The app asks for it under
+    "I have a code", and whoever read the mail on another device could only get it by
+    cutting it out of the URL. One secret, written twice in one message: nothing is exposed
+    that the link did not already expose, and it is spent the same way (ADR-0019).
+    """
     return Message(
         to=to,
         subject="Confirm your address for SyncaAI",
         text=(
             "Someone created a SyncaAI account with this address.\n\n"
             f"Confirm it here:\n{verify_url}\n\n"
-            "The link works once and expires in 24 hours.\n\n"
+            'Reading this on another device? Choose "I have a code" where you signed up, '
+            f"and paste this:\n{code}\n\n"
+            "The link and the code are the same key. It works once and expires in 24 hours.\n\n"
             "If this was not you, ignore this message. The account cannot be used until "
             "the address is confirmed."
         ),
