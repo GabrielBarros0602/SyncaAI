@@ -1,7 +1,9 @@
 # ADR-0037: A draft is held in five tables, and only an approved one stays
 
 **Status:** Accepted; a draft's job and prompt made optional, for a plan written by hand, by
-[ADR-0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md)
+[ADR-0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md); a discarded step's
+reasons kept as the sentences a person reads, by
+[ADR-0055](0055-a-discarded-step-s-reason-is-written-twice-once-for-each-reader.md)
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
