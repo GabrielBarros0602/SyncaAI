@@ -256,7 +256,10 @@ def test_a_worse_repair_leaves_the_first_answer_and_its_discards(person: uuid.UU
         assert [item.title for item in draft.items] == ["Ler", "Exercícios"]
         [discard] = draft.discards
         assert (discard.position, discard.title) == (2, "Projeto")
-        assert discard.reasons == ["it takes 300 minutes, and a step has to take between 15 and 60"]
+        # As the review prints it, not as the repair sent it (ADR-0055).
+        assert discard.reasons == [
+            "It takes 300 minutes, and a step has to take between 15 and 60."
+        ]
 
 
 def test_with_nothing_usable_the_job_fails_visibly_and_keeps_both_answers(

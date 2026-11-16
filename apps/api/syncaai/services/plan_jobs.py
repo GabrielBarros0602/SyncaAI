@@ -255,7 +255,9 @@ def _write_draft(
                 draft_id=draft.id,
                 position=discarded.position,
                 title=discarded.title,
-                reasons=list(discarded.reasons),
+                # What the review prints. The lines the model was sent stay on the job's
+                # answers (ADR-0055).
+                reasons=list(discarded.shown),
             )
         )
     session.flush()

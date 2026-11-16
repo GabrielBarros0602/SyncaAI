@@ -831,8 +831,9 @@ class PlanDraftDiscard(Base):
     draft_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("plan_drafts.id", ondelete="CASCADE"), primary_key=True
     )
-    #: Its position in the answer, as the model and the reasons number it.
+    #: Its position in the answer, as the model numbers it.
     position: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
     #: As it came, which may be empty or too long: those are among the reasons.
     title: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Sentences for the person, which name no position (ADR-0055).
     reasons: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
