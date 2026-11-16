@@ -251,6 +251,74 @@ def test_every_reason_an_item_fails_is_reported_not_only_the_first() -> None:
     assert len(report.discarded[0].reasons) == 2
 
 
+# --- What the person is shown (ADR-0055) ---------------------------------------------------
+
+
+def test_a_reason_is_shown_as_the_sentence_the_review_prints() -> None:
+    """The two the third design round draws under a discarded step."""
+    report = _checked(
+        _item(title="first"),
+        _item(title="FIRST"),
+        _item(title="third", estimated_minutes=180),
+    )
+
+    assert [item.shown for item in report.discarded] == [
+        ("The title repeats an earlier step's.",),
+        ("It takes 180 minutes, and a step has to take between 15 and 60.",),
+    ]
+
+
+def test_a_later_dependency_is_shown_without_naming_the_step() -> None:
+    """The model reads the position it wrote. The review counts the steps it kept, so a number
+    there could be another step's, or nobody's: the two dependencies here are one sentence."""
+    report = _checked(_item(title="first", depends_on=[1, 12]), _item(title="second"))
+
+    [discarded] = report.discarded
+    assert discarded.reasons == (
+        "it depends on items[1], which does not come before it",
+        "it depends on items[12], which does not come before it",
+    )
+    assert discarded.shown == ("It depends on a step that does not come before it.",)
+
+
+def test_a_link_is_counted_from_one_for_the_person() -> None:
+    report = _checked(
+        _item(
+            links=[
+                {"label": "fine", "url": "https://a.example"},
+                {"label": "", "url": "ftp://files.example/x"},
+            ]
+        )
+    )
+
+    [discarded] = report.discarded
+    assert discarded.reasons == (
+        "link 1: the label is empty",
+        "link 1: the URL is not an absolute http or https address",
+    )
+    assert discarded.shown == (
+        "Link 2: the label is empty.",
+        "Link 2: the URL is not an absolute http or https address.",
+    )
+
+
+def test_whatever_is_wrong_is_shown_as_sentences_that_number_nothing_from_zero() -> None:
+    everything_wrong = _item(
+        title="x" * (MAX_TITLE_CHARS + 1),
+        description="x" * (MAX_DESCRIPTION_CHARS + 1),
+        estimated_minutes=0,
+        depends_on=[5],
+        links=[{"label": "x" * (MAX_LINK_LABEL_CHARS + 1), "url": "javascript:alert(1)"}],
+    )
+
+    [discarded] = _checked(everything_wrong).discarded
+
+    assert len(discarded.shown) == len(discarded.reasons) == 6
+    for sentence in discarded.shown:
+        assert sentence[0].isupper() and sentence.endswith("."), sentence
+        assert "items[" not in sentence and not sentence.startswith("Link 0"), sentence
+
+
 # --- The note ------------------------------------------------------------------------------
 
 

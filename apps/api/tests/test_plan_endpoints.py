@@ -280,7 +280,7 @@ def test_a_plan_reads_back_its_steps_their_links_and_what_was_discarded(
         {
             "position": 2,
             "title": "Projeto final",
-            "reasons": ["it takes 300 minutes, and a step has to take between 15 and 60"],
+            "reasons": ["It takes 300 minutes, and a step has to take between 15 and 60."],
         }
     ]
 

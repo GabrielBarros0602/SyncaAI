@@ -40,11 +40,17 @@ class CheckedItem:
 
 @dataclass(frozen=True)
 class DiscardedItem:
-    """An item that failed, kept so the review can say how many were dropped and why."""
+    """An item that failed, kept so the review can say how many were dropped and why.
+
+    Why is written twice, because it has two readers (ADR-0055)."""
 
     position: int
     title: str
+    #: For the model, in the repair: lower case, and numbered from zero as it numbers things.
     reasons: tuple[str, ...]
+    #: For the person, in the review: sentences, with links counted from one and no step
+    #: named by number, because the review does not number steps as the answer did.
+    shown: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -75,7 +81,16 @@ def check_plan(response: PlanResponse, *, max_item_minutes: int) -> PlanReport:
     for position, item in enumerate(response.items):
         reasons = _reasons(item, position, limit, titles_kept)
         if reasons:
-            discarded.append(DiscardedItem(position, item.title.strip(), tuple(reasons)))
+            discarded.append(
+                DiscardedItem(
+                    position,
+                    item.title.strip(),
+                    tuple(told for told, _ in reasons),
+                    # Two dependencies on later steps are two lines to the model and one
+                    # sentence to the person, which names neither.
+                    tuple(dict.fromkeys(shown for _, shown in reasons)),
+                )
+            )
             continue
         title = item.title.strip()
         titles_kept.add(_comparable(title))
@@ -94,24 +109,33 @@ def check_plan(response: PlanResponse, *, max_item_minutes: int) -> PlanReport:
     return PlanReport(tuple(kept), tuple(discarded))
 
 
-def _reasons(item: PlanItem, position: int, limit: int, titles_kept: set[str]) -> list[str]:
-    reasons: list[str] = []
+def _reasons(
+    item: PlanItem, position: int, limit: int, titles_kept: set[str]
+) -> list[tuple[str, str]]:
+    """Each reason as the model is told it and as the person is shown it (ADR-0055)."""
+    reasons: list[tuple[str, str]] = []
+
+    def fail(told: str, shown: str | None = None) -> None:
+        # The model's line is already the person's sentence, short of a capital and a full
+        # stop, unless it numbers something: then the sentence is given.
+        reasons.append((told, shown or f"{told[0].upper()}{told[1:]}."))
+
     title = item.title.strip()
 
     if not title:
-        reasons.append("the title is empty")
+        fail("the title is empty")
     elif len(title) > MAX_TITLE_CHARS:
-        reasons.append(f"the title is longer than {MAX_TITLE_CHARS} characters")
+        fail(f"the title is longer than {MAX_TITLE_CHARS} characters")
     elif _comparable(title) in titles_kept:
         # Against the items kept so far, not every earlier one: if the first of two
         # identical titles was discarded for something else, the second is the one to keep.
-        reasons.append("the title repeats an earlier step's")
+        fail("the title repeats an earlier step's")
 
     if len(item.description.strip()) > MAX_DESCRIPTION_CHARS:
-        reasons.append(f"the description is longer than {MAX_DESCRIPTION_CHARS} characters")
+        fail(f"the description is longer than {MAX_DESCRIPTION_CHARS} characters")
 
     if not MIN_ITEM_MINUTES <= item.estimated_minutes <= limit:
-        reasons.append(
+        fail(
             f"it takes {item.estimated_minutes} minutes, and a step has to take between "
             f"{MIN_ITEM_MINUTES} and {limit}"
         )
@@ -125,16 +149,28 @@ def _reasons(item: PlanItem, position: int, limit: int, titles_kept: set[str]) -
         if not 0 <= prerequisite < position:
             # Only backwards, so the list's own order is a valid order and a cycle cannot
             # be written at all (ADR-0030).
-            reasons.append(f"it depends on items[{prerequisite}], which does not come before it")
+            fail(
+                f"it depends on items[{prerequisite}], which does not come before it",
+                # No number: the review counts the steps it kept, so "step 7" there may be
+                # another step, and the model can point at one that does not exist.
+                "It depends on a step that does not come before it.",
+            )
 
     for index, link in enumerate(item.links):
         label = link.label.strip()
+        nth = f"Link {index + 1}"
         if not label:
-            reasons.append(f"link {index}: the label is empty")
+            fail(f"link {index}: the label is empty", f"{nth}: the label is empty.")
         elif len(label) > MAX_LINK_LABEL_CHARS:
-            reasons.append(f"link {index}: the label is longer than {MAX_LINK_LABEL_CHARS}")
+            fail(
+                f"link {index}: the label is longer than {MAX_LINK_LABEL_CHARS}",
+                f"{nth}: the label is longer than {MAX_LINK_LABEL_CHARS} characters.",
+            )
         if not _is_web_address(link.url.strip()):
-            reasons.append(f"link {index}: the URL is not an absolute http or https address")
+            fail(
+                f"link {index}: the URL is not an absolute http or https address",
+                f"{nth}: the URL is not an absolute http or https address.",
+            )
 
     return reasons
 
