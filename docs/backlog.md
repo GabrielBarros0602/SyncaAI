@@ -435,10 +435,13 @@ com a semana rolando de lado a 200%, e deixar como estava. A coluna continua com
 
 As telas mostraram três problemas que são do servidor, não do desenho:
 
-- **O motivo de um passo descartado por depender de um posterior fala com o modelo, não com a
+- ~~**O motivo de um passo descartado por depender de um posterior fala com o modelo, não com a
   pessoa.** O validador escreve "it depends on items[6], which does not come before it", para a
   mensagem de reparo, e o rascunho guarda o mesmo texto. A revisão mostraria `items[6]` a quem
-  só vê "step 7". Os outros motivos servem às duas leituras.
+  só vê "step 7". Os outros motivos servem às duas leituras.~~ ✅ Feito em 2026-11-16
+  (ADR-0055): cada motivo é escrito duas vezes, e o rascunho guarda a frase da pessoa, "It
+  depends on a step that does not come before it." Os outros não serviam às duas leituras: o
+  `link 0` também contava do zero, e o desenho mostra todos como frase, com maiúscula e ponto.
 - ~~**Um link de reset inválido responde com a frase do link de confirmação:** "That confirmation
   link is not valid. Request a new one." Os dois links compartilham o erro; a frase tem que ser
   a de cada um. O brief do passo 6 já pede "That link to set a new password is not valid.
@@ -462,6 +465,13 @@ quando há mais de um aprovado.
 - **"Plan · 3 of 5" conta o plano aprovado mais recente que ainda tem tarefas em aberto.** Os
   outros ficam na lista de planos (ADR-0050). Somar todos misturaria planos que a pessoa vê
   separados; seguir a semana na tela mudaria o número a cada navegação.
+
+**Aberto em 2026-11-16, para o S8: como a revisão numera os passos.** A API guarda a posição de
+cada passo na resposta do modelo, com buracos onde um foi descartado. O `plan.dc.html` numera
+os mantidos pela ordem na tela e os descartados pela posição na resposta. Com um descarte no
+meio, a tela teria um "step 4" mantido e um "Step 4" descartado. O exemplo do desenho não
+mostra isso, porque os três descartes dele são os últimos. É por isso que nenhum motivo cita
+passo por número (ADR-0055).
 
 ---
 
