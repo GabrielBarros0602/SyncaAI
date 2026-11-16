@@ -162,13 +162,17 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
    antes da sessão.
 8. ~~**O CLAUDE.md diz que os testes de integração pulam sem banco.**~~ ✅ Feito em
    2026-10-26: sem PostgreSQL a execução para na hora e diz por quê, e o texto diz isso.
-9. **Duas cópias do repositório não podem rodar a suíte ao mesmo tempo.** Achado em 2026-11-16:
+9. ~~**Duas cópias do repositório não podem rodar a suíte ao mesmo tempo.** Achado em 2026-11-16:
    um worktree e o checkout principal rodaram o `pytest` juntos, e os dois usam o mesmo
    `syncaai_test`. Os testes da fila exigem a fila vazia, então cada execução derruba a outra
    com falhas que não têm a ver com a mudança: "the queue already has unfinished jobs", um
    NOTIFY a mais em `test_ai_queue.py`, um job que não chega em `test_circuit_breaker.py`.
    Opções: um banco de teste por checkout, com o nome tirado do caminho, ou só registrar que a
-   suíte roda uma de cada vez. Aberto.
+   suíte roda uma de cada vez.~~ ✅ Decidido e feito em 2026-11-16: um banco por checkout,
+   `syncaai_<resumo do caminho>_test`. O `TEST_DATABASE_URL` continua valendo por cima. Um
+   checkout apagado deixa o seu banco para trás, e o `syncaai_test` antigo ficou órfão no
+   PostgreSQL de desenvolvimento. Qualquer um deles pode ser apagado à mão: a suíte recria o
+   seu.
 
 ---
 

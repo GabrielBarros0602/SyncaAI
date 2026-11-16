@@ -1,5 +1,6 @@
 """Shared fixtures for the API test suite."""
 
+import hashlib
 import os
 import re
 from collections.abc import Iterator
@@ -19,7 +20,19 @@ from syncaai.config import Settings, discover_env_file, get_settings
 from syncaai.main import create_app
 
 API_DIR = Path(__file__).resolve().parents[1]
-TEST_DATABASE = "syncaai_test"
+
+
+def _checkout_database(checkout: Path = API_DIR) -> str:
+    """The test database of one checkout, named after where it sits on disk.
+
+    One name for all of them let two checkouts run the suite at once in the same database: a
+    worktree beside the main checkout, and the queue tests of each run failed the other's,
+    because they need the queue empty. The path is the one thing two checkouts cannot share.
+
+    A checkout that is deleted leaves its database behind. Any of them can be dropped: the
+    suite creates its own again.
+    """
+    return f"syncaai_{hashlib.sha256(str(checkout).encode()).hexdigest()[:8]}_test"
 
 
 class _DatabaseOnly(BaseSettings):
@@ -38,15 +51,15 @@ def _test_database_url() -> URL | None:
     """Where the integration tests write: never the development database.
 
     ``TEST_DATABASE_URL`` when it is set; otherwise the server ``DATABASE_URL`` names, with
-    the database swapped for ``syncaai_test``, the name CI already gives its own. A name that
-    does not end in ``_test`` is refused, so no variable set by mistake can point the suite at
-    a database somebody is using.
+    the database swapped for this checkout's own. A name that does not end in ``_test`` is
+    refused, so no variable set by mistake can point the suite at a database somebody is
+    using.
     """
     found = _DatabaseOnly()
     if found.test_database_url:
         url = make_url(found.test_database_url)
     elif found.database_url:
-        url = make_url(found.database_url).set(database=TEST_DATABASE)
+        url = make_url(found.database_url).set(database=_checkout_database())
     else:
         return None
     if not re.fullmatch(r"\w+_test", url.database or ""):

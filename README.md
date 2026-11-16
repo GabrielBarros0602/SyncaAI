@@ -248,10 +248,12 @@ and the ones kept are labelled by hand
 ([ADR-0048](docs/adr/0048-golden-fixtures-are-captured-by-a-script-and-labelled-by-a-person.md)).
 
 Tests marked `integration` need a reachable PostgreSQL. Start one with
-`docker compose up -d db` and they run as-is, in a database of their own, `syncaai_test`,
-which the suite creates and migrates itself; the development database is never touched. Set
-`TEST_DATABASE_URL` to use another, whose name has to end in `_test`. Without PostgreSQL,
-deselect them:
+`docker compose up -d db` and they run as-is, in a database of this checkout's own, which the
+suite creates and migrates itself; the development database is never touched. Its name is
+`syncaai_<digest of the checkout's path>_test`, so two checkouts on one machine can run the
+suite at once. A checkout that is deleted leaves its database behind; any of them can be
+dropped, because the suite creates its own again. Set `TEST_DATABASE_URL` to use another,
+whose name has to end in `_test`. Without PostgreSQL, deselect them:
 
 ```bash
 pytest -m "not integration"
