@@ -1,6 +1,6 @@
 /*
- * Pinned to the bottom centre of the window, as week-desktop.dc.html draws it. On a phone the
- * day view will set it above its day bar; until that view exists it sits at the same place.
+ * Pinned to the bottom centre of the window, as week-desktop.dc.html draws it. Below 1100px it
+ * is docked instead: in the flow, above the bar between days (day-phone.dc.html).
  */
 
 .region {
@@ -13,6 +13,20 @@
   max-width: calc(100vw - 2 * var(--space-4));
   /* The empty region must not catch clicks meant for the page under it. */
   pointer-events: none;
+}
+
+/* Stacked above the bar it is docked with, so the notice never covers New task or a day. */
+.docked {
+  position: static;
+  transform: none;
+  justify-content: center;
+  max-width: none;
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.docked .notice {
+  flex: 1;
+  max-width: 480px;
 }
 
 .notice {
