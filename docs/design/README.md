@@ -91,8 +91,14 @@ the copy here only renders the screens.
 - **A discarded step's reasons are shown sentence-cased,** from the validator's text.
 - **One vocabulary at every width.** Where the phone's drawing and the desktop's name the same
   thing in different words, the desktop's are used at every width, case included: "booked",
-  not "reserved"; "today" and "+ new task", not "Today" and "+ New task". A task should not
-  change its words between 1099 and 1100px. What only the phone draws keeps the phone's words.
+  not "reserved"; "today" and "+ new task", not "Today" and "+ New task"; "go to date", and in
+  its sheet "go" and "cancel", not "Go to a date", "Go to Thursday 22 Oct" and "Close"; the
+  range as `16 – 22 Nov 2026`. A task should not change its words between 1099 and 1100px.
+  What only the phone draws keeps the phone's words, Today among them.
+- **Below 640px the range is the page's heading, and "go to date" is a button under it.** The
+  drawing makes the range itself the button, but a heading cannot sit inside one, and the
+  range is what the router puts focus on. The button's target is stretched over both, so the
+  press lands where the drawing puts it.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.

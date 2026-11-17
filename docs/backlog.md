@@ -449,7 +449,7 @@ O `day-phone.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 1. ✅ Um dia na tela abaixo de 1100px, a semana de relance (faixa de sete células abaixo de
    640px, coluna de sete linhas a partir dali), a barra entre os dias embaixo e o aviso
    empilhado acima dela.
-2. O cabeçalho das duas faixas: Today, `‹ intervalo ›`, "Go to a date" como folha, a frase do
+2. ✅ O cabeçalho das duas faixas: Today, `‹ intervalo ›`, "go to date" como folha, a frase do
    fuso.
 3. O cabeçalho do dia e as linhas como desenhados, e a linha de conclusão tardia que não
    quebra a 200%.
