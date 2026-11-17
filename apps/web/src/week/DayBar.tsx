@@ -26,8 +26,9 @@ export function DayBar({ previous, next, onPrevious, onNext, onNew }: Props): Re
         <span aria-hidden="true">‹ </span>
         <span className={styles.unseen}>Previous day,</span> {previous}
       </button>
+      {/* The desktop's words for the same button on every day, not the drawing's "+ New task". */}
       <button type="button" className={styles.create} aria-haspopup="dialog" onClick={onNew}>
-        + New task
+        + new task
       </button>
       <button type="button" className={cx(styles.step, styles.stepNext)} onClick={onNext}>
         <span className={styles.unseen}>Next day,</span> {next}
