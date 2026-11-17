@@ -179,6 +179,8 @@ describe("which layout a width chooses", () => {
     // The strip names each cell in a sentence; the column's rows are named by what they show.
     expect(within(glance()).getByRole("button", { name: /^Wednesday 26, today\./ })).toBeDefined();
     expect(screen.queryByRole("complementary")).toBeNull();
+    // Part of the header, under the week and over the zone, as a phone draws it.
+    expect(glance().closest("header")).toBe(screen.getByRole("banner"));
 
     act(() => {
       setViewportWidth(640);
@@ -186,6 +188,7 @@ describe("which layout a width chooses", () => {
 
     const column = screen.getByRole("complementary", { name: "Week at a glance" });
     expect(within(column).getByRole("button", { name: /^Wed 26 today/ })).toBeDefined();
+    expect(column.closest("header")).toBeNull();
   });
 
   it("moves between one day and seven when the window crosses 1100px", async () => {
@@ -409,11 +412,16 @@ describe("another week, with one day on screen", () => {
     fireEvent.keyDown(window, { key: "[" });
     await showing("2026-08-21");
 
-    fireEvent.click(screen.getByRole("button", { name: /back to this week/ }));
+    const today = screen.getByRole("button", { name: "Today" });
+    expect(today.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(today);
     await showing("2026-08-26");
+    expect(today.getAttribute("aria-pressed")).toBe("true");
 
     fireEvent.click(within(screen.getByRole("complementary")).getByRole("button", { name: /^Mon 24/ }));
     await showing("2026-08-24");
+    // Today's week, and another day of it: not pressed, since today is not what is on screen.
+    expect(today.getAttribute("aria-pressed")).toBe("false");
     fireEvent.keyDown(window, { key: "t" });
     await showing("2026-08-26");
   });

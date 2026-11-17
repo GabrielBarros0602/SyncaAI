@@ -18,6 +18,7 @@ import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayBar } from "./DayBar";
 import { DayColumn } from "./DayColumn";
+import { DayHeader } from "./DayHeader";
 import { NewTaskDialog } from "./NewTaskDialog";
 import { WeekGlance } from "./WeekGlance";
 import { WeekHeader } from "./WeekHeader";
@@ -334,10 +335,12 @@ export function WeekScreen(): React.ReactNode {
   // The header and the legend sit at the same place in every state, so between one week and
   // the next they stay mounted: focus stays on the › that was pressed, and a folded legend
   // stays folded.
+  const range = weekRange(week.monday, dates[6] as Date);
+  const legend = <ShortcutLegend shortcuts={SHORTCUTS} />;
   const top = (
     <>
       <WeekHeader
-        range={weekRange(week.monday, dates[6] as Date)}
+        range={range}
         offset={week.offset}
         me={week.me}
         today={todayKey ?? toLocalDate(new Date())}
@@ -348,7 +351,7 @@ export function WeekScreen(): React.ReactNode {
           void signOut();
         }}
       />
-      <ShortcutLegend shortcuts={SHORTCUTS} />
+      {legend}
     </>
   );
 
@@ -378,21 +381,47 @@ export function WeekScreen(): React.ReactNode {
         </>
       );
     }
+    const glance = (
+      <WeekGlance
+        layout={layout}
+        dates={dates}
+        days={week.days}
+        state={week.status}
+        selected={current.day}
+        today={todayIndex}
+        onSelect={showDay}
+      />
+    );
+    // Edge to edge, as the drawing is: the header, the column and the bar draw their own
+    // edges, so the shell's padding is taken back. The legend, for a keyboard, sits above the
+    // day rather than between the header and the week it describes.
     return (
-      <>
-        <main className={styles.page}>
-          {top}
+      <div className={styles.edge}>
+        <main className={styles.dayPage}>
+          <DayHeader
+            layout={layout}
+            range={range}
+            offset={week.offset}
+            me={week.me}
+            days={dayKeys}
+            shown={dayKeys[current.day] ?? dayKeys[0] ?? ""}
+            today={todayKey ?? toLocalDate(new Date())}
+            onToday={week.offset === 0 && current.day === todayIndex}
+            onGoTo={goToWeek}
+            onBack={goToToday}
+            onGoToDate={goToDate}
+            onSignOut={() => {
+              void signOut();
+            }}
+          >
+            {layout === "day" && glance}
+          </DayHeader>
           <div className={cx(styles.body, layout === "beside" && styles.beside)}>
-            <WeekGlance
-              layout={layout}
-              dates={dates}
-              days={week.days}
-              state={week.status}
-              selected={current.day}
-              today={todayIndex}
-              onSelect={showDay}
-            />
-            <div className={styles.pane}>{content}</div>
+            {layout === "beside" && glance}
+            <div className={styles.pane}>
+              {legend}
+              {content}
+            </div>
           </div>
         </main>
         <div className={styles.dock}>
@@ -409,7 +438,7 @@ export function WeekScreen(): React.ReactNode {
             onNew={newTaskFromBar}
           />
         </div>
-      </>
+      </div>
     );
   }
 
