@@ -316,6 +316,48 @@ export function instantAt(localDate: string, minutesFromMidnight: number, timeZo
   return new Date(survived ? secondPass : firstPass);
 }
 
+/** `UTC-3`, `UTC+5:30`, `UTC+0`: how far a zone is from UTC at an instant, as the screen writes it. */
+export function utcOffset(at: Date, timeZone: string): string {
+  const minutes = offsetAt(at.getTime(), timeZone);
+  const whole = Math.abs(minutes);
+  const rest = whole % MINUTES_IN_AN_HOUR;
+  return `UTC${minutes < 0 ? "-" : "+"}${String(Math.floor(whole / MINUTES_IN_AN_HOUR))}${rest === 0 ? "" : `:${pad(rest)}`}`;
+}
+
+/**
+ * When the clocks change during a local day, or null when they do not.
+ *
+ * `at` is the wall-clock time they leave, `02:00` on Lisbon's last Sunday of October, and `by`
+ * is how far they move: -60 back, +60 forward, ±30 where a zone moves half an hour. A change
+ * that skips midnight itself belongs to the day that begins late, at `00:00`.
+ *
+ * Found by halving the day rather than by reading every minute: the offset is the old one up to
+ * the change and the new one after it, so eleven readings find the minute in a 25-hour day.
+ */
+export function clockChange(localDate: string, timeZone: string): { at: string; by: number } | null {
+  const [year = 1970, month = 1, day = 1] = localDate.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+  const start = startOfLocalDay(localDate, timeZone).getTime();
+  const end = startOfLocalDay(next, timeZone).getTime();
+  const minute = MILLISECONDS_IN_A_MINUTE;
+  // The offset the day was entered with: a minute before it, since a change at midnight has
+  // already happened by the day's first instant.
+  const before = offsetAt(start - minute, timeZone);
+  const after = offsetAt(end - minute, timeZone);
+  if (before === after) return null;
+
+  let low = 0;
+  let high = (end - start) / minute - 1;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (offsetAt(start + middle * minute, timeZone) === before) low = middle + 1;
+    else high = middle;
+  }
+  // Read in the old offset: the minute before the day began, plus one, plus the minutes in.
+  const entered = zonedMinutes(new Date(start - minute).toISOString(), timeZone) + 1;
+  return { at: clock(entered + low), by: after - before };
+}
+
 /** Real minutes between two instants, which is not the same as clock minutes. */
 export function minutesBetween(from: string | Date, to: string | Date): number {
   const start = from instanceof Date ? from.getTime() : Date.parse(from);
