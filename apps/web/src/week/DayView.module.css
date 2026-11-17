@@ -5,11 +5,11 @@
  */
 
 /* Seven 44px cells fit in 320px only edge to edge, so the strip runs 2px short of the window
-   on each side, past the shell's padding. A cell grows with the text, so at 200% the seven no
+   on each side, past the header's padding. A cell grows with the text, so at 200% the seven no
    longer fit one row and wrap into more instead of scrolling sideways. */
 .strip {
   list-style: none;
-  margin: 0 calc(2px - var(--shell-pad));
+  margin: 0 calc(2px - var(--space-2));
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(max(44px, calc(var(--text-1) * 3.4)), 1fr));
@@ -115,17 +115,17 @@
   background: var(--alert);
 }
 
-/* From 640px: a column of seven rows that stays in view while the day beside it scrolls. */
+/* From 640px: a column of seven rows down the left edge, ruled off from the day, whose rows
+   stay in view while the day beside them scrolls. */
 .aside {
-  position: sticky;
-  top: var(--space-4);
   padding: var(--space-3);
-  border-radius: var(--radius-3);
+  border-right: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .column {
+  position: sticky;
+  top: var(--space-3);
   list-style: none;
   margin: 0;
   padding: 0;

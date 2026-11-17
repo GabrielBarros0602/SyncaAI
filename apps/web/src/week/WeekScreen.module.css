@@ -29,11 +29,26 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* One day under the week as a strip of seven, below 640px. */
-.body {
+/* Below 1100px the screen draws its own edges, as day-phone.dc.html does: the header, the
+   column of days and the bar run to the window's edge, so the shell's padding is taken back. */
+.edge {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  margin: calc(var(--shell-pad) * -1);
+}
+
+.dayPage {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The day, under the header below 640px. */
+.body {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* One day beside the week as a column of seven rows, from 640px. 640 is where a column of
@@ -41,25 +56,24 @@
 .beside {
   display: grid;
   grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
-  align-items: start;
 }
 
 .pane {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-5);
 }
 
 /* The status region and the bar between days, at the bottom of the window and of the page.
-   Edge to edge, so it reaches past the shell's padding on three sides. Only the bar and a
-   notice take a press: the empty region above the bar lets them through to the day. */
+   Only the bar and a notice take a press: the empty region above the bar lets them through
+   to the day. */
 .dock {
   position: sticky;
   bottom: 0;
   z-index: 5;
   display: flex;
   flex-direction: column;
-  margin: var(--space-4) calc(var(--shell-pad) * -1) calc(var(--shell-pad) * -1);
   pointer-events: none;
 }

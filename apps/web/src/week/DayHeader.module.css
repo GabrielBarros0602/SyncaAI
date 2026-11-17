@@ -1,0 +1,241 @@
+/* The top of the screen below 1100px, as day-phone.dc.html draws it: edge to edge, on the
+   surface, ruled off from the day under it. Every control is a thumb's 44px, as drawn. */
+
+.narrow,
+.mid {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.narrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-3);
+}
+
+.mid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-2);
+}
+
+.wordmark {
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+.top .wordmark {
+  flex: 1 1 auto;
+}
+
+.weeks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.weeksInline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Today, go to date beside the week, and cancel in the sheet. */
+.button {
+  min-height: var(--target-touch);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.button:hover {
+  background: var(--hover);
+}
+
+.button:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.step {
+  flex: none;
+  width: var(--target-touch);
+  min-height: var(--target-touch);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-strong) var(--text-5) / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+.step:hover {
+  background: var(--hover);
+}
+
+.step:active {
+  background: var(--pressed);
+}
+
+/* The range and the way to another date under it, between the arrows: one target. */
+.range {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--target-touch);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-2);
+}
+
+.range:has(.goto:hover) {
+  background: var(--hover);
+}
+
+.range:has(.goto:active) {
+  background: var(--pressed);
+}
+
+.rangeText {
+  margin: 0;
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.goto {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The press reaches over the heading above it, and so does the focus ring. */
+.goto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-2);
+}
+
+.goto:focus-visible {
+  outline: none;
+}
+
+.goto:focus-visible::after {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+.zone {
+  margin: 0;
+  padding: 0 var(--space-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.zoneShort {
+  flex: 1 1 0;
+  min-width: 0;
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* The date, in a sheet from the bottom edge, where a thumb reaches. */
+.sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: auto;
+  max-width: none;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 0;
+  border-top: 1px solid var(--line-strong);
+  border-radius: var(--radius-4) var(--radius-4) 0 0;
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised);
+}
+
+/* Transparent, as the Menu's: the sheet is the thing to look at, not a dimmed page. */
+.sheet::backdrop {
+  background: transparent;
+}
+
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-5);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.sheetTitle {
+  flex: 1;
+  margin: 0;
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+}
+
+.sheet .button {
+  background: var(--raised);
+}
+
+.sheet .button:hover {
+  background: var(--hover);
+}
+
+.sheet .button:active {
+  background: var(--pressed);
+}
+
+.dateInput {
+  min-height: var(--target-touch);
+}
+
+.sheetActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sheetActions > * {
+  flex: 1 1 auto;
+}
+
+.primary {
+  min-height: var(--target-touch);
+}
