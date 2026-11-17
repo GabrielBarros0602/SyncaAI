@@ -458,19 +458,22 @@ O `day-phone.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 5. Nova tarefa e editar como folha inteira, com Save em cima.
 6. Avisos que levam a outro dia ("Go to Sat"), o deslizar como atalho de toque.
 
-**Três perguntas para o Gabriel**, abertas pela leitura do desenho:
+**Três perguntas abertas pela leitura do desenho — decididas em 2026-11-17**, as três como
+recomendado:
 
-- **O vocabulário.** O desenho do celular escreve "reserved", "Edit", "1 of 3 ticked" e "Delete
-  for good"; o do desktop, já implementado, "booked", "edit", "1/3 checked" e "delete for
-  good". Seguir cada desenho ao pé da letra faz a mesma tarefa trocar de palavra entre 1099 e
-  1100px. A recomendação é um vocabulário só: onde os dois nomeiam a mesma coisa, a palavra do
-  desktop. Até a resposta, a faixa diz "reserved", como o desenho do celular.
-- **Lista ou grid de 640 a 1099px.** O desenho usa a mesma lista nas duas faixas; o ADR-0053
-  diz que o grid vale também para o dia ao lado da semana. Um grid de um dia não tem para onde
-  as setas ← → irem, e hoje, com um dia só no grid, elas não fazem nada. A recomendação é a
-  lista nas duas faixas, com um ADR emendando o 0053.
-- **Teclado abaixo de 1100px sem toque**, como num desktop com zoom de 200%. A recomendação é
-  manter as teclas que ainda fazem sentido e a legenda só com elas.
+- **O vocabulário: um só.** O desenho do celular escreve "reserved", "Edit", "1 of 3 ticked" e
+  "Delete for good"; o do desktop, já implementado, "booked", "edit", "1/3 checked" e "delete
+  for good". Seguir cada desenho ao pé da letra faria a mesma tarefa trocar de palavra entre
+  1099 e 1100px. Onde os dois nomeiam a mesma coisa, vale a palavra do desktop, maiúsculas
+  incluídas; o que só existe no celular usa as palavras dele. Está em "Where the code departs
+  from the drawings", no `docs/design/README.md`.
+- **Lista, não grid, abaixo de 1100px.** O desenho usa a mesma lista nas duas faixas; o
+  ADR-0053 dizia que o grid valia também para o dia ao lado da semana. Um grid de um dia não
+  tem para onde as setas ← → irem, e na PR 1, com um dia só no grid, elas não fazem nada. A
+  lista entra na PR 3, com um ADR emendando o 0053.
+- **Teclado abaixo de 1100px sem toque**, como num desktop com zoom de 200%: ficam as teclas
+  que ainda fazem sentido numa lista, e a legenda mostra só essas. Vai no mesmo ADR e na mesma
+  PR.
 
 ### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 
