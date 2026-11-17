@@ -12,6 +12,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 
+import { cx } from "../lib/cx";
 import styles from "./StatusRegion.module.css";
 
 export interface Notice {
@@ -31,11 +32,16 @@ export interface Notice {
 interface Props {
   notice: Notice | null;
   onExpire: () => void;
+  /**
+   * In the flow of whatever holds it, rather than pinned to the window: where one day is on
+   * screen it is stacked above the bar between days, never over it (day-phone.dc.html).
+   */
+  docked?: boolean;
 }
 
 export const NOTICE_MS = 9000;
 
-export function StatusRegion({ notice, onExpire }: Props): React.ReactNode {
+export function StatusRegion({ notice, onExpire, docked = false }: Props): React.ReactNode {
   const [held, setHeld] = useState(false);
   const remaining = useRef(NOTICE_MS);
   // The latest of each, read when they fire, so a re-render with a new function does not
@@ -93,7 +99,7 @@ export function StatusRegion({ notice, onExpire }: Props): React.ReactNode {
       role="status"
       aria-live="polite"
       aria-busy={busy}
-      className={styles.region}
+      className={cx(styles.region, docked && styles.docked)}
       onMouseEnter={() => {
         setHeld(true);
       }}
