@@ -496,6 +496,50 @@ describe("a new task from the bar", () => {
   });
 });
 
+describe("the keyboard below 1100px (ADR-0056)", () => {
+  function legend(): string {
+    return screen.getByRole("region", { name: "Keyboard shortcuts" }).textContent;
+  }
+
+  it("is a list, not a grid, and the legend leaves out the keys that walk a grid", async () => {
+    setViewportWidth(TABLET);
+    serve();
+    renderWeek();
+    await showing("2026-08-26");
+
+    expect(screen.queryByRole("grid")).toBeNull();
+    expect(screen.getByRole("list", { name: "Tasks on Wednesday 26 Aug" })).toBeDefined();
+    expect(legend()).not.toContain("move between days and rows");
+    expect(legend()).not.toContain("first or last in a day");
+    expect(legend()).toContain("open or close a row");
+    expect(legend()).toContain("new task on the focused day");
+
+    act(() => {
+      setViewportWidth(1280);
+    });
+    expect(screen.getByRole("grid")).toBeDefined();
+    expect(legend()).toContain("move between days and rows");
+  });
+
+  it("puts focus back on a row's button when Esc closes it", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [aTask("Read", "2026-08-26T14:00:00", "2026-08-26T15:00:00")] });
+    renderWeek();
+    await showing("2026-08-26");
+    const button = await screen.findByRole("button", { name: /Read/ });
+
+    fireEvent.click(button);
+    const edit = await screen.findByRole("button", { name: /^edit/ });
+    edit.focus();
+    fireEvent.keyDown(edit, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(button.getAttribute("aria-expanded")).toBe("false");
+    });
+    expect(document.activeElement).toBe(button);
+  });
+});
+
 describe("a task the night before is still running", () => {
   it("follows the band to the day that owns the task, with its row open and focused", async () => {
     setViewportWidth(PHONE);
