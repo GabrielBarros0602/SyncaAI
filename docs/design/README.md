@@ -89,6 +89,10 @@ the copy here only renders the screens.
 - **A person's usable day and days off come from their settings.** The plan's drawing assumed
   07:00 to 23:00 with the weekend off; a new account starts at 06:00 to 22:00 with none.
 - **A discarded step's reasons are shown sentence-cased,** from the validator's text.
+- **One vocabulary at every width.** Where the phone's drawing and the desktop's name the same
+  thing in different words, the desktop's are used at every width, case included: "booked",
+  not "reserved"; "today" and "+ new task", not "Today" and "+ New task". A task should not
+  change its words between 1099 and 1100px. What only the phone draws keeps the phone's words.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.

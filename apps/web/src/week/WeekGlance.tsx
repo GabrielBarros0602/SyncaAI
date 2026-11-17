@@ -72,9 +72,11 @@ export function WeekGlance({
       // Every level above fine, the server's ladder and never one recomputed here.
       load: capacity === undefined || capacity.load === "fine" ? null : LEVEL[capacity.load],
       figure,
+      // "booked" and "today", where the phone's drawing says "reserved" and "Today": one
+      // vocabulary at every width, the desktop's (docs/design/README.md).
       said:
         capacity !== undefined
-          ? `${figure} reserved. ${LEVEL[capacity.load]}.`
+          ? `${figure} booked. ${LEVEL[capacity.load]}.`
           : state === "loading"
             ? "Loading."
             : "Not loaded.",
@@ -137,7 +139,7 @@ export function WeekGlance({
                 <span className={styles.short}>
                   {weekdayName(cell.index + 1)} {cell.number}
                 </span>{" "}
-                {cell.isToday && <span className={styles.today}>Today</span>}{" "}
+                {cell.isToday && <span className={styles.today}>today</span>}{" "}
                 <span className={styles.figure}>{cell.figure}</span>
               </span>{" "}
               <span aria-hidden="true" className={styles.track} style={{ width: cell.track }}>

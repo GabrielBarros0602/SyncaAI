@@ -185,7 +185,7 @@ describe("which layout a width chooses", () => {
     });
 
     const column = screen.getByRole("complementary", { name: "Week at a glance" });
-    expect(within(column).getByRole("button", { name: /^Wed 26 Today/ })).toBeDefined();
+    expect(within(column).getByRole("button", { name: /^Wed 26 today/ })).toBeDefined();
   });
 
   it("moves between one day and seven when the window crosses 1100px", async () => {
@@ -225,13 +225,13 @@ describe("the week at a glance", () => {
       .getAllByRole("button")
       .map((cell) => cell.getAttribute("aria-label"));
     expect(names).toEqual([
-      "Monday 24. 2h30 reserved. Fine.",
-      "Tuesday 25. 0m reserved. Fine.",
-      "Wednesday 26, today. 0m reserved. Fine.",
-      "Thursday 27. 0m reserved. Fine.",
-      "Friday 28. 17h reserved. Heavy.",
-      "Saturday 29. 0m reserved. Fine.",
-      "Sunday 30. 0m reserved. Fine.",
+      "Monday 24. 2h30 booked. Fine.",
+      "Tuesday 25. 0m booked. Fine.",
+      "Wednesday 26, today. 0m booked. Fine.",
+      "Thursday 27. 0m booked. Fine.",
+      "Friday 28. 17h booked. Heavy.",
+      "Saturday 29. 0m booked. Fine.",
+      "Sunday 30. 0m booked. Fine.",
     ]);
   });
 
@@ -341,7 +341,7 @@ describe("the bar between days", () => {
 
     expect(within(bar()).getByRole("button", { name: "Previous day, Tue 25" })).toBeDefined();
     expect(within(bar()).getByRole("button", { name: "Next day, Thu 27" })).toBeDefined();
-    expect(within(bar()).getByRole("button", { name: "+ New task" })).toBeDefined();
+    expect(within(bar()).getByRole("button", { name: "+ new task" })).toBeDefined();
   });
 
   it("steps a day at a time, and keeps its neighbours' names in step", async () => {
@@ -451,7 +451,7 @@ describe("a new task from the bar", () => {
     fireEvent.click(within(glance()).getByRole("button", { name: /^Friday 28/ }));
     await showing("2026-08-28");
 
-    fireEvent.click(within(bar()).getByRole("button", { name: "+ New task" }));
+    fireEvent.click(within(bar()).getByRole("button", { name: "+ new task" }));
 
     expect(screen.getByRole("dialog", { name: "New task" })).toBeDefined();
     expect(startDay()).toBe("2026-08-28");
@@ -465,7 +465,7 @@ describe("a new task from the bar", () => {
     fireEvent.click(within(glance()).getByRole("button", { name: /^Monday 24/ }));
     await showing("2026-08-24");
 
-    fireEvent.click(within(bar()).getByRole("button", { name: "+ New task" }));
+    fireEvent.click(within(bar()).getByRole("button", { name: "+ new task" }));
 
     expect(startDay()).toBe("2026-08-26");
     expect(daysOnScreen()).toEqual(["2026-08-24"]);
