@@ -1,3 +1,4 @@
+import { cx } from "../lib/cx";
 import { dayMonth, daysFrom, weekdayDrawn } from "../lib/time";
 import day from "./Day.module.css";
 import page from "./WeekScreen.module.css";
@@ -5,6 +6,8 @@ import page from "./WeekScreen.module.css";
 interface Props {
   /** The week that could not be read. */
   monday: Date;
+  /** The one day on screen below 1100px, of the seven; all seven when not given. */
+  day?: number | undefined;
   onRetry: () => void;
 }
 
@@ -15,7 +18,7 @@ interface Props {
  * would be worse than showing none: a stale free-minutes count is a number somebody will
  * plan against, and it is wrong in the direction that overbooks.
  */
-export function WeekUnreachable({ monday, onRetry }: Props): React.ReactNode {
+export function WeekUnreachable({ monday, day: only, onRetry }: Props): React.ReactNode {
   return (
     <>
       <div className={day.problem} role="alert">
@@ -27,18 +30,20 @@ export function WeekUnreachable({ monday, onRetry }: Props): React.ReactNode {
           retry
         </button>
       </div>
-      <div className={page.grid}>
-        {daysFrom(monday).map((date, index) => (
-          <div key={date.toISOString()} className={day.day}>
-            <div className={day.head}>
-              <div className={day.name}>
-                <span className={day.weekday}>{weekdayDrawn(index + 1)}</span>
-                <span className={day.date}>{dayMonth(date)}</span>
+      <div className={cx(page.grid, only !== undefined && page.oneDay)}>
+        {daysFrom(monday).map((date, index) =>
+          only !== undefined && only !== index ? null : (
+            <div key={date.toISOString()} className={day.day}>
+              <div className={day.head}>
+                <div className={day.name}>
+                  <span className={day.weekday}>{weekdayDrawn(index + 1)}</span>
+                  <span className={day.date}>{dayMonth(date)}</span>
+                </div>
+                <span className={day.bookedValue}>&#8212;</span>
               </div>
-              <span className={day.bookedValue}>&#8212;</span>
             </div>
-          </div>
-        ))}
+          ),
+        )}
       </div>
     </>
   );

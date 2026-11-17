@@ -19,6 +19,7 @@ function header(onGoToDate = vi.fn<(localDate: string) => void>()): HTMLElement 
       me={null}
       today="2026-08-26"
       onGoTo={() => undefined}
+      onBack={() => undefined}
       onGoToDate={onGoToDate}
       onSignOut={() => undefined}
     />,

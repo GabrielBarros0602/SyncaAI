@@ -2,19 +2,24 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
+import { cx } from "../lib/cx";
 import {
   dayMonth,
   daysFrom,
   toLocalDate,
   weekRange,
+  weekdayName,
   weekdayOf,
   zonedDay,
 } from "../lib/time";
+import { useLayout } from "../lib/useLayout";
 import type { Task } from "../api/types";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
+import { DayBar } from "./DayBar";
 import { DayColumn } from "./DayColumn";
 import { NewTaskDialog } from "./NewTaskDialog";
+import { WeekGlance } from "./WeekGlance";
 import { WeekHeader } from "./WeekHeader";
 import { WeekSkeleton } from "./WeekSkeleton";
 import { WeekUnreachable } from "./WeekUnreachable";
@@ -59,6 +64,8 @@ function dayLabel(localDate: string): string {
 export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
   const week = useWeek();
+  // Seven columns from 1100px, one day beside or under the week at a glance below (ADR-0052).
+  const layout = useLayout();
   const [openDay, setOpenDay] = useState<string | null>(null);
   // One row open across the whole week, not one per column. Two panels standing open at once
   // would each be offering to act on a different task with nothing saying which is in front.
@@ -70,9 +77,17 @@ export function WeekScreen(): React.ReactNode {
   // marked today from the browser would mark the wrong day for a user who travelled —
   // silently, which is the worst way to be wrong about which day it is.
   const todayKey = week.me === null ? null : zonedDay(new Date().toISOString(), week.me.timezone);
-  const todayIndex = week.days.findIndex((day) => day.day === todayKey);
+  const dates = daysFrom(week.monday);
+  const dayKeys = dates.map(toLocalDate);
+  // From the dates rather than from the days the server sent, so the one day on screen below
+  // 1100px is already today's while its week is on the way.
+  const todayIndex = todayKey === null ? -1 : dayKeys.indexOf(todayKey);
+  // Until the zone is known the browser's today says which day to draw, as the skeleton before
+  // it did, and never which day is marked.
+  const startDay = week.me === null ? dayKeys.indexOf(toLocalDate(new Date())) : todayIndex;
+  // The day holding the stop is also the one day on screen, below 1100px.
   const current =
-    focus !== null && focus.offset === week.offset ? focus : { day: Math.max(0, todayIndex), cell: 0 };
+    focus !== null && focus.offset === week.offset ? focus : { day: Math.max(0, startDay), cell: 0 };
   // Every write reloads the week, and the row somebody acted on may not be where it was when
   // the new week arrives: moved to another day, deleted, or brought back under a new id. Focus
   // is put on the week that arrives after the write — `after` is the load it has to be newer
@@ -107,11 +122,75 @@ export function WeekScreen(): React.ReactNode {
         : "newTaskOn" in target
           ? document.querySelector<HTMLElement>(`[data-new-task="${target.newTaskOn}"]`)
           : document.querySelector<HTMLElement>(`[data-cell="${target.cell}"]`);
-    element?.focus();
-  }, [loaded, status]);
+    // With one day on screen the row may have gone to a day that is not. Focus goes to the
+    // header of the day that is, rather than to the page.
+    const header =
+      layout === "week" ? null : document.querySelector<HTMLElement>('[role="grid"] [data-cell$=":0"]');
+    (element ?? header)?.focus();
+    // The day too: another day of the same week comes on screen without the week reloading.
+  }, [loaded, status, current.day, layout]);
 
   function focusOnceReloaded(target: FocusTarget): void {
     pendingFocus.current = { target, after: loaded };
+  }
+
+  /** Put another day of the week on screen, where one day is, and focus `then` once it is. */
+  function showDay(day: number, then?: FocusTarget): void {
+    setOpenTask(null);
+    setFocus({ offset: week.offset, day, cell: 0 });
+    // This week is already here, so the day's arrival is the one to wait for.
+    if (then !== undefined) pendingFocus.current = { target: then, after: loaded - 1 };
+  }
+
+  /** The day before or after the one on screen, into the next week when the week ends. */
+  function stepDay(by: -1 | 1): void {
+    const day = current.day + by;
+    if (day >= 0 && day <= 6) {
+      showDay(day);
+      return;
+    }
+    const offset = week.offset + by;
+    setOpenTask(null);
+    setFocus({ offset, day: by === 1 ? 0 : 6, cell: 0 });
+    week.goTo(offset);
+  }
+
+  /**
+   * Another week. With one day on screen it opens on the same weekday, as day-phone.dc.html
+   * has it; the seven columns start from today's header, or Monday's.
+   */
+  function goToWeek(offset: number): void {
+    if (layout !== "week") {
+      setOpenTask(null);
+      setFocus({ offset, day: current.day, cell: 0 });
+    }
+    week.goTo(offset);
+  }
+
+  /** This week, and with one day on screen, today: what T and "back to this week" mean. */
+  function goToToday(): void {
+    if (layout !== "week") {
+      setOpenTask(null);
+      setFocus(null);
+    }
+    week.goTo(0);
+  }
+
+  /**
+   * A new task from the bar under the one day on screen.
+   *
+   * On that day, unless it has gone: a day that has gone takes nothing new, so the form opens
+   * on today, in this week, as the drawing has it.
+   */
+  function newTaskFromBar(): void {
+    if (todayKey === null) return;
+    const shown = dayKeys[current.day];
+    if (shown !== undefined && shown >= todayKey) {
+      setOpenDay(shown);
+      return;
+    }
+    if (week.offset !== 0) goToToday();
+    setOpenDay(todayKey);
   }
 
   /**
@@ -132,9 +211,12 @@ export function WeekScreen(): React.ReactNode {
     const cell = `${String(day)}:0`;
     setOpenTask(null);
     setFocus({ offset, day, cell: 0 });
-    // The same week does not reload, so there is no arrival to wait for.
+    // The same week does not reload, so there is no arrival to wait for, unless the day itself
+    // is not on screen yet.
     if (offset === week.offset) {
-      document.querySelector<HTMLElement>(`[data-cell="${cell}"]`)?.focus();
+      const header = document.querySelector<HTMLElement>(`[data-cell="${cell}"]`);
+      if (header !== null) header.focus();
+      else pendingFocus.current = { target: { cell }, after: loaded - 1 };
       return;
     }
     focusOnceReloaded({ cell });
@@ -194,6 +276,7 @@ export function WeekScreen(): React.ReactNode {
   // that stays in the page through every reload rather than a new one each time.
   const region = (
     <StatusRegion
+      docked={layout !== "week"}
       notice={notice}
       onExpire={() => {
         setTrash(null);
@@ -218,6 +301,11 @@ export function WeekScreen(): React.ReactNode {
         setOpenDay(null);
         setOpenTask(null);
       } else if (event.key === "n" || event.key === "N") {
+        if (layout !== "week") {
+          event.preventDefault();
+          newTaskFromBar();
+          return;
+        }
         // The focused day, and never one that has gone: it offers no "+ new task" either.
         const day = week.days[current.day];
         if (day === undefined || current.day < todayIndex) return;
@@ -227,11 +315,11 @@ export function WeekScreen(): React.ReactNode {
         // Unconditional, including when it is already zero. A key that silently does nothing
         // on the week you are already on is indistinguishable from one that is broken.
         event.preventDefault();
-        week.goTo(0);
+        goToToday();
       } else if (event.key === "[") {
-        week.goTo(week.offset - 1);
+        goToWeek(week.offset - 1);
       } else if (event.key === "]") {
-        week.goTo(week.offset + 1);
+        goToWeek(week.offset + 1);
       }
     }
 
@@ -239,9 +327,9 @@ export function WeekScreen(): React.ReactNode {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [week, current.day, todayIndex]);
-
-  const dates = daysFrom(week.monday);
+    // No list of dependencies: the one it had began with `week`, a new object on every render,
+    // so it never held the listener back, and what the keys call is declared in this render.
+  });
 
   // The header and the legend sit at the same place in every state, so between one week and
   // the next they stay mounted: focus stays on the › that was pressed, and a folded legend
@@ -253,7 +341,8 @@ export function WeekScreen(): React.ReactNode {
         offset={week.offset}
         me={week.me}
         today={todayKey ?? toLocalDate(new Date())}
-        onGoTo={week.goTo}
+        onGoTo={goToWeek}
+        onBack={goToToday}
         onGoToDate={goToDate}
         onSignOut={() => {
           void signOut();
@@ -263,27 +352,74 @@ export function WeekScreen(): React.ReactNode {
     </>
   );
 
-  if (week.status === "loading") {
+  /** `Wed 21`: the day `by` days from the one on screen, which may be in another week. */
+  function neighbour(by: -1 | 1): string {
+    const date = new Date(week.monday);
+    date.setDate(date.getDate() + current.day + by);
+    return `${weekdayName(((current.day + by + 7) % 7) + 1)} ${String(date.getDate())}`;
+  }
+
+  /**
+   * The page around what the week holds, in whichever state it is in.
+   *
+   * From 1100px the week is all there is. Below, one day stands beside or under the week at a
+   * glance, and the bar between days stays at the bottom with the status region stacked above
+   * it rather than over it, so New task and both days stay in reach while a notice shows.
+   */
+  function frame(content: React.ReactNode): React.ReactNode {
+    if (layout === "week") {
+      return (
+        <>
+          <main className={styles.page}>
+            {top}
+            {content}
+          </main>
+          {region}
+        </>
+      );
+    }
     return (
       <>
         <main className={styles.page}>
           {top}
-          <WeekSkeleton monday={week.monday} />
+          <div className={cx(styles.body, layout === "beside" && styles.beside)}>
+            <WeekGlance
+              layout={layout}
+              dates={dates}
+              days={week.days}
+              state={week.status}
+              selected={current.day}
+              today={todayIndex}
+              onSelect={showDay}
+            />
+            <div className={styles.pane}>{content}</div>
+          </div>
         </main>
-        {region}
+        <div className={styles.dock}>
+          {region}
+          <DayBar
+            previous={neighbour(-1)}
+            next={neighbour(1)}
+            onPrevious={() => {
+              stepDay(-1);
+            }}
+            onNext={() => {
+              stepDay(1);
+            }}
+            onNew={newTaskFromBar}
+          />
+        </div>
       </>
     );
   }
+
+  const only = layout === "week" ? undefined : current.day;
+
+  if (week.status === "loading") {
+    return frame(<WeekSkeleton monday={week.monday} day={only} />);
+  }
   if (week.status === "unreachable" || week.me === null) {
-    return (
-      <>
-        <main className={styles.page}>
-          {top}
-          <WeekUnreachable monday={week.monday} onRetry={week.reload} />
-        </main>
-        {region}
-      </>
-    );
+    return frame(<WeekUnreachable monday={week.monday} day={only} onRetry={week.reload} />);
   }
 
   // Focus rather than scroll: moving the keyboard there is what makes the way back usable by
@@ -346,20 +482,20 @@ export function WeekScreen(): React.ReactNode {
 
   const timezone = week.me.timezone;
 
-  return (
+  return frame(
     <>
-      <main className={styles.page}>
-        {top}
-        {/* Not a stop itself: its cells hold the one tab stop and the keys arrive from them,
-            as the grid pattern has it (ADR-0053). */}
-        {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
-        <div
-          role="grid"
-          aria-label={`Week of ${weekRange(week.monday, dates[6] as Date)}`}
-          className={styles.grid}
-          onKeyDown={onGridKey}
-        >
-          {week.days.map((capacity, index) => (
+      {/* Not a stop itself: its cells hold the one tab stop and the keys arrive from them,
+          as the grid pattern has it (ADR-0053). */}
+      {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+      <div
+        role="grid"
+        aria-label={`Week of ${weekRange(week.monday, dates[6] as Date)}`}
+        className={cx(styles.grid, only !== undefined && styles.oneDay)}
+        onKeyDown={onGridKey}
+      >
+        {week.days.map((capacity, index) =>
+          // Below 1100px the grid holds the one day on screen; the other six are in the glance.
+          only !== undefined && only !== index ? null : (
             <DayColumn
               key={capacity.day}
               capacity={capacity}
@@ -370,7 +506,18 @@ export function WeekScreen(): React.ReactNode {
               // Null on the first column only. What Monday inherits comes from the Sunday
               // before the week — fetched so the figures are right, never rendered — so there
               // is no row on this screen to send anybody to.
-              onGoToOwner={index === 0 ? null : focusTask}
+              onGoToOwner={
+                index === 0
+                  ? null
+                  : only === undefined
+                    ? focusTask
+                    : // The owner's day is not on screen: it comes on with the row open, as the
+                      // drawing follows a band to its owner.
+                      (taskId) => {
+                        showDay(index - 1, { task: taskId });
+                        setOpenTask({ id: taskId, panel: "open" });
+                      }
+              }
               openTask={openTask}
               saving={week.saving}
               onOpenTask={setOpenTask}
@@ -417,29 +564,28 @@ export function WeekScreen(): React.ReactNode {
               onToggle={week.toggle}
               onChecklist={week.checklist}
             />
-          ))}
-        </div>
-        {openDay !== null && (
-          <NewTaskDialog
-            key={openDay}
-            startDay={openDay}
-            days={week.days}
-            timezone={timezone}
-            onCreate={async (task, sentence) => {
-              const created = await week.create(task);
-              setOpenDay(null);
-              say(sentence);
-              // On the row it made, which is where somebody looks next, rather than back on
-              // the button that opened the dialog.
-              focusOnceReloaded({ task: created.id });
-            }}
-            onClose={() => {
-              setOpenDay(null);
-            }}
-          />
+            ),
         )}
-      </main>
-      {region}
-    </>
+      </div>
+      {openDay !== null && (
+        <NewTaskDialog
+          key={openDay}
+          startDay={openDay}
+          days={week.days}
+          timezone={timezone}
+          onCreate={async (task, sentence) => {
+            const created = await week.create(task);
+            setOpenDay(null);
+            say(sentence);
+            // On the row it made, which is where somebody looks next, rather than back on
+            // the button that opened the dialog.
+            focusOnceReloaded({ task: created.id });
+          }}
+          onClose={() => {
+            setOpenDay(null);
+          }}
+        />
+      )}
+    </>,
   );
 }
