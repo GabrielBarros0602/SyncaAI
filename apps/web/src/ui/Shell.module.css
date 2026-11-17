@@ -8,16 +8,24 @@
  * 24px from 640px up, as week-desktop.dc.html pads the week. The second round's 56px and 64px
  * took 80px from the seven columns at 1280px, where every pixel of a column is a word of a
  * title that wraps or does not.
+ *
+ * The padding is named, because two things below 1100px run edge to edge and have to reach
+ * back across it: the strip of seven days and the bar between days. A column, so that bar can
+ * sit at the bottom of the window when the day above it is short.
  */
 
 .signedIn {
+  --shell-pad: var(--space-6);
+
   min-height: 100vh;
-  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  padding: var(--shell-pad);
 }
 
 @media (max-width: 639px) {
   .signedIn {
-    padding: var(--space-4);
+    --shell-pad: var(--space-4);
   }
 }
 
