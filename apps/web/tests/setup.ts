@@ -1,3 +1,7 @@
+import { afterEach } from "vitest";
+
+import { installViewport, resetViewport } from "./viewport";
+
 /**
  * What jsdom does not implement and the screens rely on.
  *
@@ -15,3 +19,8 @@ if (typeof HTMLDialogElement.prototype.showModal !== "function") {
     this.dispatchEvent(new Event("close"));
   };
 }
+
+// jsdom has no matchMedia either. Every test starts on a desktop-wide window, and one that
+// narrows it gets the width back afterwards.
+installViewport();
+afterEach(resetViewport);
