@@ -250,3 +250,260 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/*
+ * The one day below 1100px, as a list (ADR-0056): its head, the trail of its tasks, and the
+ * rows, each a box and a button that opens it. Measures are the drawing's.
+ */
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dayHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.titleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+
+.dayTitle {
+  margin: 0;
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+}
+
+.todayPill {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+}
+
+.count {
+  margin-left: auto;
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.bookedLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.big {
+  font: var(--weight-strong) var(--text-8) / var(--leading-8) var(--font-sans);
+  letter-spacing: var(--tracking-figure);
+  font-variant-numeric: tabular-nums;
+}
+
+.bookedWord,
+.free {
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.free {
+  margin: 0;
+}
+
+/* Each task where it falls, on the ruler the glance uses, and a mark for now. */
+.trail {
+  position: relative;
+  height: 16px;
+  margin-top: var(--space-2);
+}
+
+.trailTrack {
+  position: absolute;
+  inset: 3px 0 auto;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--track);
+}
+
+.segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--bar);
+}
+
+.now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--tick);
+}
+
+.load {
+  margin: var(--space-1) 0 0;
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+  color: var(--alert-ink);
+  text-wrap: pretty;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The band from the night before: sunken, and quieter than a row, with no verbs on it. */
+.band {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-3) var(--space-1) var(--space-4);
+  border-radius: var(--radius-3);
+  background: var(--sunken);
+}
+
+.bandGo {
+  align-self: flex-start;
+  min-height: var(--target-touch);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bandGo:active {
+  background: var(--pressed);
+}
+
+.item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+}
+
+.itemOpen {
+  border-color: var(--line-strong);
+  background: var(--open);
+  box-shadow: var(--shadow-raised);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--ink-2);
+}
+
+.itemLine {
+  display: flex;
+  align-items: flex-start;
+}
+
+.box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--target-touch);
+  height: var(--target-touch);
+  margin: var(--space-1) 0 0 var(--space-1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.box:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.disclosure {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-1);
+  border: 0;
+  border-radius: var(--radius-3);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.disclosure:active {
+  background: var(--pressed);
+}
+
+.itemTime,
+.itemLine2 {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-mono);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.itemTitle {
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+  hyphens: auto;
+}
+
+.itemMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.tag {
+  min-width: 0;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--tag);
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-1) / var(--leading-2) var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.saving {
+  font-weight: var(--weight-strong);
+}
+
+/* Under the row: the note and a refusal, and once open, the verbs and their panels. */
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.itemPanels {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}

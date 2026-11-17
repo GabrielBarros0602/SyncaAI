@@ -28,7 +28,7 @@ import day from "./Day.module.css";
 const LONGEST_DAY = 1500;
 
 /** Where `minutes` falls on the ruler, as a CSS percentage rounded to a tenth. */
-function onRuler(minutes: number): string {
+export function onRuler(minutes: number): string {
   return `${String(Math.round((minutes / LONGEST_DAY) * 1000) / 10)}%`;
 }
 
@@ -38,7 +38,7 @@ function onRuler(minutes: number): string {
  * Both weekdays are named rather than left to `+1`, because the mark says only *that* it
  * crosses. Which day gets how much is the thing somebody planning is actually asking.
  */
-function splitText(task: Task, timeZone: string, own: string, next: string): string | null {
+export function splitText(task: Task, timeZone: string, own: string, next: string): string | null {
   const split = splitOf(task, timeZone);
   if (split === null) return null;
 
@@ -61,7 +61,7 @@ function splitText(task: Task, timeZone: string, own: string, next: string): str
  * +53h52`. The second round dropped the comparison there, as true about the clock and false
  * about the work; the round keeps it and lets the day say why it is what it is.
  */
-function doneText(task: Task, timeZone: string): string | null {
+export function doneText(task: Task, timeZone: string): string | null {
   if (task.completed_at === null) return null;
 
   const at = clock(zonedMinutes(task.completed_at, timeZone));
@@ -269,7 +269,7 @@ export function DayColumn({
           fromWeekday={previousWeekday}
           timezone={timezone}
           onGoToOwner={onGoToOwner}
-          {...cellProps(1)}
+          grid={cellProps(1)}
         />
       )}
 
