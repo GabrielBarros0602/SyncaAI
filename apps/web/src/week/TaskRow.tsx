@@ -1,81 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-import { ApiError } from "../api/client";
-import { clock, formatCompact, relativeDay, zonedDay, zonedMinutes } from "../lib/time";
+import { clock, formatCompact } from "../lib/time";
 import type { DayCapacity, NewTask, Task, TaskChanges } from "../api/types";
-import { ChecklistPanel } from "./ChecklistPanel";
-import { DeletePanel } from "./DeletePanel";
-import { restoreBlocker, restoreBlockers, snapshotOf } from "./restore";
-import { EditPanel } from "./EditPanel";
-import { MovePanel } from "./MovePanel";
-import { NotePanel } from "./NotePanel";
+import { type Panel, RowPanels, useRowActions } from "./RowPanels";
 import type { ChecklistChange } from "./useWeek";
 import { cx } from "../lib/cx";
 import day from "./Day.module.css";
 
-/**
- * What an opened row is showing.
- *
- * `open` is the resting state the disclosure produces: the verbs and the note. The rest are
- * verbs; the checklist is shown by its own, `list`, as the round draws it.
- */
-export type Panel = "open" | "edit" | "move" | "note" | "list" | "delete";
-
-interface Verb {
-  panel: Panel;
-  label: string;
-  /** What the key hint shows. */
-  key: string;
-  /** How `aria-keyshortcuts` names it. */
-  shortcut: string;
-  /** The `KeyboardEvent.key` values that reach this verb from the row. */
-  keys: string[];
-}
-
-const EDIT: Verb = { panel: "edit", label: "edit", key: "E", shortcut: "E", keys: ["e", "E"] };
-const MOVE: Verb = { panel: "move", label: "move", key: "M", shortcut: "M", keys: ["m", "M"] };
-const NOTE: Verb = { panel: "note", label: "note", key: "O", shortcut: "O", keys: ["o", "O"] };
-const LIST: Verb = { panel: "list", label: "checklist", key: "C", shortcut: "C", keys: ["c", "C"] };
-// The design's key is ⌫. Delete is accepted beside Backspace because on a Mac keyboard the
-// key labelled delete sends Backspace, and on a PC the key labelled Delete sends Delete —
-// each person presses the one their keyboard calls delete.
-const DELETE: Verb = {
-  panel: "delete",
-  label: "delete",
-  key: "⌫",
-  shortcut: "Delete",
-  keys: ["Backspace", "Delete"],
-};
-
-/**
- * The verbs a row offers, in the design's order.
- *
- * `move` is withheld from a completed task. Completing early shortens `end_at` to the moment
- * it was done (ADR-0022), so moving a finished task to a day after that moment gives it an
- * empty range: it would appear to move and occupy nothing, and the plan-versus-actual record
- * S6 reads from would stop meaning anything. Whether a finished task should move at all is an
- * open decision in the backlog; until it is made, the verb is not offered.
- */
-function verbsFor(task: Task): Verb[] {
-  return task.completed_at === null ? [EDIT, MOVE, NOTE, LIST, DELETE] : [EDIT, NOTE, LIST, DELETE];
-}
-
-/**
- * Why the row asks before deleting, one sentence per reason (item 21 of the round): what the
- * undo could not bring back, named in the person's own day and time.
- */
-function whyNot(task: Task, timezone: string, now: Date): string[] {
-  const today = zonedDay(now.toISOString(), timezone);
-  return restoreBlockers(task, now).map((blocker) => {
-    if (blocker === "done") return "It is done.";
-    if (blocker === "started") {
-      const at = clock(zonedMinutes(task.start_at, timezone));
-      return `It has started — ${at} ${relativeDay(zonedDay(task.start_at, timezone), today)}.`;
-    }
-    const ticked = task.items.filter((item) => item.completed_at !== null).length;
-    return `${String(ticked)} of ${String(task.items.length)} checklist items ${ticked === 1 ? "is" : "are"} ticked, and would come back unticked.`;
-  });
-}
+export type { Panel } from "./RowPanels";
 
 interface Props {
   task: Task;
@@ -146,10 +78,8 @@ export function TaskRow({
   onChecklist,
 }: Props): React.ReactNode {
   const done = task.completed_at !== null;
-  const verbs = verbsFor(task);
-  // The server's sentence for the last thing refused on the closed row: a delete or a
-  // completion, both of which can be pressed without opening it.
-  const [refusal, setRefusal] = useState<string | null>(null);
+  const actions = useRowActions(task, onOpen, onToggle, onDelete);
+  const { refusal, toggle } = actions;
   const self = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(open !== null);
 
@@ -162,26 +92,6 @@ export function TaskRow({
     wasOpen.current = open !== null;
   }, [open]);
 
-  function refused(problem: unknown): void {
-    setRefusal(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
-  }
-
-  function toggle(): void {
-    setRefusal(null);
-    onToggle(task).catch(refused);
-  }
-
-  // Judged at the press, not when the row was drawn: a task that could be put back when the
-  // screen loaded may have started since (ADR-0025). A faithful recreate exists, so the delete
-  // goes now and the undo is offered; otherwise the row asks first and promises nothing.
-  function startDelete(): void {
-    if (restoreBlocker(task, new Date()) !== null) {
-      onOpen("delete");
-      return;
-    }
-    setRefusal(null);
-    onDelete(snapshotOf(task)).catch(refused);
-  }
   const checked = task.items.filter((item) => item.completed_at !== null).length;
   const hasNote = task.notes !== null && task.notes.trim() !== "";
 
@@ -218,12 +128,7 @@ export function TaskRow({
           toggle();
           return;
         }
-        if (event.ctrlKey || event.metaKey || event.altKey) return;
-        const verb = verbs.find((candidate) => candidate.keys.includes(event.key));
-        if (verb === undefined) return;
-        event.preventDefault();
-        if (verb === DELETE) startDelete();
-        else onOpen(verb.panel);
+        actions.verbKey(event);
       }}
     >
       <div className={day.time}>
@@ -283,87 +188,19 @@ export function TaskRow({
       )}
 
       {open !== null && (
-        <>
-          <div role="toolbar" aria-label={`Actions for ${task.title}`} className={day.verbs}>
-            {verbs.map((verb) => (
-              <button
-                key={verb.panel}
-                type="button"
-                className={cx(day.verb, open === verb.panel && day.verbOn)}
-                aria-pressed={open === verb.panel}
-                aria-keyshortcuts={verb.shortcut}
-                onClick={() => {
-                  if (open === verb.panel) onOpen("open");
-                  else if (verb === DELETE) startDelete();
-                  else onOpen(verb.panel);
-                }}
-              >
-                {verb.label}
-                <kbd aria-hidden="true" className={day.cap}>
-                  {verb.key}
-                </kbd>
-              </button>
-            ))}
-            <button
-              type="button"
-              className={day.close}
-              aria-label="Close"
-              aria-keyshortcuts="Escape"
-              onClick={() => {
-                onOpen(null);
-              }}
-            >
-              esc
-            </button>
-          </div>
-
-          {open === "edit" && (
-            <EditPanel
-              task={task}
-              days={days}
-              timezone={timezone}
-              onSave={onSave}
-              onCancel={() => {
-                onOpen("open");
-              }}
-            />
-          )}
-
-          {open === "delete" && (
-            <DeletePanel
-              reasons={whyNot(task, timezone, new Date())}
-              onConfirm={() => onDelete(null)}
-              onCancel={() => {
-                onOpen("open");
-              }}
-            />
-          )}
-
-          {open === "move" && !done && (
-            <MovePanel task={task} days={days} tasks={allTasks} timezone={timezone} onSave={onSave} />
-          )}
-
-          {open === "note" && (
-            <NotePanel
-              task={task}
-              onSave={onSave}
-              onCancel={() => {
-                onOpen("open");
-              }}
-            />
-          )}
-
-          {open === "list" && (
-            <ChecklistPanel
-              task={task}
-              saving={saving}
-              onChange={onChecklist}
-              onCancel={() => {
-                onOpen("open");
-              }}
-            />
-          )}
-        </>
+        <RowPanels
+          task={task}
+          open={open}
+          timezone={timezone}
+          days={days}
+          allTasks={allTasks}
+          saving={saving}
+          actions={actions}
+          onOpen={onOpen}
+          onSave={onSave}
+          onDelete={onDelete}
+          onChecklist={onChecklist}
+        />
       )}
     </div>
   );
