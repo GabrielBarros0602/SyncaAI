@@ -27,6 +27,8 @@ interface Props {
   /** Today's local date, where "go to date" starts the first time it opens. */
   today: string;
   onGoTo: (offset: number) => void;
+  /** Back to the week holding today, from any other. */
+  onBack: () => void;
   /** Open the week holding a local date, with focus on that day. */
   onGoToDate: (localDate: string) => void;
   onSignOut: () => void;
@@ -38,6 +40,7 @@ export function WeekHeader({
   me,
   today,
   onGoTo,
+  onBack,
   onGoToDate,
   onSignOut,
 }: Props): React.ReactNode {
@@ -112,9 +115,7 @@ export function WeekHeader({
               type="button"
               className={styles.back}
               aria-keyshortcuts="T"
-              onClick={() => {
-                onGoTo(0);
-              }}
+              onClick={onBack}
             >
               back to this week
               <kbd aria-hidden="true" className={styles.key}>

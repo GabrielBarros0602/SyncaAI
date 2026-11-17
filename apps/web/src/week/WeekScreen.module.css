@@ -2,6 +2,9 @@
    them out. The shell pads the page; this only spaces what is inside it. */
 
 .page {
+  /* Takes what the window has left, so the bar between days sits at the bottom of a short day
+     too. From 1100px nothing comes after it and this changes nothing. */
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -20,11 +23,43 @@
   overflow-x: auto;
 }
 
-/* Below 1100px the round puts one day beside the week, and below 640px one day under a strip
-   of seven (ADR-0052). Until those layouts land, the seven days keep a readable width and the
-   week scrolls sideways inside itself rather than squeezing every column to nothing. */
-@media (max-width: 1099px) {
-  .grid {
-    grid-template-columns: repeat(7, minmax(200px, 1fr));
-  }
+/* Below 1100px the grid holds one day, the one on screen (ADR-0052). The screen chooses the
+   layout in script, since the other six days are not rendered at all. */
+.oneDay {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* One day under the week as a strip of seven, below 640px. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* One day beside the week as a column of seven rows, from 640px. 640 is where a column of
+   this width still leaves the day about 400px. */
+.beside {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* The status region and the bar between days, at the bottom of the window and of the page.
+   Edge to edge, so it reaches past the shell's padding on three sides. Only the bar and a
+   notice take a press: the empty region above the bar lets them through to the day. */
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-4) calc(var(--shell-pad) * -1) calc(var(--shell-pad) * -1);
+  pointer-events: none;
 }

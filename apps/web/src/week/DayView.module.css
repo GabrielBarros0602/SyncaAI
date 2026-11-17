@@ -1,0 +1,252 @@
+/*
+ * What stands around the one day on screen below 1100px, as day-phone.dc.html draws it: the
+ * week at a glance, as a strip of seven cells or a column of seven rows, and the bar between
+ * days at the bottom.
+ */
+
+/* Seven 44px cells fit in 320px only edge to edge, so the strip runs 2px short of the window
+   on each side, past the shell's padding. A cell grows with the text, so at 200% the seven no
+   longer fit one row and wrap into more instead of scrolling sideways. */
+.strip {
+  list-style: none;
+  margin: 0 calc(2px - var(--shell-pad));
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(44px, calc(var(--text-1) * 3.4)), 1fr));
+}
+
+.stripItem {
+  display: flex;
+}
+
+/* A day to press, as a cell of the strip or a row of the column. The ring says which day is
+   on screen; the ground says which is over its budget, and wins where both are true. */
+.pick {
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.pick:hover {
+  background: var(--hover);
+}
+
+.pick[aria-current="true"] {
+  border-color: var(--ink);
+  background: var(--raised);
+}
+
+.pick:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.over,
+.over[aria-current="true"] {
+  background: var(--alert-surface);
+}
+
+.over:hover {
+  background: var(--alert-hover);
+}
+
+.over:active {
+  background: var(--alert-pressed);
+}
+
+.cell {
+  flex: 1;
+  min-width: 0;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1) 2px;
+  border-radius: var(--radius-2);
+}
+
+.letter {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.number {
+  min-width: 24px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-align: center;
+}
+
+/* Today's date on a filled disc, apart from the ring that follows the day on screen. */
+.numberToday {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.figure {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-mono);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.over .figure {
+  color: var(--alert-ink);
+}
+
+.track {
+  align-self: flex-start;
+  display: flex;
+  height: 4px;
+  margin: 2px 0 0 3px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--track);
+}
+
+.fill {
+  background: var(--bar);
+}
+
+.over .fill {
+  background: var(--alert);
+}
+
+/* From 640px: a column of seven rows that stays in view while the day beside it scrolls. */
+.aside {
+  position: sticky;
+  top: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.column {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  text-align: left;
+}
+
+.rowTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  width: 100%;
+}
+
+.short {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.today {
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+}
+
+.row .figure {
+  margin-left: auto;
+  font-size: var(--text-2);
+  line-height: var(--leading-2);
+}
+
+.row .track {
+  height: 6px;
+  margin: 0;
+}
+
+.level {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--alert-ink);
+}
+
+/* The bar between days. Its three buttons wrap rather than shrink, so at 200% text each
+   still holds its words. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  pointer-events: auto;
+}
+
+.step,
+.create {
+  flex: 1 1 auto;
+  min-height: var(--target-touch);
+  border-radius: var(--radius-2);
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.step {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.stepNext {
+  text-align: right;
+}
+
+.step:hover {
+  background: var(--hover);
+}
+
+.step:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.create {
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: var(--weight-strong);
+}
+
+.create:hover {
+  background: var(--primary-hover);
+}
+
+.create:active {
+  background: var(--primary-pressed);
+  transform: scale(var(--press-scale));
+}
+
+/* Said, not drawn: "Previous day," before a name that an arrow already shows the direction of. */
+.unseen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
