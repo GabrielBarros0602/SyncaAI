@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   clock,
+  clockChange,
+  utcOffset,
   zonedDay,
   daysFrom,
   dayMonth,
@@ -329,5 +331,40 @@ describe("reading an instant in the user's zone", () => {
     // The whole reason GET /me exists: the zone is the server's, never this browser's.
     expect(zonedMinutes("2026-08-24T12:00:00Z", "Asia/Tokyo")).toBe(1260);
     expect(zonedDay("2026-08-24T20:00:00Z", "Asia/Tokyo")).toBe("2026-08-25");
+  });
+});
+
+describe("the zone, as the day view says it", () => {
+  it("writes the offset in whole hours, half hours and zero", () => {
+    const winter = new Date("2026-01-15T12:00:00Z");
+    expect(utcOffset(winter, "America/Sao_Paulo")).toBe("UTC-3");
+    expect(utcOffset(winter, "Asia/Kolkata")).toBe("UTC+5:30");
+    expect(utcOffset(winter, "Europe/Lisbon")).toBe("UTC+0");
+    expect(utcOffset(new Date("2026-07-15T12:00:00Z"), "Europe/Lisbon")).toBe("UTC+1");
+  });
+
+  it("finds the minute the clocks go back, read on the clock they leave", () => {
+    // 02:00 summer time in Lisbon becomes 01:00: the day is 25 hours long.
+    expect(clockChange("2026-10-25", "Europe/Lisbon")).toEqual({ at: "02:00", by: -60 });
+    expect(clockChange("2026-11-01", "America/New_York")).toEqual({ at: "02:00", by: -60 });
+  });
+
+  it("finds the minute the clocks go forward", () => {
+    expect(clockChange("2026-03-29", "Europe/Lisbon")).toEqual({ at: "01:00", by: 60 });
+  });
+
+  it("gives a change that skipped midnight to the day that began late", () => {
+    // Brazil began daylight saving at midnight: 2018-11-04 started at 01:00.
+    expect(clockChange("2018-11-04", "America/Sao_Paulo")).toEqual({ at: "00:00", by: 60 });
+    expect(clockChange("2018-11-03", "America/Sao_Paulo")).toBeNull();
+  });
+
+  it("measures a change of half an hour as half an hour", () => {
+    expect(clockChange("2026-04-05", "Australia/Lord_Howe")).toEqual({ at: "02:00", by: -30 });
+  });
+
+  it("says nothing about an ordinary day", () => {
+    expect(clockChange("2026-11-17", "America/Sao_Paulo")).toBeNull();
+    expect(clockChange("2026-10-24", "Europe/Lisbon")).toBeNull();
   });
 });
