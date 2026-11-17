@@ -442,6 +442,36 @@ com a semana rolando de lado a 200%, e deixar como estava. A coluna continua com
   navegador. Firefox e Safari trazem o seu, e o Chrome o baixa à parte. Sem ele, como no
   navegador embutido do app, a quebra em qualquer ponto continua valendo.
 
+### A visão de um dia abaixo de 1100px — começada em 2026-11-17
+
+O `day-phone.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
+
+1. ✅ Um dia na tela abaixo de 1100px, a semana de relance (faixa de sete células abaixo de
+   640px, coluna de sete linhas a partir dali), a barra entre os dias embaixo e o aviso
+   empilhado acima dela.
+2. O cabeçalho das duas faixas: Today, `‹ intervalo ›`, "Go to a date" como folha, a frase do
+   fuso.
+3. O cabeçalho do dia e as linhas como desenhados, e a linha de conclusão tardia que não
+   quebra a 200%.
+4. A linha aberta no toque: reordenar a checklist com ↑ ↓ ✕, mover como lista, confirmar
+   exclusão, nota.
+5. Nova tarefa e editar como folha inteira, com Save em cima.
+6. Avisos que levam a outro dia ("Go to Sat"), o deslizar como atalho de toque.
+
+**Três perguntas para o Gabriel**, abertas pela leitura do desenho:
+
+- **O vocabulário.** O desenho do celular escreve "reserved", "Edit", "1 of 3 ticked" e "Delete
+  for good"; o do desktop, já implementado, "booked", "edit", "1/3 checked" e "delete for
+  good". Seguir cada desenho ao pé da letra faz a mesma tarefa trocar de palavra entre 1099 e
+  1100px. A recomendação é um vocabulário só: onde os dois nomeiam a mesma coisa, a palavra do
+  desktop. Até a resposta, a faixa diz "reserved", como o desenho do celular.
+- **Lista ou grid de 640 a 1099px.** O desenho usa a mesma lista nas duas faixas; o ADR-0053
+  diz que o grid vale também para o dia ao lado da semana. Um grid de um dia não tem para onde
+  as setas ← → irem, e hoje, com um dia só no grid, elas não fazem nada. A recomendação é a
+  lista nas duas faixas, com um ADR emendando o 0053.
+- **Teclado abaixo de 1100px sem toque**, como num desktop com zoom de 200%. A recomendação é
+  manter as teclas que ainda fazem sentido e a legenda só com elas.
+
 ### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 
 As telas mostraram três problemas que são do servidor, não do desenho:
@@ -601,8 +631,9 @@ fora dessa linha:
   `tokens.css` sobrescreve com `!important` abaixo de 1100px. Quando o padding sair do inline,
   o override sai junto — o seletor casa com o próprio valor inline, então ele para de valer
   sozinho, mas continua lá até alguém apagar.
-- **A faixa de 700–1099px começa na segunda-feira**, e numa sexta o dia de hoje fica fora da
-  tela até alguém arrastar. Rolar até hoje precisa de script.
+- ~~**A faixa de 700–1099px começa na segunda-feira**, e numa sexta o dia de hoje fica fora da
+  tela até alguém arrastar. Rolar até hoje precisa de script.~~ ✅ Feito em 2026-11-17: abaixo
+  de 1100px a tela mostra um dia só, e abre em hoje (ADR-0052).
 
 ~~E uma fora do `docs/`: o `CLAUDE.md` diz que são 23 ADRs, e agora são 24.~~ Corrigido na
 PR 5, que levou a contagem a 25.
