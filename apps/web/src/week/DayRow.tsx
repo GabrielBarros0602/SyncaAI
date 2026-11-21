@@ -165,6 +165,7 @@ export function DayRow({
               onSave={onSave}
               onDelete={onDelete}
               onChecklist={onChecklist}
+              list
             />
           )}
         </div>
