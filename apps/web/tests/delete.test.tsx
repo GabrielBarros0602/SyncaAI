@@ -401,11 +401,13 @@ describe("deleting a task that can come back", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "undo" }));
 
+    // Waited for by the id the server gave the recreate, not by the title. Until the week
+    // that no longer holds it arrives, the deleted row is still on screen, has the same title
+    // and can hold focus, so a wait by title could pass on it and then lose it.
     await waitFor(() => {
-      expect(document.activeElement).toBe(title("Thesis chapter"));
+      expect(document.activeElement?.id).toMatch(/^task-created-/);
     });
-    // Found by the id the server gave the recreate, not by the one that was deleted.
-    expect(document.activeElement?.closest("[id^=task-]")?.id).toMatch(/^task-created-/);
+    expect(document.activeElement).toBe(title("Thesis chapter"));
   });
 
   it("shows the server's refusal once, and does not try again", async () => {
