@@ -93,8 +93,12 @@ the copy here only renders the screens.
   thing in different words, the desktop's are used at every width, case included: "booked",
   not "reserved"; "today" and "+ new task", not "Today" and "+ New task"; "go to date", and in
   its sheet "go" and "cancel", not "Go to a date", "Go to Thursday 22 Oct" and "Close"; the
-  range as `16 – 22 Nov 2026`. A task should not change its words between 1099 and 1100px.
-  What only the phone draws keeps the phone's words, Today among them.
+  range as `16 – 22 Nov 2026`. On the day: "Thursday 22 Oct", not "Thursday 22 October";
+  `13:30 – 16:30 · 3h` with its `+1`; "1/3 checked", not "1 of 3 ticked"; the done line as
+  one sentence; the band's "↳ carried from Wed" and "go to Wed", not "Started Wednesday 22:00
+  · open it there"; "Nothing booked." and "saving…". A task should not change its words
+  between 1099 and 1100px. What only the phone draws keeps the phone's words: Today, the
+  day's task count, the trail's label and how long a running task has run.
 - **Below 640px the range is the page's heading, and "go to date" is a button under it.** The
   drawing makes the range itself the button, but a heading cannot sit inside one, and the
   range is what the router puts focus on. The button's target is stretched over both, so the
