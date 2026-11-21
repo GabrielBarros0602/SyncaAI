@@ -923,6 +923,22 @@
   background: var(--hover);
 }
 
+/* A label in Reorder mode is read, not pressed: its arrows are the controls then. */
+.itemLabelStill {
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
+
+.itemLabelStill:hover {
+  background: transparent;
+}
+
+/* Below 1100px, on the checklist's head: what turns its items into arrows and back. */
+.reorderToggle {
+  margin-left: auto;
+}
+
 .itemLabelDone {
   color: var(--ink-2);
   text-decoration: line-through;

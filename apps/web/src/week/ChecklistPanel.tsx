@@ -17,6 +17,12 @@ interface Props {
   onChange: (change: ChecklistChange) => Promise<void>;
   /** Esc in the field that adds: back to the row's verbs, as every panel's fields do. */
   onCancel: () => void;
+  /**
+   * In the one day's list below 1100px, as day-phone.dc.html draws it: no handle to drag,
+   * and a Reorder mode whose ↑, ↓ and × buttons move and remove an item with one press each
+   * (WCAG 2.5.7). Alt+↑ and Alt+↓ stay, on the item's label (ADR-0056).
+   */
+  list?: boolean;
 }
 
 /**
@@ -34,7 +40,7 @@ interface Props {
  * What a change did is said inside the panel, where the list is, rather than in the screen's
  * status region: it is about the list in front of somebody, not about the week.
  */
-export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): React.ReactNode {
+export function ChecklistPanel({ task, saving, onChange, onCancel, list = false }: Props): React.ReactNode {
   const id = useId();
   const self = useRef<HTMLDivElement>(null);
   const items = task.items;
@@ -44,6 +50,9 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
   const [adding, setAdding] = useState("");
   const [renaming, setRenaming] = useState<{ itemId: string; label: string } | null>(null);
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
+  // Only with something to put in order: one item has nowhere to go.
+  const [reorderMode, setReorderMode] = useState(false);
+  const reordering = list && reorderMode && items.length > 1;
   // Esc in the rename field: the blur that follows closes it without saving.
   const keep = useRef(false);
   // Where focus goes once the change is on screen: the control the next press is for. A
@@ -73,13 +82,25 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
     );
   }
 
-  function reorder(from: number, to: number): void {
+  /**
+   * Move an item, and leave focus on the control the next press of the same kind is for: the
+   * handle on a desktop, the label below 1100px, and in Reorder mode the arrow that moved it,
+   * or the other one once it reaches an end and that arrow stops.
+   */
+  function reorder(from: number, to: number, by: "key" | "arrow" = "key"): void {
     const item = items[from];
     if (saving || item === undefined || to < 0 || to >= items.length || from === to) return;
     const order = items.map((each) => each.id);
     order.splice(from, 1);
     order.splice(to, 0, item.id);
-    next.current = `[data-handle="${item.id}"]`;
+    const up = to < from;
+    const atEnd = up ? to === 0 : to === items.length - 1;
+    next.current =
+      by === "arrow"
+        ? `[data-${up !== atEnd ? "up" : "down"}="${item.id}"]`
+        : list
+          ? `[data-label="${item.id}"]`
+          : `[data-handle="${item.id}"]`;
     send(
       { kind: "order", itemIds: order },
       `Moved “${item.label}” to ${String(to + 1)} of ${String(items.length)}.`,
@@ -121,6 +142,19 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
         <span className={day.count}>
           {ticked}/{items.length} checked
         </span>
+        {list && items.length > 1 && (
+          <button
+            type="button"
+            className={cx(day.secondary, day.reorderToggle)}
+            aria-pressed={reordering}
+            onClick={() => {
+              setRenaming(null);
+              setReorderMode(!reordering);
+            }}
+          >
+            {reordering ? "Done reordering" : "Reorder"}
+          </button>
+        )}
       </div>
 
       {items.length > 0 && (
@@ -131,7 +165,8 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
               <li
                 key={item.id}
                 // Not while its label is a field: selecting text in it would start a drag.
-                draggable={renaming === null}
+                // Not below 1100px either, where a finger cannot drag and Reorder does it.
+                draggable={!list && renaming === null}
                 className={cx(
                   day.checkItem,
                   drag !== null && drag.over === at && drag.from !== at && day.checkItemOver,
@@ -155,22 +190,24 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
                   setDrag(null);
                 }}
               >
-                <button
-                  type="button"
-                  data-handle={item.id}
-                  className={day.handle}
-                  aria-label={`Reorder “${item.label}”, ${String(at + 1)} of ${String(items.length)}`}
-                  aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
-                  onKeyDown={(event) => {
-                    if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
-                    // Not the grid's arrows, and not the page scrolling under the list.
-                    event.preventDefault();
-                    event.stopPropagation();
-                    reorder(at, event.key === "ArrowUp" ? at - 1 : at + 1);
-                  }}
-                >
-                  ⠿
-                </button>
+                {!list && (
+                  <button
+                    type="button"
+                    data-handle={item.id}
+                    className={day.handle}
+                    aria-label={`Reorder “${item.label}”, ${String(at + 1)} of ${String(items.length)}`}
+                    aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                    onKeyDown={(event) => {
+                      if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+                      // Not the grid's arrows, and not the page scrolling under the list.
+                      event.preventDefault();
+                      event.stopPropagation();
+                      reorder(at, event.key === "ArrowUp" ? at - 1 : at + 1);
+                    }}
+                  >
+                    ⠿
+                  </button>
+                )}
                 <button
                   type="button"
                   role="checkbox"
@@ -202,31 +239,76 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
                     }}
                     onBlur={finishRename}
                   />
+                ) : reordering ? (
+                  <span className={cx(day.itemLabel, day.itemLabelStill, done && day.itemLabelDone)}>
+                    {item.label}
+                  </span>
                 ) : (
                   <button
                     type="button"
                     data-label={item.id}
                     className={cx(day.itemLabel, done && day.itemLabelDone)}
                     aria-label={`Rename “${item.label}”`}
+                    // Below 1100px the handle is gone, and the keys that moved it come here.
+                    aria-keyshortcuts={list ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
                     onClick={() => {
                       next.current = "[data-rename]";
                       setRenaming({ itemId: item.id, label: item.label });
+                    }}
+                    onKeyDown={(event) => {
+                      if (!list || !event.altKey) return;
+                      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      reorder(at, event.key === "ArrowUp" ? at - 1 : at + 1);
                     }}
                   >
                     {item.label}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className={day.itemRemove}
-                  aria-label={`Remove “${item.label}”`}
-                  onClick={() => {
-                    next.current = "[data-add]";
-                    send({ kind: "remove", itemId: item.id }, `Removed “${item.label}”.`);
-                  }}
-                >
-                  ×
-                </button>
+                {reordering && (
+                  <>
+                    <button
+                      type="button"
+                      data-up={item.id}
+                      className={day.itemRemove}
+                      aria-label={`Move “${item.label}” up`}
+                      disabled={at === 0}
+                      onClick={() => {
+                        reorder(at, at - 1, "arrow");
+                      }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      data-down={item.id}
+                      className={day.itemRemove}
+                      aria-label={`Move “${item.label}” down`}
+                      disabled={at === items.length - 1}
+                      onClick={() => {
+                        reorder(at, at + 1, "arrow");
+                      }}
+                    >
+                      ↓
+                    </button>
+                  </>
+                )}
+                {/* Below 1100px a remove sits only in Reorder mode, as drawn: the list at rest
+                    is for ticking and renaming, and a × beside every label is a slip away. */}
+                {(!list || reordering) && (
+                  <button
+                    type="button"
+                    className={day.itemRemove}
+                    aria-label={`Remove “${item.label}”`}
+                    onClick={() => {
+                      next.current = "[data-add]";
+                      send({ kind: "remove", itemId: item.id }, `Removed “${item.label}”.`);
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
               </li>
             );
           })}
@@ -258,7 +340,11 @@ export function ChecklistPanel({ task, saving, onChange, onCancel }: Props): Rea
       </form>
 
       <span className={day.panelHint}>
-        Drag ⠿ to reorder, or focus it and press Alt+↑ or Alt+↓. Click a label to rename it.
+        {!list
+          ? "Drag ⠿ to reorder, or focus it and press Alt+↑ or Alt+↓. Click a label to rename it."
+          : reordering
+            ? "Use ↑ and ↓ to change the order."
+            : "Tap an item to rename it."}
       </span>
       <span role="status" className={day.said}>
         {said}

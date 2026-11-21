@@ -309,3 +309,124 @@ describe("the requests a change becomes", () => {
     ]);
   });
 });
+
+describe("below 1100px, as the phone draws it", () => {
+  /** The panel as the one day's list shows it; `again` draws it over the next list. */
+  function listPanel(
+    items: ChecklistItem[],
+    onChange: Change = vi.fn<Change>(() => Promise.resolve()),
+  ): { again: (next: ChecklistItem[]) => void; container: HTMLElement } {
+    const view = render(
+      <ChecklistPanel task={aTask(items)} saving={false} list onChange={onChange} onCancel={() => undefined} />,
+    );
+    return {
+      container: view.container,
+      again: (next) => {
+        view.rerender(
+          <ChecklistPanel task={aTask(next)} saving={false} list onChange={onChange} onCancel={() => undefined} />,
+        );
+      },
+    };
+  }
+
+  function reorder(): HTMLElement {
+    return screen.getByRole("button", { name: /^(Reorder|Done reordering)$/ });
+  }
+
+  it("has nothing to drag and no remove at rest: an item is its box and its label", () => {
+    const { container } = listPanel([OUTLINE, SOURCES]);
+
+    expect(screen.queryByRole("button", { name: /^Reorder “/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Remove/ })).toBeNull();
+    expect(container.querySelector("[draggable='true']")).toBeNull();
+    expect(screen.getByText("Tap an item to rename it.")).toBeDefined();
+  });
+
+  it("keeps Alt and an arrow on the label, and focus on it once the list arrives", async () => {
+    const onChange = vi.fn<Change>(() => Promise.resolve());
+    const { again } = listPanel([OUTLINE, SOURCES, DRAFT], onChange);
+    const label = screen.getByRole("button", { name: "Rename “Draft”" });
+    expect(label.getAttribute("aria-keyshortcuts")).toBe("Alt+ArrowUp Alt+ArrowDown");
+
+    fireEvent.keyDown(label, { key: "ArrowUp", altKey: true });
+
+    expect(onChange).toHaveBeenCalledWith({ kind: "order", itemIds: ["a", "c", "b"] });
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe("Moved “Draft” to 2 of 3.");
+    });
+    again([OUTLINE, { ...DRAFT, position: 1 }, { ...SOURCES, position: 2 }]);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Rename “Draft”" }));
+  });
+
+  it("turns each item into arrows and a remove in Reorder mode, and back", () => {
+    listPanel([OUTLINE, SOURCES, DRAFT]);
+    expect(reorder().getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(reorder());
+
+    expect(reorder().textContent).toBe("Done reordering");
+    expect(reorder().getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Move “Outline” up" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Move “Draft” down" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getAllByRole("button", { name: /^Remove/ })).toHaveLength(3);
+    // The labels are read, not pressed, while the arrows are the controls.
+    expect(screen.queryByRole("button", { name: /^Rename/ })).toBeNull();
+    expect(screen.getByText("Use ↑ and ↓ to change the order.")).toBeDefined();
+
+    fireEvent.click(reorder());
+    expect(screen.queryByRole("button", { name: /^Move “/ })).toBeNull();
+  });
+
+  it("moves an item with one press, sends the whole list, and keeps focus on the arrow", async () => {
+    const onChange = vi.fn<Change>(() => Promise.resolve());
+    const { again } = listPanel([OUTLINE, SOURCES, DRAFT], onChange);
+    fireEvent.click(reorder());
+
+    fireEvent.click(screen.getByRole("button", { name: "Move “Outline” down" }));
+
+    expect(onChange).toHaveBeenCalledWith({ kind: "order", itemIds: ["b", "a", "c"] });
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe("Moved “Outline” to 2 of 3.");
+    });
+    again([{ ...SOURCES, position: 0 }, { ...OUTLINE, position: 1 }, DRAFT]);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move “Outline” down" }));
+  });
+
+  it("puts focus on the other arrow once an item reaches an end", async () => {
+    const onChange = vi.fn<Change>(() => Promise.resolve());
+    const { again } = listPanel([OUTLINE, SOURCES], onChange);
+    fireEvent.click(reorder());
+
+    fireEvent.click(screen.getByRole("button", { name: "Move “Sources” up" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe("Moved “Sources” to 1 of 2.");
+    });
+    again([{ ...SOURCES, position: 0 }, { ...OUTLINE, position: 1 }]);
+    // Its up arrow has stopped; the press that is left for it is down.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move “Sources” down" }));
+  });
+
+  it("removes from Reorder mode", () => {
+    const onChange = vi.fn<Change>(() => Promise.resolve());
+    listPanel([OUTLINE, SOURCES], onChange);
+    fireEvent.click(reorder());
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove “Sources”" }));
+
+    expect(onChange).toHaveBeenCalledWith({ kind: "remove", itemId: "b" });
+  });
+
+  it("offers no Reorder with one item, which has nowhere to go", () => {
+    listPanel([OUTLINE]);
+    expect(screen.queryByRole("button", { name: "Reorder" })).toBeNull();
+  });
+
+  it("passes the automated accessibility check at rest and in Reorder mode", async () => {
+    const { container } = listPanel([OUTLINE, SOURCES, DRAFT]);
+    await expectNoViolations(container);
+
+    fireEvent.click(reorder());
+    await expectNoViolations(container);
+  });
+});
