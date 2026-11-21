@@ -61,6 +61,12 @@ the copy here only renders the screens.
   them. Swiping is only a shortcut.
 - **The week at a glance:** always in view, as seven 44px cells. It wraps rather than shrinks.
 - **The time zone:** a sentence under the strip, always visible.
+- **The task count stays, below 1100px only** (decided on 2026-11-21). The day's heading says
+  "3 tasks", as drawn, although the week from 1100px leaves the count out under item 17, each
+  number once. On the week every row of every day is in view, so a count repeats what the eye
+  already has. Here one day is on screen, its rows run on past the bar at the bottom, and the
+  strip shows only booked time: the count is the one figure that says how many rows are still
+  to scroll to.
 
 **The plan.**
 - **Asking:** a "Plan" button in the header, beside Menu. Its label carries the state:
@@ -93,8 +99,12 @@ the copy here only renders the screens.
   thing in different words, the desktop's are used at every width, case included: "booked",
   not "reserved"; "today" and "+ new task", not "Today" and "+ New task"; "go to date", and in
   its sheet "go" and "cancel", not "Go to a date", "Go to Thursday 22 Oct" and "Close"; the
-  range as `16 – 22 Nov 2026`. A task should not change its words between 1099 and 1100px.
-  What only the phone draws keeps the phone's words, Today among them.
+  range as `16 – 22 Nov 2026`. On the day: "Thursday 22 Oct", not "Thursday 22 October";
+  `13:30 – 16:30 · 3h` with its `+1`; "1/3 checked", not "1 of 3 ticked"; the done line as
+  one sentence; the band's "↳ carried from Wed" and "go to Wed", not "Started Wednesday 22:00
+  · open it there"; "Nothing booked." and "saving…". A task should not change its words
+  between 1099 and 1100px. What only the phone draws keeps the phone's words: Today, the
+  day's task count, the trail's label and how long a running task has run.
 - **Below 640px the range is the page's heading, and "go to date" is a button under it.** The
   drawing makes the range itself the button, but a heading cannot sit inside one, and the
   range is what the router puts focus on. The button's target is stretched over both, so the

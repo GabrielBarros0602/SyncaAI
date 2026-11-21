@@ -423,7 +423,9 @@ front-end abriu em 2026-10-27 com o ADR-0052, que supera o ADR-0024 e põe as ci
 Dois defeitos menores ficaram para a implementação, porque são de quebra de linha e não pedem
 outra volta de design. Os dois só aparecem com o texto a 200%:
 
-- a linha de conclusão tardia passa da borda no celular a 320, 375 e 667px;
+- ~~a linha de conclusão tardia passa da borda no celular a 320, 375 e 667px;~~ ✅ Feito em
+  2026-11-21: é a frase única do desktop, que quebra em qualquer espaço. Conferida a 320, 375,
+  667, 768 e 1099px com o texto a 200%;
 - o seletor de dia, ao editar um passo do plano, passa da borda a 320px.
 
 A implementação achou um terceiro em 2026-10-29, conferindo o diálogo de nova tarefa: na semana
@@ -451,8 +453,8 @@ O `day-phone.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    empilhado acima dela.
 2. ✅ O cabeçalho das duas faixas: Today, `‹ intervalo ›`, "go to date" como folha, a frase do
    fuso.
-3. O cabeçalho do dia e as linhas como desenhados, e a linha de conclusão tardia que não
-   quebra a 200%.
+3. ✅ O cabeçalho do dia e as linhas como desenhados, e a linha de conclusão tardia que não
+   quebra a 200%. O dia virou lista nas duas faixas (ADR-0056).
 4. A linha aberta no toque: reordenar a checklist com ↑ ↓ ✕, mover como lista, confirmar
    exclusão, nota.
 5. Nova tarefa e editar como folha inteira, com Save em cima.

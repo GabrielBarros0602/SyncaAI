@@ -13,12 +13,13 @@ import {
   zonedDay,
 } from "../lib/time";
 import { useLayout } from "../lib/useLayout";
-import type { Task } from "../api/types";
+import type { NewTask, Task, TaskChanges } from "../api/types";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayBar } from "./DayBar";
 import { DayColumn } from "./DayColumn";
 import { DayHeader } from "./DayHeader";
+import { DayList } from "./DayList";
 import { NewTaskDialog } from "./NewTaskDialog";
 import { WeekGlance } from "./WeekGlance";
 import { WeekHeader } from "./WeekHeader";
@@ -56,6 +57,14 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["Ctrl", "Z"], label: "undo a delete" },
   { keys: ["Esc"], label: "close" },
 ];
+
+/**
+ * The keys below 1100px, where the day is a list (ADR-0056): the arrows and Home and End walk
+ * the week's grid, and there is none.
+ */
+const LIST_SHORTCUTS = SHORTCUTS.filter(
+  (shortcut) => !shortcut.keys.some((key) => key === "←" || key === "Home"),
+);
 
 /** `Thu 22`, for a local date: what the status region calls the day a task was on. */
 function dayLabel(localDate: string): string {
@@ -125,8 +134,7 @@ export function WeekScreen(): React.ReactNode {
           : document.querySelector<HTMLElement>(`[data-cell="${target.cell}"]`);
     // With one day on screen the row may have gone to a day that is not. Focus goes to the
     // header of the day that is, rather than to the page.
-    const header =
-      layout === "week" ? null : document.querySelector<HTMLElement>('[role="grid"] [data-cell$=":0"]');
+    const header = layout === "week" ? null : document.querySelector<HTMLElement>('[data-cell$=":0"]');
     (element ?? header)?.focus();
     // The day too: another day of the same week comes on screen without the week reloading.
   }, [loaded, status, current.day, layout]);
@@ -336,7 +344,7 @@ export function WeekScreen(): React.ReactNode {
   // the next they stay mounted: focus stays on the › that was pressed, and a folded legend
   // stays folded.
   const range = weekRange(week.monday, dates[6] as Date);
-  const legend = <ShortcutLegend shortcuts={SHORTCUTS} />;
+  const legend = <ShortcutLegend shortcuts={layout === "week" ? SHORTCUTS : LIST_SHORTCUTS} />;
   const top = (
     <>
       <WeekHeader
@@ -511,6 +519,100 @@ export function WeekScreen(): React.ReactNode {
 
   const timezone = week.me.timezone;
 
+  async function saveTask(taskId: string, changes: TaskChanges, sentence?: string): Promise<void> {
+    await week.update(taskId, changes);
+    if (sentence !== undefined) say(sentence);
+    // Back to the resting panel rather than shut. The row stays where the reader was, and the
+    // change they just made is on it — on another day, after a move.
+    setOpenTask({ id: taskId, panel: "open" });
+    focusOnceReloaded({ task: taskId });
+  }
+
+  async function deleteTask(task: Task, snapshot: NewTask | null): Promise<void> {
+    const target = focusAfterDeleting(task, timezone);
+    // Sent now, not when the window closes: holding the DELETE would keep the slot taken from
+    // somebody deleting precisely to free it (the division of item 2).
+    await week.remove(task.id);
+    setOpenTask(null);
+    // A confirmed delete has no undo, and leaves any notice already showing alone.
+    if (snapshot !== null) {
+      notices.current += 1;
+      setSaid(null);
+      setTrash({
+        id: notices.current,
+        day: zonedDay(task.start_at, timezone),
+        title: task.title,
+        snapshot,
+        restoring: false,
+        failure: null,
+      });
+    }
+    focusOnceReloaded(target);
+  }
+
+  const newTask = openDay !== null && (
+    <NewTaskDialog
+      key={openDay}
+      startDay={openDay}
+      days={week.days}
+      timezone={timezone}
+      onCreate={async (task, sentence) => {
+        const created = await week.create(task);
+        setOpenDay(null);
+        say(sentence);
+        // On the row it made, which is where somebody looks next, rather than back on
+        // the button that opened the dialog.
+        focusOnceReloaded({ task: created.id });
+      }}
+      onClose={() => {
+        setOpenDay(null);
+      }}
+    />
+  );
+
+  if (layout !== "week") {
+    const capacity = week.days[current.day];
+    const index = current.day;
+    return frame(
+      <>
+        {capacity !== undefined && (
+          <DayList
+            key={capacity.day}
+            capacity={capacity}
+            tasks={week.byDay.get(capacity.day) ?? []}
+            week={week.days}
+            allTasks={week.tasks}
+            carried={week.carried.get(capacity.day) ?? []}
+            // Null on Monday: what it inherits comes from the Sunday before the week, which is
+            // fetched so the figures are right and never rendered.
+            onGoToOwner={
+              index === 0
+                ? null
+                : (taskId) => {
+                    // The owner's day is not on screen: it comes on with the row open, as the
+                    // drawing follows a band to its owner.
+                    showDay(index - 1, { task: taskId });
+                    setOpenTask({ id: taskId, panel: "open" });
+                  }
+            }
+            openTask={openTask}
+            saving={week.saving}
+            onOpenTask={setOpenTask}
+            onSaveTask={saveTask}
+            onDeleteTask={deleteTask}
+            index={index}
+            date={dayMonth(dates[index] as Date)}
+            today={capacity.day === todayKey}
+            timezone={timezone}
+            onToggle={week.toggle}
+            onChecklist={week.checklist}
+          />
+        )}
+        {newTask}
+      </>,
+    );
+  }
+
   return frame(
     <>
       {/* Not a stop itself: its cells hold the one tab stop and the keys arrive from them,
@@ -519,102 +621,43 @@ export function WeekScreen(): React.ReactNode {
       <div
         role="grid"
         aria-label={`Week of ${weekRange(week.monday, dates[6] as Date)}`}
-        className={cx(styles.grid, only !== undefined && styles.oneDay)}
+        className={styles.grid}
         onKeyDown={onGridKey}
       >
-        {week.days.map((capacity, index) =>
-          // Below 1100px the grid holds the one day on screen; the other six are in the glance.
-          only !== undefined && only !== index ? null : (
-            <DayColumn
-              key={capacity.day}
-              capacity={capacity}
-              tasks={week.byDay.get(capacity.day) ?? []}
-              week={week.days}
-              allTasks={week.tasks}
-              carried={week.carried.get(capacity.day) ?? []}
-              // Null on the first column only. What Monday inherits comes from the Sunday
-              // before the week — fetched so the figures are right, never rendered — so there
-              // is no row on this screen to send anybody to.
-              onGoToOwner={
-                index === 0
-                  ? null
-                  : only === undefined
-                    ? focusTask
-                    : // The owner's day is not on screen: it comes on with the row open, as the
-                      // drawing follows a band to its owner.
-                      (taskId) => {
-                        showDay(index - 1, { task: taskId });
-                        setOpenTask({ id: taskId, panel: "open" });
-                      }
-              }
-              openTask={openTask}
-              saving={week.saving}
-              onOpenTask={setOpenTask}
-              onSaveTask={async (taskId, changes, sentence) => {
-                await week.update(taskId, changes);
-                if (sentence !== undefined) say(sentence);
-                // Back to the resting panel rather than shut. The row stays where the reader
-                // was, and the change they just made is on it — on another column, after a move.
-                setOpenTask({ id: taskId, panel: "open" });
-                focusOnceReloaded({ task: taskId });
-              }}
-              onDeleteTask={async (task, snapshot) => {
-                const target = focusAfterDeleting(task, timezone);
-                // Sent now, not when the window closes: holding the DELETE would keep the slot
-                // taken from somebody deleting precisely to free it (the division of item 2).
-                await week.remove(task.id);
-                setOpenTask(null);
-                // A confirmed delete has no undo, and leaves any notice already showing alone.
-                if (snapshot !== null) {
-                  notices.current += 1;
-                  setSaid(null);
-                  setTrash({
-                    id: notices.current,
-                    day: zonedDay(task.start_at, timezone),
-                    title: task.title,
-                    snapshot,
-                    restoring: false,
-                    failure: null,
-                  });
-                }
-                focusOnceReloaded(target);
-              }}
-              index={index}
-              date={dayMonth(dates[index] as Date)}
-              today={capacity.day === todayKey}
-              // Local dates as YYYY-MM-DD compare as strings in calendar order.
-              past={todayKey !== null && capacity.day < todayKey}
-              timezone={week.me?.timezone ?? "UTC"}
-              focusedCell={current.day === index ? current.cell : null}
-              onFocusCell={(cell) => {
-                setFocus({ offset: week.offset, day: index, cell });
-              }}
-              onOpenForm={setOpenDay}
-              onToggle={week.toggle}
-              onChecklist={week.checklist}
-            />
-            ),
-        )}
+        {week.days.map((capacity, index) => (
+          <DayColumn
+            key={capacity.day}
+            capacity={capacity}
+            tasks={week.byDay.get(capacity.day) ?? []}
+            week={week.days}
+            allTasks={week.tasks}
+            carried={week.carried.get(capacity.day) ?? []}
+            // Null on the first column only. What Monday inherits comes from the Sunday
+            // before the week — fetched so the figures are right, never rendered — so there
+            // is no row on this screen to send anybody to.
+            onGoToOwner={index === 0 ? null : focusTask}
+            openTask={openTask}
+            saving={week.saving}
+            onOpenTask={setOpenTask}
+            onSaveTask={saveTask}
+            onDeleteTask={deleteTask}
+            index={index}
+            date={dayMonth(dates[index] as Date)}
+            today={capacity.day === todayKey}
+            // Local dates as YYYY-MM-DD compare as strings in calendar order.
+            past={todayKey !== null && capacity.day < todayKey}
+            timezone={week.me?.timezone ?? "UTC"}
+            focusedCell={current.day === index ? current.cell : null}
+            onFocusCell={(cell) => {
+              setFocus({ offset: week.offset, day: index, cell });
+            }}
+            onOpenForm={setOpenDay}
+            onToggle={week.toggle}
+            onChecklist={week.checklist}
+          />
+        ))}
       </div>
-      {openDay !== null && (
-        <NewTaskDialog
-          key={openDay}
-          startDay={openDay}
-          days={week.days}
-          timezone={timezone}
-          onCreate={async (task, sentence) => {
-            const created = await week.create(task);
-            setOpenDay(null);
-            say(sentence);
-            // On the row it made, which is where somebody looks next, rather than back on
-            // the button that opened the dialog.
-            focusOnceReloaded({ task: created.id });
-          }}
-          onClose={() => {
-            setOpenDay(null);
-          }}
-        />
-      )}
+      {newTask}
     </>,
   );
 }
