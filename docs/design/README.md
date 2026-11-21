@@ -109,6 +109,10 @@ the copy here only renders the screens.
   drawing makes the range itself the button, but a heading cannot sit inside one, and the
   range is what the router puts focus on. The button's target is stretched over both, so the
   press lands where the drawing puts it.
+- **An opened row below 1100px uses the desktop's panels.** Its verbs stay in view under
+  whichever panel is open, and an item is renamed in place and saved as the field is left.
+  The drawing swaps the verbs out for the panel and gives a rename its own Save and Cancel.
+  One set of panels keeps a task offering the same things at every width.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.

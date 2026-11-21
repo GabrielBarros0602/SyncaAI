@@ -455,7 +455,7 @@ O `day-phone.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    fuso.
 3. ✅ O cabeçalho do dia e as linhas como desenhados, e a linha de conclusão tardia que não
    quebra a 200%. O dia virou lista nas duas faixas (ADR-0056).
-4. A linha aberta no toque: reordenar a checklist com ↑ ↓ ✕, mover como lista, confirmar
+4. ✅ A linha aberta no toque: reordenar a checklist com ↑ ↓ ✕, mover como lista, confirmar
    exclusão, nota.
 5. Nova tarefa e editar como folha inteira, com Save em cima.
 6. Avisos que levam a outro dia ("Go to Sat"), o deslizar como atalho de toque.
