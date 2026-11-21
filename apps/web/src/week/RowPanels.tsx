@@ -159,6 +159,13 @@ interface Props {
   onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
   onDelete: (snapshot: NewTask | null) => Promise<void>;
   onChecklist: (change: ChecklistChange) => Promise<void>;
+  /**
+   * The one day's list below 1100px, which opens a row as day-phone.dc.html does: the
+   * checklist is on the opened row itself, with room for it, rather than behind its own verb;
+   * the verbs come after what they act on; and the row's own button closes it, so there is no
+   * "esc" to press.
+   */
+  list?: boolean;
 }
 
 /** The verbs of an opened row, and the panel the one that is pressed opens. */
@@ -174,31 +181,40 @@ export function RowPanels({
   onSave,
   onDelete,
   onChecklist,
+  list = false,
 }: Props): React.ReactNode {
   const done = task.completed_at !== null;
+  // Below 1100px a list with items is already on the opened row, so the verb is offered only
+  // to start one, as the drawing's "Add checklist" is.
+  const verbs = verbsFor(task).filter((verb) => !(list && verb === LIST && task.items.length > 0));
+  const listOnRow = list && (open === "list" || (open === "open" && task.items.length > 0));
 
-  return (
-    <>
-      <div role="toolbar" aria-label={`Actions for ${task.title}`} className={day.verbs}>
-        {verbsFor(task).map((verb) => (
-          <button
-            key={verb.panel}
-            type="button"
-            className={cx(day.verb, open === verb.panel && day.verbOn)}
-            aria-pressed={open === verb.panel}
-            aria-keyshortcuts={verb.shortcut}
-            onClick={() => {
-              if (open === verb.panel) onOpen("open");
-              else if (verb === DELETE) actions.startDelete();
-              else onOpen(verb.panel);
-            }}
-          >
-            {verb.label}
-            <kbd aria-hidden="true" className={day.cap}>
-              {verb.key}
-            </kbd>
-          </button>
-        ))}
+  const toolbar = (
+    <div
+      role="toolbar"
+      aria-label={`Actions for ${task.title}`}
+      className={cx(day.verbs, list && day.verbsList)}
+    >
+      {verbs.map((verb) => (
+        <button
+          key={verb.panel}
+          type="button"
+          className={cx(day.verb, open === verb.panel && day.verbOn)}
+          aria-pressed={open === verb.panel}
+          aria-keyshortcuts={verb.shortcut}
+          onClick={() => {
+            if (open === verb.panel) onOpen("open");
+            else if (verb === DELETE) actions.startDelete();
+            else onOpen(verb.panel);
+          }}
+        >
+          {verb.label}
+          <kbd aria-hidden="true" className={day.cap}>
+            {verb.key}
+          </kbd>
+        </button>
+      ))}
+      {!list && (
         <button
           type="button"
           className={day.close}
@@ -210,8 +226,12 @@ export function RowPanels({
         >
           esc
         </button>
-      </div>
+      )}
+    </div>
+  );
 
+  const panel = (
+    <>
       {open === "edit" && (
         <EditPanel
           task={task}
@@ -235,7 +255,7 @@ export function RowPanels({
       )}
 
       {open === "move" && !done && (
-        <MovePanel task={task} days={days} tasks={allTasks} timezone={timezone} onSave={onSave} />
+        <MovePanel task={task} days={days} tasks={allTasks} timezone={timezone} list={list} onSave={onSave} />
       )}
 
       {open === "note" && (
@@ -248,16 +268,29 @@ export function RowPanels({
         />
       )}
 
-      {open === "list" && (
+      {(listOnRow || (!list && open === "list")) && (
         <ChecklistPanel
           task={task}
           saving={saving}
+          list={list}
           onChange={onChecklist}
           onCancel={() => {
             onOpen("open");
           }}
         />
       )}
+    </>
+  );
+
+  return list ? (
+    <>
+      {panel}
+      {toolbar}
+    </>
+  ) : (
+    <>
+      {toolbar}
+      {panel}
     </>
   );
 }

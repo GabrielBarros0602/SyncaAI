@@ -15,6 +15,8 @@ interface Props {
   /** Every task the screen holds, including the evening before the week. */
   tasks: Task[];
   timezone: string;
+  /** In the one day's list below 1100px: the days one per line, as the phone draws them. */
+  list?: boolean;
   onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
 }
 
@@ -56,7 +58,7 @@ function offAs(option: MoveOption): { sub: string; reason: string } {
  * with the server's sentence rather than retrying or recalculating — the person can pick
  * another day, and a retry would only be refused the same way.
  */
-export function MovePanel({ task, days, tasks, timezone, onSave }: Props): React.ReactNode {
+export function MovePanel({ task, days, tasks, timezone, list = false, onSave }: Props): React.ReactNode {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -90,7 +92,9 @@ export function MovePanel({ task, days, tasks, timezone, onSave }: Props): React
         Same clock time, <span className={day.figure}>{clockSpan(task, timezone)}</span>, on another day of
         this week.
       </span>
-      <div className={day.moveDays}>
+      {/* Below 1100px a day per line, its name and what it offers side by side, as the
+          phone draws the move: seven buttons a thumb can tell apart. */}
+      <div className={cx(day.moveDays, list && day.moveDaysList)}>
         {options.map((option) => {
           const name = weekdayName(option.weekday);
           if (option.blocker !== null) {

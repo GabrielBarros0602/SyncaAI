@@ -529,6 +529,35 @@
   transform: scale(var(--press-scale));
 }
 
+/* Below 1100px, as the phone draws them: bordered buttons sharing the row's width, each a
+   thumb's wide and not only a thumb's tall. */
+.verbsList {
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.verbsList .verb {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: var(--target-touch);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.verbsList .verb:hover {
+  background: var(--hover);
+}
+
+.verbsList .verb:active {
+  background: var(--pressed);
+}
+
+.verbsList .verbOn {
+  background: var(--tag);
+}
+
 .cap {
   padding: 0 var(--space-1);
   border-radius: var(--radius-1);
@@ -589,6 +618,21 @@
 
 /* The lightest day the task can go to, ringed in ink rather than the accent, which means
    trouble. */
+/* Below 1100px: a day per line, its name and what it offers at either end. */
+.moveDaysList {
+  display: flex;
+  flex-direction: column;
+}
+
+.moveDaysList .moveDay {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  min-height: var(--target-touch);
+}
+
 .moveDayLightest {
   box-shadow: inset 0 0 0 1px var(--ink);
 }
@@ -629,7 +673,7 @@
 .input,
 .select {
   min-width: 0;
-  min-height: 40px;
+  min-height: max(40px, var(--target));
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-2);
@@ -947,7 +991,7 @@
 .renameInput {
   flex: 1;
   min-width: 0;
-  min-height: 32px;
+  min-height: max(32px, var(--target));
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-1);
@@ -971,14 +1015,14 @@
 }
 
 .addInput {
-  min-height: 36px;
+  min-height: max(36px, var(--target));
   padding: 0 var(--space-2);
   font-size: var(--text-2);
   line-height: var(--leading-2);
 }
 
 .addButton {
-  min-height: 36px;
+  min-height: max(36px, var(--target));
   padding: 0 var(--space-3);
 }
 

@@ -504,6 +504,10 @@
 }
 
 .itemPanels {
+  /* Every control in an opened row is a thumb's, as the phone draws them, whatever the
+     pointer: the panels size their controls from this. */
+  --target: var(--target-touch);
+
   padding-top: var(--space-3);
   border-top: 1px solid var(--line);
 }

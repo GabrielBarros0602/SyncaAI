@@ -303,3 +303,61 @@ it("passes the automated accessibility check, a row open and a band in it", asyn
 
   await expectNoViolations(container);
 });
+
+describe("an opened row, as the phone draws it", () => {
+  const ITEMS = [
+    { id: "i1", label: "Outline", position: 0, completed_at: null },
+    { id: "i2", label: "Sources", position: 1, completed_at: null },
+  ];
+
+  function toolbar(): HTMLElement {
+    return screen.getByRole("toolbar", { name: "Actions for Read" });
+  }
+
+  function verbs(): string[] {
+    return within(toolbar())
+      .getAllByRole("button")
+      .map((button) => button.textContent.replace(/[A-Z⌫]$/, ""));
+  }
+
+  it("shows the checklist on the row itself, before the verbs, and no verb or esc for it", () => {
+    renderDay({ tasks: [{ ...READ, items: ITEMS }], openTask: { id: "Read", panel: "open" } });
+
+    const list = screen.getByRole("group", { name: "Checklist" });
+    expect(within(list).getByRole("checkbox", { name: "Tick Outline" })).toBeDefined();
+    expect(verbs()).toEqual(["edit", "move", "note", "delete"]);
+    expect(within(toolbar()).queryByRole("button", { name: "Close" })).toBeNull();
+    // The verbs come after what they act on.
+    expect(list.compareDocumentPosition(toolbar()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("offers the checklist verb on a task with none, and starts one in place", () => {
+    const onOpenTask = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
+    renderDay({ tasks: [READ], openTask: { id: "Read", panel: "open" }, onOpenTask });
+    expect(screen.queryByRole("group", { name: "Checklist" })).toBeNull();
+    expect(verbs()).toEqual(["edit", "move", "note", "checklist", "delete"]);
+
+    fireEvent.click(within(toolbar()).getByRole("button", { name: /^checklist/ }));
+    expect(onOpenTask).toHaveBeenCalledWith({ id: "Read", panel: "list" });
+  });
+
+  it("shows an empty checklist to add to once the verb is pressed", () => {
+    renderDay({ tasks: [READ], openTask: { id: "Read", panel: "list" } });
+
+    expect(screen.getByRole("group", { name: "Checklist" })).toBeDefined();
+    expect(screen.getByLabelText("Add an item")).toBeDefined();
+    expect(within(toolbar()).getByRole("button", { name: /^checklist/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it.each(["move", "delete", "note"] as const)(
+    "passes the automated accessibility check with the %s panel open",
+    async (panel) => {
+      const started = aTask("Read", "2026-08-26T09:00:00", "2026-08-26T10:30:00");
+      const container = renderDay({
+        tasks: [{ ...started, items: ITEMS }],
+        openTask: { id: "Read", panel },
+      });
+      await expectNoViolations(container);
+    },
+  );
+});
