@@ -61,6 +61,12 @@ the copy here only renders the screens.
   them. Swiping is only a shortcut.
 - **The week at a glance:** always in view, as seven 44px cells. It wraps rather than shrinks.
 - **The time zone:** a sentence under the strip, always visible.
+- **The task count stays, below 1100px only** (decided on 2026-11-21). The day's heading says
+  "3 tasks", as drawn, although the week from 1100px leaves the count out under item 17, each
+  number once. On the week every row of every day is in view, so a count repeats what the eye
+  already has. Here one day is on screen, its rows run on past the bar at the bottom, and the
+  strip shows only booked time: the count is the one figure that says how many rows are still
+  to scroll to.
 
 **The plan.**
 - **Asking:** a "Plan" button in the header, beside Menu. Its label carries the state:
