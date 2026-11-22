@@ -93,6 +93,28 @@ export function waitLine(job: Job, timeZone: string): string {
     : `${asked} It starts when a place frees up.`;
 }
 
+/**
+ * A plan written by hand before there is one: what the review shows until its first step is
+ * added, which is when the server makes it, since the API takes the plan's name only then and
+ * does not rename it (decided on 2026-11-22). Its days and its week are the ones the server
+ * will give it, from today; with no id, it is nothing the server has.
+ */
+export function unwrittenPlan(today: string, days: number): Plan {
+  return {
+    id: "",
+    job_id: null,
+    created_at: "",
+    status: "pending",
+    request: "",
+    first_day: today,
+    last_day: plus(today, days - 1),
+    week_ends_on: plus(today, 7 - isoWeekday(today)),
+    items: [],
+    discarded: [],
+    progress: null,
+  };
+}
+
 /** The notice that stays until it is acted on: `Your plan is ready: 6 steps, 3 discarded.` */
 export function readyText(plan: Plan): string {
   const kept = `${String(plan.items.length)} ${plan.items.length === 1 ? "step" : "steps"}`;
