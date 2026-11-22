@@ -536,8 +536,9 @@ passo por número (ADR-0055). ✅ Decidido em 2026-11-22, em "As telas do plano"
 
 O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 
-1. O que a tela lê e a API não dava (ADR-0058), e o pedido que nenhum worker vai pegar lido
-   como falho (ADR-0057). Só servidor.
+1. ✅ O que a tela lê e a API não dava (ADR-0058), e o pedido que nenhum worker vai pegar lido
+   como falho (ADR-0057). Só servidor. A frase sob cada passo sem horário veio depois, numa
+   PR só de servidor antes da 2 (ADR-0059).
 2. O botão Plan e a revisão, só leitura, com Approve e Discard: a vista inteira abaixo de
    1100px, o painel de 440px a partir dali, os passos propostos tracejados na semana.
 3. Pedir e esperar: o formulário, as recusas com a hora do `Retry-After`, o polling, as três
@@ -574,6 +575,12 @@ recomendado:
 - **"What it's for" no plano à mão.** A API pede o nome ao criar o plano e não o renomeia. O
   rascunho vazio existe só na tela até o primeiro Add, que cria o plano e o passo; daí em
   diante o nome é texto, como o "You asked".
+
+**Uma sétima, aberta ao construir a revisão — decidida em 2026-11-22:** a frase sob cada passo
+sem horário vem do servidor. O scheduler a escrevia e ninguém a guardava, e o
+`not_this_week` junta o passo que não cabe antes de domingo e o que vai junto com outro. A
+leitura do plano passou a derivá-la do plano como está (ADR-0059), em vez de a tela
+escrever as frases uma segunda vez.
 
 Três desvios do desenho que não pediram decisão vão para "Where the code departs from the
 drawings" com a PR que os implementa: os minutos de um passo seguem o servidor, de 1 a 1440

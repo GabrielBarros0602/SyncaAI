@@ -1,6 +1,7 @@
 # ADR-0058: A request says what it asked, and a plan's tasks are listed by the plan
 
-**Status:** Accepted
+**Status:** Accepted; each step's reason added to a plan's read by
+[ADR-0059](0059-a-step-s-reason-is-read-from-the-plan-as-it-is-now.md)
 **Date:** 2026-11-22
 **Deciders:** Gabriel Barros
 
