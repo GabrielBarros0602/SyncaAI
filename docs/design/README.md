@@ -123,6 +123,25 @@ the copy here only renders the screens.
   the 200ms duration token rather than the drawing's 220ms.
 - **A notice's ✕ is not offered while it is busy.** "Restoring…" ends when the work does, and
   if the server refuses, the refusal needs a notice to land in.
+- **The plan's review opens beside the week only from 1640px.** The drawing puts its 440px
+  panel beside the week from 1100px and shares what is left among the seven columns: 101px
+  each at 1280px, 76px at 1100px, where Sunday's header spills out of its column even at 100%
+  text. From 1640px the columns keep their 155px floor beside the panel: 1617px measured, and
+  a scrollbar's width on top. Below it the review takes the page, as it does below 1100px,
+  with each step's day and what the plan adds to every day it touches. The week never scrolls
+  sideways beside the panel. Gabriel's reason: all seven days are always on screen, so a
+  change the plan makes is never on a day out of view.
+- **Kept steps are numbered 1 to n in the order shown, and a discarded step is named by its
+  title.** The drawing numbers a discarded step by its position in the model's answer, which
+  collides with a kept step's number. "after step N" and a refused commit count the same way
+  (decided on 2026-11-22).
+- **The count line has no "came back":** "6 kept · 3 discarded". No row keeps how many steps
+  the model's answer held.
+- **Reading the plan again after a commit lost a race says nothing of its own.** The drawing
+  says "Read again. Every step still has its time.", which the read cannot promise: it does
+  not look for tasks booked since (ADR-0059). The steps as read are the answer.
+- **A step's time is `14:25 – 14:55`, spaced,** as every range is in the one vocabulary. The
+  drawing writes the plan's ranges unspaced.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.
