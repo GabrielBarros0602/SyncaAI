@@ -10,7 +10,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DayCapacity, Task } from "../src/api/types";
+import { ApiError } from "../src/api/client";
+import type { DayCapacity, Task, TaskChanges } from "../src/api/types";
 import { type Carried, carriedInto } from "../src/week/carried";
 import { DayList } from "../src/week/DayList";
 import type { Panel } from "../src/week/RowPanels";
@@ -62,6 +63,7 @@ interface When {
   openTask?: { id: string; panel: Panel } | null;
   onOpenTask?: (open: { id: string; panel: Panel } | null) => void;
   onToggle?: (task: Task) => Promise<void>;
+  onSaveTask?: (taskId: string, changes: TaskChanges, sentence?: string) => Promise<void>;
   today?: boolean;
 }
 
@@ -79,7 +81,7 @@ function renderDay(when: When = {}): HTMLElement {
       openTask={when.openTask ?? null}
       saving={new Set()}
       onOpenTask={when.onOpenTask ?? (() => undefined)}
-      onSaveTask={() => Promise.resolve()}
+      onSaveTask={when.onSaveTask ?? (() => Promise.resolve())}
       onDeleteTask={() => Promise.resolve()}
       index={2}
       date="26 Aug"
@@ -349,7 +351,7 @@ describe("an opened row, as the phone draws it", () => {
     expect(within(toolbar()).getByRole("button", { name: /^checklist/ }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it.each(["move", "delete", "note"] as const)(
+  it.each(["move", "delete", "note", "edit"] as const)(
     "passes the automated accessibility check with the %s panel open",
     async (panel) => {
       const started = aTask("Read", "2026-08-26T09:00:00", "2026-08-26T10:30:00");
@@ -360,4 +362,64 @@ describe("an opened row, as the phone draws it", () => {
       await expectNoViolations(container);
     },
   );
+});
+
+describe("edit, as a full sheet (day-phone.dc.html)", () => {
+  type Save = (taskId: string, changes: TaskChanges, sentence?: string) => Promise<void>;
+
+  function sheet(): HTMLElement {
+    return screen.getByRole("dialog", { name: "Edit task" });
+  }
+
+  it("covers the day with cancel, its heading and save on a bar on top", () => {
+    renderDay({ tasks: [READ], openTask: { id: "Read", panel: "edit" } });
+
+    const save = within(sheet()).getByRole("button", { name: "save" });
+    // Outside the form it submits, so the keyboard covering the bottom cannot hide it.
+    expect(save.closest("form")).toBeNull();
+    expect(save.getAttribute("form")).toBe(sheet().querySelector("form")?.id);
+    expect(within(sheet()).getAllByRole("button", { name: /^(save|cancel)$/ })).toHaveLength(2);
+    expect(within(sheet()).getByText("The note and the checklist are edited in the open row.")).toBeDefined();
+    expect(document.activeElement).toBe(within(sheet()).getByLabelText("Title"));
+  });
+
+  it("saves from the bar, and says saving… while it waits", () => {
+    const onSaveTask = vi.fn<Save>(() => new Promise(() => undefined));
+    renderDay({ tasks: [READ], openTask: { id: "Read", panel: "edit" }, onSaveTask });
+    fireEvent.change(within(sheet()).getByLabelText("Title"), { target: { value: "Read more" } });
+
+    fireEvent.click(within(sheet()).getByRole("button", { name: "save" }));
+
+    expect(onSaveTask).toHaveBeenCalledWith("Read", { title: "Read more" }, undefined);
+    const saving = within(sheet()).getByRole("button", { name: "saving…" });
+    expect(saving.getAttribute("aria-busy")).toBe("true");
+    fireEvent.click(saving);
+    expect(onSaveTask).toHaveBeenCalledOnce();
+  });
+
+  it("puts the server's refusal under Start, word for word, and keeps what was typed", async () => {
+    const overlap = "That time overlaps “Shift”, 14:00 – 15:30.";
+    const onSaveTask = vi.fn<Save>(() => Promise.reject(new ApiError(409, overlap)));
+    renderDay({ tasks: [READ], openTask: { id: "Read", panel: "edit" }, onSaveTask });
+    fireEvent.change(within(sheet()).getByLabelText("Start time"), { target: { value: "14:30" } });
+
+    fireEvent.click(within(sheet()).getByRole("button", { name: "save" }));
+
+    const alert = await within(sheet()).findByRole("alert");
+    expect(alert.textContent).toBe(overlap);
+    const duration = within(sheet()).getByLabelText("Duration");
+    expect(alert.compareDocumentPosition(duration) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(sheet()).getByLabelText<HTMLInputElement>("Start time").value).toBe("14:30");
+  });
+
+  it("goes back to the open row on cancel, with nothing sent", () => {
+    const onOpenTask = vi.fn<(open: { id: string; panel: Panel } | null) => void>();
+    const onSaveTask = vi.fn<Save>(() => Promise.resolve());
+    renderDay({ tasks: [READ], openTask: { id: "Read", panel: "edit" }, onOpenTask, onSaveTask });
+
+    fireEvent.click(within(sheet()).getByRole("button", { name: "cancel" }));
+
+    expect(onOpenTask).toHaveBeenCalledWith({ id: "Read", panel: "open" });
+    expect(onSaveTask).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,11 @@
-import { useId, useRef, useState, type KeyboardEvent, type SyntheticEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from "react";
 
 import { ApiError } from "../api/client";
 import type { DayCapacity, Task, TaskChanges } from "../api/types";
@@ -17,6 +24,7 @@ import {
 } from "../lib/time";
 import { cx } from "../lib/cx";
 import { changesFrom, isEmpty, normaliseTag } from "./changes";
+import { SheetHead } from "./SheetHead";
 import { TagField, tagStatus, useTags } from "./TagField";
 import day from "./Day.module.css";
 
@@ -33,6 +41,12 @@ interface Props {
   timezone: string;
   onSave: (changes: TaskChanges, sentence?: string) => Promise<void>;
   onCancel: () => void;
+  /**
+   * Below 1100px: a full sheet over the day, with save on top (`SheetHead`), rather than a
+   * form inside the row. The refusal moves under Start, where the drawing puts it and where
+   * the keyboard does not cover it.
+   */
+  sheet?: boolean;
 }
 
 /** `Mon 26 Oct`, for a local date, without letting the browser's zone move it. */
@@ -58,8 +72,19 @@ function at(instant: Date, timezone: string): string {
  * exclusion constraint knows everything, and a task moved into a neighbouring week would pass a
  * local check and be refused anyway. The 409 is the authority and its sentence is what shows.
  */
-export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): React.ReactNode {
+export function EditPanel({
+  task,
+  days,
+  timezone,
+  onSave,
+  onCancel,
+  sheet = false,
+}: Props): React.ReactNode {
   const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  // Read at the first render, before the sheet takes focus: the verb or the row it was opened
+  // from, where focus goes back when it closes without saving.
+  const opener = useRef(document.activeElement);
   const found = useTags();
   // The task's own tag is one of theirs whether or not the list has arrived.
   const tags =
@@ -106,6 +131,16 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
   const { isNew } = tagStatus(fields.tag, tags);
   const newTag = normaliseTag(fields.tag) ?? "";
 
+  useEffect(() => {
+    if (!sheet) return;
+    dialog.current?.showModal();
+    first.current.title?.focus();
+  }, [sheet]);
+
+  // A sheet is closed, not unmounted, so its close event hands focus back; the row's form
+  // goes straight to the resting panel.
+  const cancel = sheet ? () => dialog.current?.close() : onCancel;
+
   function set(patch: Partial<typeof fields>): void {
     setFields((current) => ({ ...current, ...patch }));
     setRefusal(null);
@@ -113,6 +148,8 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
 
   function save(event?: SyntheticEvent): void {
     event?.preventDefault();
+    // The sheet's save stays pressable while saving, as the new task's does.
+    if (saving) return;
     setTried(true);
     if (startAt === null || duration === null || problems.title !== null) {
       // The first field that needs fixing takes focus, so nobody has to hunt for it.
@@ -128,7 +165,7 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
       tag: fields.tag.trim() === "" ? null : fields.tag,
     });
     if (isEmpty(changes)) {
-      onCancel();
+      cancel();
       return;
     }
 
@@ -146,13 +183,25 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
   }
 
   function onKeyDown(event: KeyboardEvent): void {
-    if (event.key === "Escape") onCancel();
+    if (event.key === "Escape") cancel();
   }
 
   const shown = (problem: string | null): string | null => (tried ? problem : null);
+  const refused = refusal !== null && (
+    <span role="alert" className={day.refusal}>
+      {refusal}
+    </span>
+  );
 
-  return (
-    <form className={day.form} aria-label="Edit task" noValidate onSubmit={save}>
+  const form = (
+    <form
+      id={`${id}-form`}
+      className={day.form}
+      aria-label={sheet ? undefined : "Edit task"}
+      aria-busy={sheet ? saving : undefined}
+      noValidate
+      onSubmit={save}
+    >
       <div className={day.field}>
         <div className={day.fieldHead}>
           <label htmlFor={`${id}-title`} className={day.panelHead}>
@@ -225,6 +274,7 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
         <span id={`${id}-time-error`} className={day.fieldError}>
           {shown(problems.time)}
         </span>
+        {sheet && refused}
       </div>
 
       <div className={day.field}>
@@ -256,25 +306,49 @@ export function EditPanel({ task, days, timezone, onSave, onCancel }: Props): Re
       <TagField
         value={fields.tag}
         tags={tags}
-        onEscape={onCancel}
+        onEscape={cancel}
         onChange={(tag) => {
           set({ tag });
         }}
       />
 
-      {refusal !== null && (
-        <span role="alert" className={day.refusal}>
-          {refusal}
-        </span>
+      {sheet ? (
+        <p className={day.panelHint}>The note and the checklist are edited in the open row.</p>
+      ) : (
+        <>
+          {refused}
+          <div className={day.actions}>
+            <button type="submit" className={day.primary} disabled={saving}>
+              {isNew ? `save and create tag “${newTag}”` : "save"}
+            </button>
+            <button type="button" className={day.secondary} onClick={onCancel}>
+              cancel
+            </button>
+          </div>
+        </>
       )}
-      <div className={day.actions}>
-        <button type="submit" className={day.primary} disabled={saving}>
-          {isNew ? `save and create tag “${newTag}”` : "save"}
-        </button>
-        <button type="button" className={day.secondary} onClick={onCancel}>
-          cancel
-        </button>
-      </div>
     </form>
+  );
+
+  if (!sheet) return form;
+  return (
+    <dialog
+      ref={dialog}
+      className={day.sheet}
+      aria-labelledby={`${id}-heading`}
+      onClose={() => {
+        onCancel();
+        if (opener.current instanceof HTMLElement) opener.current.focus();
+      }}
+    >
+      <SheetHead
+        id={`${id}-heading`}
+        heading="Edit task"
+        form={`${id}-form`}
+        saving={saving}
+        onCancel={cancel}
+      />
+      {form}
+    </dialog>
   );
 }

@@ -162,8 +162,8 @@ interface Props {
   /**
    * The one day's list below 1100px, which opens a row as day-phone.dc.html does: the
    * checklist is on the opened row itself, with room for it, rather than behind its own verb;
-   * the verbs come after what they act on; and the row's own button closes it, so there is no
-   * "esc" to press.
+   * the verbs come after what they act on; the row's own button closes it, so there is no
+   * "esc" to press; and edit is a full sheet over the day.
    */
   list?: boolean;
 }
@@ -237,6 +237,7 @@ export function RowPanels({
           task={task}
           days={days}
           timezone={timezone}
+          sheet={list}
           onSave={onSave}
           onCancel={() => {
             onOpen("open");
