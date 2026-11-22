@@ -15,6 +15,7 @@ import {
 } from "../lib/time";
 import { cx } from "../lib/cx";
 import { normaliseTag } from "./changes";
+import { SheetHead } from "./SheetHead";
 import { TagField, tagStatus, useTags } from "./TagField";
 import day from "./Day.module.css";
 
@@ -31,6 +32,8 @@ interface Props {
   onCreate: (task: NewTask, sentence: string) => Promise<void>;
   /** Closed without creating: Esc, cancel, or the backdrop. */
   onClose: () => void;
+  /** Below 1100px: the whole screen, with save on top (`SheetHead`). */
+  sheet?: boolean;
 }
 
 /** The next half hour after now, in the person's zone, as a clock; 09:00 on any other day. */
@@ -52,7 +55,14 @@ function firstTime(localDate: string, timezone: string, now: Date): string {
  * constraint knows everything, and a task in a neighbouring week would pass a local check and
  * be refused anyway. The server's sentence shows at the time, which is what it is about.
  */
-export function NewTaskDialog({ startDay, days, timezone, onCreate, onClose }: Props): React.ReactNode {
+export function NewTaskDialog({
+  startDay,
+  days,
+  timezone,
+  onCreate,
+  onClose,
+  sheet = false,
+}: Props): React.ReactNode {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   // Where focus goes back to when it closes without creating: the button or the cell it was
@@ -164,27 +174,39 @@ export function NewTaskDialog({ startDay, days, timezone, onCreate, onClose }: P
 
   return (
     // The click handler closes on a click on the backdrop, the dialog itself rather than
-    // anything in it: a pointer's shortcut for cancel, which the keyboard has as Esc.
+    // anything in it: a pointer's shortcut for cancel, which the keyboard has as Esc. A sheet
+    // has no backdrop to click.
+    // One element in both shapes, so a tablet turned across 1100px keeps what was typed.
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={dialog}
-      className={day.dialog}
+      className={sheet ? day.sheet : day.dialog}
       aria-labelledby={`${id}-heading`}
       onClose={() => {
         onClose();
         if (opener.current instanceof HTMLElement) opener.current.focus();
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) cancel();
+        if (!sheet && event.target === event.currentTarget) cancel();
       }}
     >
-      <div className={day.dialogHead}>
-        <h2 id={`${id}-heading`} className={day.dialogTitle}>
-          New task
-        </h2>
-        <span className={day.dialogKey}>Esc closes</span>
-      </div>
-      <form className={day.form} noValidate aria-busy={saving} onSubmit={save}>
+      {sheet ? (
+        <SheetHead
+          id={`${id}-heading`}
+          heading="New task"
+          form={`${id}-form`}
+          saving={saving}
+          onCancel={cancel}
+        />
+      ) : (
+        <div className={day.dialogHead}>
+          <h2 id={`${id}-heading`} className={day.dialogTitle}>
+            New task
+          </h2>
+          <span className={day.dialogKey}>Esc closes</span>
+        </div>
+      )}
+      <form id={`${id}-form`} className={day.form} noValidate aria-busy={saving} onSubmit={save}>
         <div className={day.field}>
           <label htmlFor={`${id}-title`} className={day.panelHead}>
             Title
@@ -358,14 +380,16 @@ export function NewTaskDialog({ startDay, days, timezone, onCreate, onClose }: P
           </div>
         </div>
 
-        <div className={day.actions}>
-          <button type="submit" className={day.primary} aria-busy={saving}>
-            {saving ? "saving…" : isNew && tag !== null ? `save and create tag “${tag}”` : "save"}
-          </button>
-          <button type="button" className={day.secondary} onClick={cancel}>
-            cancel
-          </button>
-        </div>
+        {!sheet && (
+          <div className={day.actions}>
+            <button type="submit" className={day.primary} aria-busy={saving}>
+              {saving ? "saving…" : isNew && tag !== null ? `save and create tag “${tag}”` : "save"}
+            </button>
+            <button type="button" className={day.secondary} onClick={cancel}>
+              cancel
+            </button>
+          </div>
+        )}
       </form>
     </dialog>
   );

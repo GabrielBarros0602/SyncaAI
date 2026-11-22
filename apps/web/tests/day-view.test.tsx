@@ -461,8 +461,10 @@ describe("a new task from the bar", () => {
 
     fireEvent.click(within(bar()).getByRole("button", { name: "+ new task" }));
 
-    expect(screen.getByRole("dialog", { name: "New task" })).toBeDefined();
+    const dialog = screen.getByRole("dialog", { name: "New task" });
     expect(startDay()).toBe("2026-08-28");
+    // A full sheet, its save on the bar above the form rather than inside it.
+    expect(within(dialog).getByRole("button", { name: "save" }).closest("form")).toBeNull();
   });
 
   it("opens on today from a day that has gone, and leaves that day on screen", async () => {

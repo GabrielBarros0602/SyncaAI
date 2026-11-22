@@ -556,6 +556,7 @@ export function WeekScreen(): React.ReactNode {
       startDay={openDay}
       days={week.days}
       timezone={timezone}
+      sheet={layout !== "week"}
       onCreate={async (task, sentence) => {
         const created = await week.create(task);
         setOpenDay(null);

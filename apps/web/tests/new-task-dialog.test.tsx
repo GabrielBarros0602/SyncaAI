@@ -7,8 +7,8 @@
  * the sentence it hands back names the day, the time and any tag it creates; and closing
  * without creating puts focus back where it came from.
  */
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../src/api/client";
 import type { DayCapacity, NewTask } from "../src/api/types";
@@ -208,4 +208,90 @@ it("has nothing an automated accessibility check can find", async () => {
   open("2026-08-27");
 
   await expectNoViolations(document.body);
+});
+
+describe("below 1100px, as a full sheet (day-phone.dc.html)", () => {
+  function sheet(onCreate: Create = vi.fn<Create>(() => Promise.resolve())): void {
+    render(
+      <NewTaskDialog
+        startDay="2026-08-27"
+        days={WEEK}
+        timezone={SAO_PAULO}
+        onCreate={onCreate}
+        onClose={vi.fn()}
+        sheet
+      />,
+    );
+  }
+
+  it("puts cancel, its heading and save on a bar on top, and nothing under the fields", () => {
+    sheet();
+    const dialog = screen.getByRole("dialog", { name: "New task" });
+
+    const save = within(dialog).getByRole("button", { name: "save" });
+    const form = dialog.querySelector("form");
+    // Outside the form it submits, so the keyboard covering the bottom cannot hide it.
+    expect(save.closest("form")).toBeNull();
+    expect(save.getAttribute("form")).toBe(form?.id);
+    expect(within(dialog).getAllByRole("button", { name: /^(save|cancel)$/ })).toHaveLength(2);
+    const heading = within(dialog).getByRole("heading", { name: "New task" });
+    const cancel = within(dialog).getByRole("button", { name: "cancel" });
+    expect(cancel.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(heading.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("Esc closes")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByLabelText("Title"));
+  });
+
+  it("saves from the bar, and says saving… while it waits", () => {
+    const onCreate = vi.fn<Create>(() => new Promise(() => undefined));
+    sheet(onCreate);
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Ler artigo" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "save" }));
+
+    expect(onCreate).toHaveBeenCalledOnce();
+    const saving = screen.getByRole("button", { name: "saving…" });
+    expect(saving.getAttribute("aria-busy")).toBe("true");
+    fireEvent.click(saving);
+    expect(onCreate).toHaveBeenCalledOnce();
+  });
+
+  it("keeps save short when a new tag is typed, since the field says saving creates it", async () => {
+    sheet();
+    fireEvent.change(screen.getByRole("combobox", { name: "Tag" }), { target: { value: "Saude" } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/isn’t one of your tags yet. Saving creates it./)).toBeDefined();
+    });
+    expect(screen.getByRole("button", { name: "save" })).toBeDefined();
+  });
+
+  it("closes from its cancel, with focus back where it was opened from", () => {
+    const onClose = vi.fn();
+    render(<button type="button">+ new task</button>);
+    const opener = screen.getByRole("button", { name: "+ new task" });
+    opener.focus();
+    render(
+      <NewTaskDialog
+        startDay="2026-08-27"
+        days={WEEK}
+        timezone={SAO_PAULO}
+        onCreate={() => Promise.resolve()}
+        onClose={onClose}
+        sheet
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("has nothing an automated accessibility check can find", async () => {
+    vi.useRealTimers();
+    sheet();
+
+    await expectNoViolations(document.body);
+  });
 });

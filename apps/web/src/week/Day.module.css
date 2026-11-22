@@ -1202,6 +1202,80 @@
   color: var(--ink-2);
 }
 
+/* Below 1100px a form is the whole screen (day-phone.dc.html): a bar with cancel, the heading
+   and save on top, where a phone's keyboard cannot cover it, and the fields scrolling under. */
+
+.sheet {
+  --target: var(--target-touch);
+  /* The browser centres a modal dialog and keeps it off the edges; a sheet is the viewport. */
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetHead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.sheetTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  hyphens: auto;
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.sheetCancel {
+  min-height: var(--target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+}
+
+.sheetCancel:hover {
+  background: var(--hover);
+}
+
+.sheetCancel:active {
+  background: var(--pressed);
+}
+
+.sheetSave {
+  font-size: var(--text-3);
+  line-height: var(--leading-3);
+}
+
+.sheet .form {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
 .fieldset {
   display: flex;
   flex-direction: column;
