@@ -542,8 +542,9 @@ O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 2. ✅ O botão Plan e a revisão, só leitura, com Approve e Discard: a vista inteira abaixo de
    1640px, o painel de 440px a partir dali, os passos propostos tracejados na semana. O desenho
    abria o painel a partir de 1100px; a medida está abaixo.
-3. Pedir e esperar: o formulário, as recusas com a hora do `Retry-After`, o polling, as três
-   falhas e o aviso de "ready" que fica até a pessoa agir ou fechá-lo.
+3. ✅ Pedir e esperar: o formulário, as recusas com a hora do `Retry-After`, o polling, as três
+   falhas e o aviso de "ready" que fica até a pessoa agir ou fechá-lo. O "Write it myself", que
+   o desenho põe ao lado de "Make a plan", nas recusas e na falha, entra com a PR 5.
 4. Editar na revisão: dar horário, editar, remover, mandar para a semana seguinte, acrescentar
    um passo. Com o seletor de dia que passa da borda a 320px com o texto a 200%.
 5. Escrever à mão.
@@ -602,6 +603,11 @@ dia fora da vista. Daqui em diante, o princípio vale para a tela do plano.
 **Para o Gabriel decidir depois:** o mesmo princípio alcança a rolagem que já existe sem o
 painel. Entre 1100 e uns 1180px a semana rola de lado dentro de si, para manter o piso de
 155px (2026-11-01), e um dia pode ficar fora da vista. Ficou fora da PR 2.
+
+**Achado na PR 3:** cruzar 1100px com a tela do plano aberta remonta a revisão, porque a
+semana e o dia são árvores diferentes. Um pedido escrito e ainda não enviado se perde, assim
+como o formulário aberto a partir de uma falha. Só acontece redimensionando a janela, já que
+um tablet girando entre 768 e 1024px não cruza 1100. Ficou como está.
 
 ---
 

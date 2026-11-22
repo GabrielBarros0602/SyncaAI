@@ -142,6 +142,17 @@ the copy here only renders the screens.
   not look for tasks booked since (ADR-0059). The steps as read are the answer.
 - **A step's time is `14:25 – 14:55`, spaced,** as every range is in the one vocabulary. The
   drawing writes the plan's ranges unspaced.
+- **A plan being made says when it was asked, not when it started.** The drawing has "It
+  started at 14:21"; a request's read carries only when it was asked (ADR-0058), so it says
+  "Asked at 14:20, for 14 days. Plans usually take under a minute."
+- **A refused request says when to ask again in one sentence, read from its `Retry-After`.**
+  "You can ask again at 14:43.", with the day when it is not today: "You can ask again on Sun
+  1 Nov, at 00:00." The drawing names the day past ten hours, and words a month's allowance
+  apart, "They come back on Sunday 1 November.", which is the wrong day west of UTC: the month
+  turns in UTC (ADR-0044), on the evening before there.
+- **A failed request stays "didn’t work" on the Plan button until something newer happens:**
+  a request sent or a plan written. The drawing clears it when "Ask for it again" is pressed,
+  which nothing on the server records, so a reload would bring it back.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.
