@@ -115,3 +115,43 @@ it("moves focus to the new page's heading when the page changes", async () => {
   expect(heading.getAttribute("tabindex")).toBe("-1");
   expect(scrolled).toHaveBeenCalledWith(0, 0);
 });
+
+it("moves focus to what the new page names instead, when it names something", async () => {
+  vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+  render(
+    <MemoryRouter initialEntries={["/"]}>
+      <RouteFocus />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <main>
+              <h1>The week</h1>
+              <Link to="/plan">Step 3 of your plan</Link>
+            </main>
+          }
+        />
+        <Route
+          path="/plan"
+          element={
+            <main>
+              <h1>The week</h1>
+              <h2>Review the plan</h2>
+              <ol>
+                <li data-route-focus="">Step 3</li>
+              </ol>
+            </main>
+          }
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+  await userEvent.click(screen.getByRole("link", { name: "Step 3 of your plan" }));
+
+  const step = screen.getByText("Step 3");
+  await waitFor(() => {
+    expect(document.activeElement).toBe(step);
+  });
+  expect(step.getAttribute("tabindex")).toBe("-1");
+});
