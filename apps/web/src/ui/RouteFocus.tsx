@@ -22,6 +22,13 @@ export function RouteFocus(): null {
       return;
     }
     window.scrollTo(0, 0);
+    // A page can name what it opens on instead: a step asked for by its row in the week.
+    const asked = document.querySelector<HTMLElement>("[data-route-focus]");
+    if (asked !== null) {
+      if (!asked.hasAttribute("tabindex")) asked.setAttribute("tabindex", "-1");
+      asked.focus();
+      return;
+    }
     const heading = document.querySelector<HTMLElement>("main h1, h1");
     if (heading === null) return;
     // A heading is not focusable on its own; -1 lets a script focus it without adding a stop
