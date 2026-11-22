@@ -1,6 +1,7 @@
 # ADR-0050: Plans and their requests are listed, and an approved plan counts its tasks
 
-**Status:** Accepted
+**Status:** Accepted; requests filtered by the status they read by
+[ADR-0057](0057-a-request-no-worker-will-take-reads-as-failed.md)
 **Date:** 2026-10-24
 **Deciders:** Gabriel Barros
 
