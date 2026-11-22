@@ -66,7 +66,8 @@ the old one and update the status of the old one — never rewrite history.
 | [0055](0055-a-discarded-step-s-reason-is-written-twice-once-for-each-reader.md) | A discarded step's reason is written twice, once for each reader | Accepted |
 | [0056](0056-below-1100px-the-day-is-a-list-and-the-keys-that-still-apply-stay.md) | Below 1100px the day is a list, and the keys that still apply stay | Accepted |
 | [0057](0057-a-request-no-worker-will-take-reads-as-failed.md) | A request no worker will take reads as failed | Accepted |
-| [0058](0058-a-request-says-what-it-asked-and-a-plan-s-tasks-are-listed-by-the-plan.md) | A request says what it asked, and a plan's tasks are listed by the plan | Accepted |
+| [0058](0058-a-request-says-what-it-asked-and-a-plan-s-tasks-are-listed-by-the-plan.md) | A request says what it asked, and a plan's tasks are listed by the plan | Accepted; each step's reason by 0059 |
+| [0059](0059-a-step-s-reason-is-read-from-the-plan-as-it-is-now.md) | A step's reason is read from the plan as it is now | Accepted |
 
 ## Template
 
