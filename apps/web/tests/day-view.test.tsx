@@ -654,7 +654,7 @@ describe("a notice about a task on another day, below 1100px", () => {
    * Hold back the week's next read of its tasks until released, so a notice can be pressed
    * before the week it speaks of has arrived.
    */
-  function holdTheReload(): () => void {
+  function holdTheReload(inAct = true): () => void {
     const answer = fetchMock.getMockImplementation() as FetchLike;
     let release = (): void => undefined;
     let holding = true;
@@ -668,6 +668,10 @@ describe("a notice about a task on another day, below 1100px", () => {
       });
     });
     return () => {
+      if (!inAct) {
+        release();
+        return;
+      }
       act(() => {
         release();
       });
@@ -715,6 +719,41 @@ describe("a notice about a task on another day, below 1100px", () => {
     await showing("2026-08-28");
     release();
 
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("task-Read");
+    });
+  });
+
+  it("keeps the row's focus when pressed between the week's arrival and its effects", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [READ()] });
+    renderWeek();
+    await showing("2026-08-26");
+    const release = holdTheReload(false);
+    await moveReadTo(/^Fri,/);
+    await screen.findByText("Moved “Read” to Fri 28, 14:00.");
+
+    // The week arrives outside act(), as it does in a browser: its render commits and its
+    // effects are left for later. The notice is pressed in between, the moment Wednesday
+    // shows the task gone.
+    const env = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+    env.IS_REACT_ACT_ENVIRONMENT = false;
+    try {
+      await new Promise<void>((resolve) => {
+        const observer = new MutationObserver(() => {
+          if (screen.queryByText("Nothing booked.") === null) return;
+          observer.disconnect();
+          resolve();
+        });
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+        release();
+      });
+    } finally {
+      env.IS_REACT_ACT_ENVIRONMENT = true;
+    }
+    fireEvent.click(screen.getByRole("button", { name: "go to Fri" }));
+
+    await showing("2026-08-28");
     await waitFor(() => {
       expect(document.activeElement?.id).toBe("task-Read");
     });
