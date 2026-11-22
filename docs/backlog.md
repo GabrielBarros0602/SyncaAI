@@ -458,7 +458,10 @@ O `day-phone.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 4. ✅ A linha aberta no toque: reordenar a checklist com ↑ ↓ ✕, mover como lista, confirmar
    exclusão, nota.
 5. ✅ Nova tarefa e editar como folha inteira, com Save em cima.
-6. Avisos que levam a outro dia ("Go to Sat"), o deslizar como atalho de toque.
+6. ✅ Avisos que levam a outro dia ("Go to Sat"), o deslizar como atalho de toque.
+
+**O passo está completo em 2026-11-22.** Abaixo de 1100px o dia é o do desenho, e a semana a
+partir de 1100px não mudou.
 
 **Três perguntas abertas pela leitura do desenho — decididas em 2026-11-17**, as três como
 recomendado:
@@ -482,7 +485,10 @@ teclado cobre a parte de baixo da folha, que o Save continua à vista e que o ca
 rola até logo acima do teclado. Nada disso aparece num navegador de desktop com a largura
 emulada, porque não há teclado virtual. E os campos usam `--text-3`, 15px: o Safari do iPhone
 amplia a página ao focar um campo com fonte abaixo de 16px, o que tiraria a barra de vista.
-Quem confere: um iPhone e um Android abrindo "+ new task" e editando uma tarefa.
+Quem confere: um iPhone e um Android abrindo "+ new task" e editando uma tarefa. Os mesmos
+aparelhos conferem o deslizar da PR 6, que no navegador foi disparado por eventos de toque
+sintéticos: que um dedo de verdade troca de dia, que a rolagem não é tomada por ele e que a
+pinça continua ampliando.
 
 ### Aberto pela conferência dos passos 4 e 6 — antes da implementação
 

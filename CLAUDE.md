@@ -201,14 +201,17 @@ behaviour, copy and appearance. Pages are routed with `react-router`; every scre
 browser on each pull request. `tokens.css` is direction Papel under its contrast test
 (ADR-0026); its legacy block goes once the last module has moved to the new names.
 
-**Open, in the order ADR-0052 sets:**
+**Done, in the order ADR-0052 sets, on 2026-11-22:** the base — the round's new token, the
+router, the header with Menu, the shortcut legend, the status region and the breakpoints (640
+and 1100px) — and the week, as seven columns from 1100px and below it as one day, a list
+(ADR-0056), the way `day-phone.dc.html` draws it. The three server problems the round found
+are fixed. What only a real phone can confirm is in `docs/backlog.md`.
 
-1. Base: the round's new token, the router, the header with Plan and Menu, the shortcut
-   legend, the status region and the breakpoints (640 and 1100px).
-2. The week, on a desktop and on a phone, with creating a task.
-3. The three server problems the round found (`docs/backlog.md`), then the plan screens: S8.
-4. Settings.
-5. Signing in and recovering a password.
+**Open, in that order:**
+
+1. The plan screens: S8. The Plan button in the header arrives with them.
+2. Settings.
+3. Signing in and recovering a password.
 
 S9 waits for S8 to be published (ADR-0002), and the paid client for a decision to pay
 (`docs/backlog.md`, "Quando um provedor for pago").

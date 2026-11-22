@@ -434,6 +434,14 @@ backlog, em "Quando um provedor for pago".
 
 - ~~Protótipo migrado do HTML estático para build real, preservando o design system em `_ds/`~~
   — fora do plano desde 2026-10-21; o S8 constrói sobre o front-end atual (nota no fim do S5)
+- [x] Antes das telas do plano, os dois primeiros passos da ordem do
+      [ADR-0052](adr/0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md):
+      a base (roteador, cabeçalho com Menu, legenda, região de status, pontos de quebra) e a
+      semana, em sete colunas a partir de 1100px e como um dia abaixo
+      ([ADR-0056](adr/0056-below-1100px-the-day-is-a-list-and-the-keys-that-still-apply-stay.md)).
+      Fechados em 2026-11-22, com os três problemas do servidor que a rodada achou já
+      corrigidos. O botão Plan entra com o card de revisão, e o que só um celular de verdade
+      confere está em `docs/backlog.md`
 - [ ] Fluxo de autenticação completo. Entrar, cadastrar e confirmar o endereço existem desde o
       S5; faltam as telas de recuperar e trocar a senha. O que cada uma faz com as sessões está
       decidido no ADR-0051: a troca mantém esta e encerra as outras, o reset encerra todas

@@ -118,6 +118,11 @@ the copy here only renders the screens.
   what stops a double write. Save stays "save" when a new tag is typed, the one word that
   changes at 1100px: the tag field already says saving creates it, and a bar 320px wide has
   no room for the tag's name beside the heading.
+- **Swiping the day leaves pinch zoom alone.** The drawing gives the day `touch-action: pan-y`,
+  which also stops two fingers from zooming it; the code adds `pinch-zoom`. The slide takes
+  the 200ms duration token rather than the drawing's 220ms.
+- **A notice's ✕ is not offered while it is busy.** "Restoring…" ends when the work does, and
+  if the server refuses, the refusal needs a notice to land in.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.
