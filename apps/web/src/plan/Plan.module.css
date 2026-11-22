@@ -258,11 +258,49 @@
 .step {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-3);
   background: var(--surface);
+}
+
+/* The row itself is the button that opens it, as a task's row is. */
+.stepToggle {
+  width: 100%;
+  min-height: var(--target-touch);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-3);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stepToggle:active {
+  background: var(--pressed);
+}
+
+.stepOpen {
+  border-color: var(--line-strong);
+  background: var(--open);
+  box-shadow: var(--shadow-raised);
+}
+
+.step .links {
+  padding: 0 var(--space-4) var(--space-2);
+}
+
+/* Under an open row: its verbs, or its form. */
+.stepPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
 /* A step the server named in a refusal. */
@@ -415,6 +453,7 @@
   font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
 }
 
+.input,
 .textarea,
 .select {
   min-width: 0;
@@ -424,6 +463,20 @@
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--line-strong);
   font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.input {
+  min-height: var(--target-touch);
+  padding: 0 var(--space-3);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* A duration or a time, which a whole row would only make harder to read. */
+.short {
+  max-width: 200px;
 }
 
 .textarea {
@@ -436,6 +489,95 @@
   max-width: 320px;
   min-height: var(--target-touch);
   padding: 0 var(--space-3);
+}
+
+.textareaShort {
+  min-height: 64px;
+}
+
+.optional {
+  font-weight: var(--weight-regular);
+  color: var(--ink-2);
+}
+
+/* A step's start: the day and the time side by side where they fit, one over the other where
+   they do not, and the hint and the refusal under both. */
+.start {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.start legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+
+/* No narrower than their content is a flex item's default, and a select's content is its
+   longest option: at 320px with text at 200%, "Sat 28 Nov (day off)" took the day past the
+   edge. Allowed to shrink, the select fills what is left and clips the option instead. */
+.startDay,
+.startTime {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.startDay {
+  flex: 1 1 150px;
+}
+
+.startTime {
+  flex: 1 1 110px;
+}
+
+.startWide {
+  flex: 1 1 100%;
+}
+
+/* What did not fit this week, and the way to send it on. */
+.nextWeek {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+  text-wrap: pretty;
+}
+
+.nextWeek .primary {
+  flex: none;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-3);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.addStep {
+  flex: none;
+  align-self: flex-start;
+}
+
+/* A step being written, lifted as an open row is. */
+.adding {
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-3);
+  background: var(--open);
+  box-shadow: var(--shadow-raised);
 }
 
 /* A field that stopped the request is ringed in the accent, which means trouble. */

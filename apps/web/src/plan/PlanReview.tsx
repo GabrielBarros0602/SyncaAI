@@ -8,16 +8,17 @@
  * adds to each day, the steps in order and the steps the check discarded. Approve and Discard
  * sit at its foot, and below 1100px where the bar between days is.
  *
- * The review is read only, for now: giving a step a time, editing, removing and adding come
- * with the next steps of the screen (docs/backlog.md, "As telas do plano").
+ * Under review, a step opens on its verbs: give it a time or edit it, remove it. What did not
+ * fit this week can be sent to the days after, and a step can be added by hand.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ApiError } from "../api/client";
-import type { Job, Plan, PlanItem } from "../api/types";
+import type { Job, NewPlanItem, Plan, PlanItem, PlanItemChanges } from "../api/types";
 import { cx } from "../lib/cx";
-import { formatCompact, toLocalDate, todayIn } from "../lib/time";
+import { toLocalDate, todayIn } from "../lib/time";
+import { AddStep } from "./AddStep";
 import {
   MAX_HORIZON,
   MAX_REQUEST,
@@ -27,18 +28,10 @@ import {
   waitLine,
   waitWord,
 } from "./asking";
+import { addedText, nextWeekText, sentText } from "./editing";
 import styles from "./Plan.module.css";
-import {
-  afterText,
-  countText,
-  coverText,
-  hostOf,
-  impactLines,
-  precheckText,
-  shortDate,
-  stepNumbers,
-  stepWhen,
-} from "./steps";
+import { StepRow } from "./StepRow";
+import { countText, coverText, impactLines, precheckText, shortDate, stepNumbers } from "./steps";
 import type { PlanState } from "./usePlan";
 
 /** A refusal shown above the steps. `reread` offers to read the plan again. */
@@ -78,8 +71,14 @@ interface Props {
    */
   docked: boolean;
   barSlot: HTMLElement | null;
-  /** The person's days off, which the form's help names when the plan stays in this week. */
+  /** The person's days off: named by the form's help, and marked among a step's days. */
   daysOff: readonly number[];
+  /** The person's preferred block, which a step added by hand starts at. */
+  blockMinutes: number;
+  /** Say what a change to the plan came to, in the status region. */
+  onSay: (text: string) => void;
+  /** A step was taken out: the region offers to put it back until its notice ends. */
+  onRemoved: (step: { id: string; number: number; title: string }) => void;
   onClose: () => void;
   onApproved: (tasks: number) => void;
   onDiscarded: () => void;
@@ -104,6 +103,9 @@ export function PlanReview({
   docked,
   barSlot,
   daysOff,
+  blockMinutes,
+  onSay,
+  onRemoved,
   onClose,
   onApproved,
   onDiscarded,
@@ -182,6 +184,10 @@ export function PlanReview({
             focusStep={focusStep}
             docked={docked}
             barSlot={barSlot}
+            daysOff={daysOff}
+            blockMinutes={blockMinutes}
+            onSay={onSay}
+            onRemoved={onRemoved}
             onApproved={onApproved}
             onDiscarded={onDiscarded}
           />
@@ -449,6 +455,10 @@ interface ReviewProps {
   focusStep: string | null;
   docked: boolean;
   barSlot: HTMLElement | null;
+  daysOff: readonly number[];
+  blockMinutes: number;
+  onSay: (text: string) => void;
+  onRemoved: (step: { id: string; number: number; title: string }) => void;
   onApproved: (tasks: number) => void;
   onDiscarded: () => void;
 }
@@ -460,6 +470,10 @@ function Review({
   focusStep,
   docked,
   barSlot,
+  daysOff,
+  blockMinutes,
+  onSay,
+  onRemoved,
   onApproved,
   onDiscarded,
 }: ReviewProps): React.ReactNode {
@@ -471,6 +485,21 @@ function Review({
   const keep = useRef<HTMLButtonElement>(null);
   const discardPlan = useRef<HTMLButtonElement>(null);
   const confirmed = useRef(false);
+  // One step open at a time, as one row is in the week; and in it, perhaps its form.
+  const [openStep, setOpenStep] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [sending, setSending] = useState(false);
+  const addButton = useRef<HTMLButtonElement>(null);
+  // Where focus goes once the change it follows is on screen: a step's row by its id, or the
+  // button that adds one.
+  const focusAfter = useRef<string | null>(null);
+  useEffect(() => {
+    const target = focusAfter.current;
+    if (target === null) return;
+    focusAfter.current = null;
+    (target === "add" ? addButton.current : document.getElementById(target))?.focus();
+  });
 
   // Into the question when it opens, on the safe answer; back to the button when it closes
   // without discarding.
@@ -490,6 +519,51 @@ function Review({
   const impact = impactLines(plan, state.capacity, timezone);
   const precheck = precheckText(plan);
   const count = plan.items.length;
+  const waiting = plan.items.filter((item) => item.state === "not_this_week");
+
+  async function save(item: PlanItem, changes: PlanItemChanges): Promise<void> {
+    await state.change(item.id, changes);
+    setEditing(null);
+    // A step the server named is answered by the change: its mark goes with it.
+    setRefusal((current) => {
+      if (current?.steps.has(item.id) !== true) return current;
+      const steps = new Map(current.steps);
+      steps.delete(item.id);
+      return { ...current, steps };
+    });
+    focusAfter.current = `step-${item.id}`;
+  }
+
+  function remove(item: PlanItem): void {
+    const index = plan.items.indexOf(item);
+    const next = plan.items[index + 1] ?? plan.items[index - 1];
+    onRemoved({ id: item.id, number: numbers.get(item.id) ?? 0, title: item.title });
+    state.remove(item.id);
+    setOpenStep(null);
+    setEditing(null);
+    // The row that takes its place, or the way to add one when it was the last.
+    focusAfter.current = next === undefined ? "add" : `step-${next.id}`;
+  }
+
+  async function add(step: NewPlanItem): Promise<void> {
+    const added = await state.add(step);
+    setAdding(false);
+    onSay(addedText(added, timezone));
+    focusAfter.current = `step-${added.id}`;
+  }
+
+  async function sendOn(): Promise<void> {
+    if (sending) return;
+    setSending(true);
+    const sent = waiting.map((item) => item.id);
+    try {
+      onSay(sentText(sent, await state.sendOn(), timezone));
+    } catch (problem) {
+      setRefusal(refusalOf(problem));
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function approve(): Promise<void> {
     if (busy !== null) return;
@@ -616,7 +690,8 @@ function Review({
               Step {numbers.get(step.id) ?? "?"}, {step.title}: {step.reason}
             </span>
           ))}
-          {refusal.reread && (
+          {/* With no step at all there is nothing to read again for: it is the plan's to fill. */}
+          {refusal.reread && count > 0 && (
             <button
               type="button"
               className={styles.button}
@@ -644,17 +719,76 @@ function Review({
 
       <ol aria-label="Steps" className={styles.steps}>
         {plan.items.map((item) => (
-          <Step
+          <StepRow
             key={item.id}
             item={item}
+            plan={plan}
             number={numbers.get(item.id) ?? 0}
             numbers={numbers}
             timezone={timezone}
+            daysOff={daysOff}
             refused={refusal?.steps.get(item.id) ?? null}
             focus={focusStep === item.id}
+            open={openStep === item.id}
+            editing={editing === item.id}
+            onToggle={() => {
+              setOpenStep((current) => (current === item.id ? null : item.id));
+              setEditing(null);
+            }}
+            onEdit={() => {
+              setEditing(item.id);
+            }}
+            onCancelEdit={() => {
+              setEditing(null);
+              focusAfter.current = `step-${item.id}`;
+            }}
+            onSave={(changes) => save(item, changes)}
+            onRemove={() => {
+              remove(item);
+            }}
           />
         ))}
       </ol>
+
+      {count === 0 && <p className={styles.empty}>No steps yet. Add the first one; it goes to the first free time.</p>}
+
+      {waiting.length > 0 && (
+        <div className={styles.nextWeek}>
+          <span>{nextWeekText(waiting, numbers, plan)}</span>
+          <button
+            type="button"
+            className={styles.primary}
+            aria-busy={sending}
+            onClick={() => {
+              void sendOn();
+            }}
+          >
+            {sending ? "Sending…" : `Send ${String(waiting.length)} to next week`}
+          </button>
+        </div>
+      )}
+
+      {adding ? (
+        <AddStep
+          blockMinutes={blockMinutes}
+          onAdd={add}
+          onCancel={() => {
+            setAdding(false);
+            focusAfter.current = "add";
+          }}
+        />
+      ) : (
+        <button
+          ref={addButton}
+          type="button"
+          className={cx(styles.button, styles.addStep)}
+          onClick={() => {
+            setAdding(true);
+          }}
+        >
+          + Add a step
+        </button>
+      )}
 
       {plan.discarded.length > 0 && (
         <div role="group" aria-labelledby={discardedHeading} className={styles.discarded}>
@@ -682,59 +816,5 @@ function Review({
 
       {docked ? barSlot !== null && createPortal(bar, barSlot) : <div className={styles.foot}>{bar}</div>}
     </>
-  );
-}
-
-interface StepProps {
-  item: PlanItem;
-  number: number;
-  numbers: Map<string, number>;
-  timezone: string;
-  /** The server's reason, when a commit was refused for this step. */
-  refused: string | null;
-  /** Where the router puts focus on arrival. */
-  focus: boolean;
-}
-
-/**
- * One step at rest: its number, time or reason, length, what it waits on, its description and
- * links. No verbs yet; they arrive with editing.
- */
-function Step({ item, number, numbers, timezone, refused, focus }: StepProps): React.ReactNode {
-  const after = afterText(item, numbers);
-  return (
-    <li
-      id={`step-${item.id}`}
-      // Focus from script only: a proposed row in the week leads here.
-      tabIndex={-1}
-      data-route-focus={focus ? "" : undefined}
-      className={cx(styles.step, refused !== null && styles.stepRefused)}
-    >
-      <span className={styles.stepMeta}>
-        <span>Step {number}</span>
-        <span>{stepWhen(item, timezone)}</span>
-        <span>{formatCompact(item.minutes)}</span>
-      </span>
-      <span className={styles.stepTitle}>{item.title}</span>
-      {after !== null && <span className={styles.stepNote}>{after}</span>}
-      {item.description !== "" && <span className={styles.stepNote}>{item.description}</span>}
-      {refused !== null ? (
-        <span className={styles.stepError}>{refused}</span>
-      ) : (
-        item.reason !== null && <span className={styles.reason}>{item.reason}</span>
-      )}
-      {item.links.length > 0 && (
-        <ul aria-label="Links" className={styles.links}>
-          {item.links.map((link) => (
-            <li key={link.url}>
-              <a href={link.url} target="_blank" rel="noopener noreferrer" className={styles.link}>
-                <span>{link.label}</span>
-                <span className={styles.host}>{hostOf(link.url)}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </li>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useLocation, useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -18,6 +19,7 @@ import type { NewTask, Task, TaskChanges } from "../api/types";
 import { PlanButton, planState } from "../plan/PlanButton";
 import { PlanReview } from "../plan/PlanReview";
 import { readyText } from "../plan/asking";
+import { removedText } from "../plan/editing";
 import { proposedByDay } from "../plan/steps";
 import { usePlan } from "../plan/usePlan";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
@@ -159,7 +161,19 @@ export function WeekScreen(): React.ReactNode {
   const [said, setSaid] = useState<{ id: number; text: string; about?: About } | null>(null);
   const notices = useRef(0);
 
+  // A step taken out of the plan, offered back until its notice ends; only then does the server
+  // hear of it, since a deleted step cannot be put back (decided on 2026-11-22).
+  const [removed, setRemoved] = useState<{ id: number; step: string; text: string } | null>(null);
+
+  /** The removal on offer is no longer: its notice gave way, so the server is told now. */
+  function letRemovalGo(): void {
+    if (removed === null) return;
+    setRemoved(null);
+    void plan.settle().catch(() => undefined);
+  }
+
   function say(text: string, about?: About): void {
+    letRemovalGo();
     notices.current += 1;
     setTrash(null);
     setSaid({ id: notices.current, text, ...(about === undefined ? {} : { about }) });
@@ -345,6 +359,7 @@ export function WeekScreen(): React.ReactNode {
   const readyShown =
     trash === null &&
     said === null &&
+    removed === null &&
     ready !== null &&
     plan.plan?.id === ready.plan &&
     plan.plan.status === "pending";
@@ -363,10 +378,29 @@ export function WeekScreen(): React.ReactNode {
             },
           },
         };
+  const removedNotice: Notice | null =
+    removed === null
+      ? null
+      : {
+          id: `${String(removed.id)}:removed`,
+          text: removed.text,
+          action: {
+            label: "undo",
+            run: () => {
+              // On screen before focus goes to it: the step is back where it was.
+              flushSync(() => {
+                plan.keep();
+                setRemoved(null);
+              });
+              document.getElementById(`step-${removed.step}`)?.focus();
+            },
+            undoKey: true,
+          },
+        };
   const notice: Notice | null =
     trash === null
       ? said === null
-        ? readyNotice
+        ? (removedNotice ?? readyNotice)
         : {
             id: `${String(said.id)}:said`,
             text: said.text,
@@ -411,6 +445,7 @@ export function WeekScreen(): React.ReactNode {
       docked={layout !== "week"}
       notice={notice}
       onExpire={() => {
+        letRemovalGo();
         setTrash(null);
         setSaid(null);
       }}
@@ -425,6 +460,7 @@ export function WeekScreen(): React.ReactNode {
               if (readyShown) {
                 setReady(null);
               } else {
+                letRemovalGo();
                 setTrash(null);
                 setSaid(null);
               }
@@ -514,6 +550,17 @@ export function WeekScreen(): React.ReactNode {
       docked={layout !== "week"}
       barSlot={barSlot}
       daysOff={week.me.days_off}
+      blockMinutes={week.me.preferred_block_minutes}
+      onSay={(text) => {
+        say(text);
+      }}
+      onRemoved={(step) => {
+        // The newest notice replaces the last, as any other news does.
+        notices.current += 1;
+        setTrash(null);
+        setSaid(null);
+        setRemoved({ id: notices.current, step: step.id, text: removedText(step.number, step.title) });
+      }}
       onClose={closePlan}
       onApproved={(made) => {
         week.reload();
@@ -776,6 +823,7 @@ export function WeekScreen(): React.ReactNode {
     setOpenTask(null);
     // A confirmed delete has no undo, and leaves any notice already showing alone.
     if (snapshot !== null) {
+      letRemovalGo();
       notices.current += 1;
       setSaid(null);
       setTrash({
