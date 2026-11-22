@@ -551,7 +551,9 @@ O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    o desenho põe ao lado de "Make a plan", nas recusas e na falha, entra com a PR 5.
 4. ✅ Editar na revisão: dar horário, editar, remover, mandar para a semana seguinte, acrescentar
    um passo. Com o seletor de dia que passa da borda a 320px com o texto a 200%.
-5. Escrever à mão.
+5. ✅ Escrever à mão: o "Write it myself" ao lado de "Make a plan", nas recusas que poupam o
+   modelo, na falha e no plano fechado. O plano existe só na tela até o primeiro Add, que o
+   cria com o nome e o passo.
 6. O progresso: "Plan · 3 of 5", a página do plano e a etiqueta na linha da tarefa. Fecha o
    ROADMAP, o `CLAUDE.md` e o README do design.
 
@@ -612,6 +614,10 @@ painel. Entre 1100 e uns 1180px a semana rola de lado dentro de si, para manter 
 semana e o dia são árvores diferentes. Um pedido escrito e ainda não enviado se perde, assim
 como o formulário aberto a partir de uma falha. Só acontece redimensionando a janela, já que
 um tablet girando entre 768 e 1024px não cruza 1100. Ficou como está.
+
+**Achado na PR 5:** "Ask for it again" e "Ask for a new plan" abrem o formulário com 14 dias,
+e não com os dias do pedido que falhou ou do plano fechado; só o texto volta. O "Write it
+myself" ao lado deles usa os dias pedidos. Fica para decidir se o formulário também os traz.
 
 ---
 
