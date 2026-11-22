@@ -45,6 +45,12 @@ export interface PlanState {
   change: (stepId: string, changes: PlanItemChanges) => Promise<void>;
   /** Add a step where the plan would place it, then read the plan again. Answers the step. */
   add: (step: NewPlanItem) => Promise<PlanItem>;
+  /**
+   * Make a plan written by hand, with its first step: until then it is only on the screen
+   * (decided on 2026-11-22). Answers the step. Rejects with the `ApiError` of whichever of the
+   * two the server refused; a refused step leaves the plan made, for the next one to go to.
+   */
+  write: (request: string, horizonDays: number, step: NewPlanItem) => Promise<PlanItem>;
   /** Send the steps that did not fit to the days after the plan's first week. Answers the plan. */
   sendOn: () => Promise<Plan>;
   /**
@@ -310,6 +316,16 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
     [planId],
   );
 
+  const write = useCallback(async (text: string, horizonDays: number, step: NewPlanItem) => {
+    const made = await api.post<Plan>("/plans", { request: text, horizon_days: horizonDays });
+    // Followed from here, step or no step: a step refused now goes to this plan when sent again.
+    setPlan(made);
+    setJob(null);
+    const added = await api.post<PlanItem>(`/plans/${made.id}/items`, step);
+    setPlan(await api.get<Plan>(`/plans/${made.id}`));
+    return added;
+  }, []);
+
   const sendOn = useCallback(async () => {
     if (planId === null) throw new Error("There is no plan to send on.");
     const placed = await api.post<Plan>(`/plans/${planId}/next-week`, {});
@@ -354,6 +370,7 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
     discard,
     change,
     add,
+    write,
     sendOn,
     remove,
     keep,

@@ -73,7 +73,7 @@ export function precheckText(plan: Plan): string | null {
 }
 
 /** The days a plan covers, counted from its first to its last. */
-function dayCount(plan: Plan): number {
+export function dayCount(plan: Plan): number {
   return Math.round((Date.parse(plan.last_day) - Date.parse(plan.first_day)) / 86_400_000) + 1;
 }
 

@@ -2,13 +2,15 @@
  * Tests for what the screen says while a plan is asked for and made, from the request alone.
  *
  * The claims that matter are the ones the drawing left to the code: a refused request names the
- * minute it may be sent again and never one too early, the day when it is not today, and the
- * days off the help names are the person's, among the plan's own days.
+ * minute it may be sent again and never one too early, the day when it is not today, the days
+ * off the help names are the person's, among the plan's own days, and a plan written by hand
+ * covers, before the server has it, the days the server will give it.
  */
 import { describe, expect, it } from "vitest";
 
 import type { Job, Plan } from "../src/api/types";
-import { horizonHelp, horizonOptions, readyText, retryText, waitLine } from "../src/plan/asking";
+import { horizonHelp, horizonOptions, readyText, retryText, unwrittenPlan, waitLine } from "../src/plan/asking";
+import { countText, coverText } from "../src/plan/steps";
 
 const LISBON = "Europe/Lisbon";
 // Thursday 22 October 2026. Lisbon is UTC+1 until the clocks go back on the 25th.
@@ -85,4 +87,21 @@ it("counts the steps a ready plan kept, and what was discarded when anything was
 
   expect(readyText(plan)).toBe("Your plan is ready: 2 steps, 1 discarded.");
   expect(readyText(single)).toBe("Your plan is ready: 1 step.");
+});
+
+describe("a plan written by hand, before the server has it", () => {
+  it("covers the days the server will give it, from today, and this week up to Sunday", () => {
+    const plan = unwrittenPlan(THURSDAY, 5);
+
+    expect(plan).toMatchObject({ id: "", job_id: null, first_day: THURSDAY, last_day: "2026-10-26" });
+    expect(plan.week_ends_on).toBe("2026-10-25");
+    expect(coverText(plan)).toBe(
+      "Covers Thu 22 Oct – Mon 26 Oct (5 days). This week ends Sun 25; what doesn’t fit by then is offered for the days after.",
+    );
+    expect(countText(plan)).toBe("0 steps, written by you");
+  });
+
+  it("ends its week on the day it is written when that is a Sunday", () => {
+    expect(unwrittenPlan("2026-10-25", 1)).toMatchObject({ last_day: "2026-10-25", week_ends_on: "2026-10-25" });
+  });
 });
