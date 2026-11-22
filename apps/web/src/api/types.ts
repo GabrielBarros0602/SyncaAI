@@ -87,6 +87,69 @@ export interface TaskChanges {
   tag?: string | null;
 }
 
+/**
+ * How a step stands. Read against the clock, never stored: a placed step whose start has
+ * passed reads `passed` (ADR-0033).
+ */
+export type StepState = "placed" | "passed" | "no_room" | "not_this_week" | "after_unplaced";
+
+/** `expired` is read, too: a pending plan whose last day has ended (ADR-0050). */
+export type PlanStatus = "pending" | "approved" | "discarded" | "expired";
+
+export interface PlanLink {
+  label: string;
+  url: string;
+}
+
+export interface PlanItem {
+  id: string;
+  position: number;
+  title: string;
+  description: string;
+  minutes: number;
+  /** Null while the step has no time. */
+  start_at: string | null;
+  state: StepState;
+  /** Why it has no time ahead of it, in a sentence that says what to change; null once it
+   *  has one (ADR-0059). */
+  reason: string | null;
+  /** Steps of the same plan that must end before this one starts. */
+  prerequisites: string[];
+  links: PlanLink[];
+}
+
+export interface PlanDiscard {
+  position: number;
+  title: string;
+  reasons: string[];
+}
+
+export interface PlanProgress {
+  done: number;
+  total: number;
+}
+
+export interface Plan {
+  id: string;
+  /** The request that made it; null for a plan written by hand (ADR-0058). */
+  job_id: string | null;
+  created_at: string;
+  status: PlanStatus;
+  request: string;
+  first_day: string;
+  last_day: string;
+  /** The Sunday a new plan fills up to on its own; what waits is offered the days after. */
+  week_ends_on: string;
+  items: PlanItem[];
+  discarded: PlanDiscard[];
+  progress: PlanProgress | null;
+}
+
+export interface PlanCommit {
+  plan_id: string;
+  task_ids: string[];
+}
+
 export interface NewTask {
   title: string;
   start_at: string;
