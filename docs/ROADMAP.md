@@ -442,14 +442,25 @@ backlog, em "Quando um provedor for pago".
       Fechados em 2026-11-22, com os três problemas do servidor que a rodada achou já
       corrigidos. O botão Plan entra com o card de revisão, e o que só um celular de verdade
       confere está em `docs/backlog.md`
-- [ ] Fluxo de autenticação completo. Entrar, cadastrar e confirmar o endereço existem desde o
-      S5; faltam as telas de recuperar e trocar a senha. O que cada uma faz com as sessões está
-      decidido no ADR-0051: a troca mantém esta e encerra as outras, o reset encerra todas
-- [ ] Terceiro destino `To plan` na Captura rápida, e o comando equivalente no `⌘K`
+- ~~Terceiro destino `To plan` na Captura rápida, e o comando equivalente no `⌘K`~~ — superado
+  pelo ADR-0052 em 2026-11-22: o `plan.dc.html` faz do plano um destino, um botão no cabeçalho
+  ao lado de Menu, e não uma captura rápida. O comando fica com o `⌘K` completo do S10
+
+O resto vai na ordem do ADR-0052: o plano, as configurações e entrar. Decidido em 2026-11-22:
+a autenticação continua no S8, que só fecha com as três, porque o marco é "publicável", e
+publicar sem recuperar a senha não é (ver a pendência da recuperação de senha). As telas do
+plano entram em seis PRs, listadas em `docs/backlog.md`.
+
+- [ ] Botão Plan no cabeçalho, ao lado de Menu, com o estado do pedido no rótulo
 - [ ] Card de revisão do draft: itens, dia sugerido de cada um, edição, Approve e Discard
 - [ ] Polling do status do job com backoff
 - [ ] Draft aprovado renderizado como o componente `3 of 5 preparations done`
 - [ ] Estados de erro visíveis: job falhou, provedor fora, acima do teto, rate limit
+- [ ] Configurações, contra o `settings.dc.html`: endereço, fuso, tema, o dia útil, as folgas e
+      o bloco, trocar a senha e sair. A troca mantém esta sessão e encerra as outras (ADR-0051)
+- [ ] Entrar e recuperar a senha, contra o `sign-in.dc.html`. Entrar, cadastrar e confirmar o
+      endereço existem desde o S5; falta a tela de recuperar, cujo reset encerra todas as
+      sessões (ADR-0051)
 
 **Marco:** ao fim do S8 o caso de uso 2 está completo e publicável. É o ponto em que o projeto
 pode ir para o currículo.

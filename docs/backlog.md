@@ -530,7 +530,59 @@ cada passo na resposta do modelo, com buracos onde um foi descartado. O `plan.dc
 os mantidos pela ordem na tela e os descartados pela posição na resposta. Com um descarte no
 meio, a tela teria um "step 4" mantido e um "Step 4" descartado. O exemplo do desenho não
 mostra isso, porque os três descartes dele são os últimos. É por isso que nenhum motivo cita
-passo por número (ADR-0055).
+passo por número (ADR-0055). ✅ Decidido em 2026-11-22, em "As telas do plano", abaixo.
+
+### As telas do plano — começadas em 2026-11-22
+
+O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
+
+1. O que a tela lê e a API não dava (ADR-0058), e o pedido que nenhum worker vai pegar lido
+   como falho (ADR-0057). Só servidor.
+2. O botão Plan e a revisão, só leitura, com Approve e Discard: a vista inteira abaixo de
+   1100px, o painel de 440px a partir dali, os passos propostos tracejados na semana.
+3. Pedir e esperar: o formulário, as recusas com a hora do `Retry-After`, o polling, as três
+   falhas e o aviso de "ready" que fica até a pessoa agir ou fechá-lo.
+4. Editar na revisão: dar horário, editar, remover, mandar para a semana seguinte, acrescentar
+   um passo. Com o seletor de dia que passa da borda a 320px com o texto a 200%.
+5. Escrever à mão.
+6. O progresso: "Plan · 3 of 5", a página do plano e a etiqueta na linha da tarefa. Fecha o
+   ROADMAP, o `CLAUDE.md` e o README do design.
+
+**Seis perguntas abertas pela leitura do desenho — decididas em 2026-11-22**, todas como
+recomendado:
+
+- **A numeração.** Os passos mantidos são numerados de 1 a n pela ordem na tela; os
+  descartados aparecem só pelo título. O desenho numera os descartados pela posição na
+  resposta, e isso colide não só com um descarte no meio: um passo acrescentado à mão recebe a
+  posição seguinte à do último mantido, que pode ser a de um descartado. "after step N", a
+  recusa do commit e "Removed step 3" contam do mesmo jeito. Depois de aprovada, a tarefa diz
+  "from your plan", sem número: ela guarda só o `plan_id`, e o número pediria uma coluna e uma
+  migration.
+- **O ROADMAP.** "To plan" na Captura rápida e o `⌘K` foram riscados como superados pelo
+  ADR-0052. A autenticação fica no S8, na ordem do ADR-0052, com as configurações como item.
+- **Reload e polling.** O botão acha o pedido no servidor (`GET /ai/plans` com
+  `status=queued&status=running&limit=1`, e `GET /plans?status=pending&limit=1`); nada fica no
+  navegador, que o lint do ADR-0021 proíbe. O polling começa em 2s, multiplica por 1,5 até
+  30s, pausa com a aba escondida e para quando o pedido termina, a sessão sai ou a tela fecha.
+  Sem worker o pedido nunca terminava, e o servidor passou a lê-lo como falho (ADR-0057).
+- **O que já estava decidido continua:** o "3 of 5" de 2026-10-28, e o seletor de dia, que é
+  corrigido na PR 4.
+- **Desfazer a remoção de um passo.** A API não restaura um passo apagado: o `POST` de um
+  passo não recebe links, pré-requisitos nem horário. O passo some na hora e o `DELETE` só vai
+  quando o aviso de nove segundos acaba, ou antes de Approve, Discard e de sair da tela. Fechar
+  a aba nesse tempo mantém o passo, o lado seguro.
+- **"What it's for" no plano à mão.** A API pede o nome ao criar o plano e não o renomeia. O
+  rascunho vazio existe só na tela até o primeiro Add, que cria o plano e o passo; daí em
+  diante o nome é texto, como o "You asked".
+
+Três desvios do desenho que não pediram decisão vão para "Where the code departs from the
+drawings" com a PR que os implementa: os minutos de um passo seguem o servidor, de 1 a 1440
+para o que a pessoa escreve (ADR-0032, ADR-0037), e não de 15 ao bloco; um passo escrito à mão
+não tem "after step N", porque não tem pré-requisito (ADR-0047); e o "9 came back" sai, porque
+nenhuma linha guarda quantos passos a resposta trouxe.
+
+**A medir na PR 2:** o painel de 440px a 1100px deixa as colunas da semana com uns 90px,
+contra os 107px que o desenho mostra a 1280px.
 
 ---
 
