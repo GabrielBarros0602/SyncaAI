@@ -50,7 +50,7 @@ from syncaai.schemas.plans import (
     PlanRead,
 )
 from syncaai.services.ai_breaker import refuse_while_open
-from syncaai.services.ai_queue import enqueue_plan
+from syncaai.services.ai_queue import enqueue_plan, failure_of, sweep
 from syncaai.services.ai_spend import DEFAULT_CEILINGS, Ceilings, refuse_past_the_ceilings
 from syncaai.services.plan_context import plannable_days
 from syncaai.services.plan_drafts import expire_drafts
@@ -96,20 +96,24 @@ class PlanService:
         sentence.
         """
         self._refuse_past_the_rate_limit()
-        self._let_an_ended_plan_go()
+        self._let_what_has_ended_go()
         if self._jobs.any_in_progress() or self._drafts.any_pending():
             raise PlanInProgressError
         refuse_past_the_ceilings(self._session, self._jobs.owner_id, self._ceilings)
         refuse_while_open(self._session, self._provider)
         return enqueue_plan(self._session, self._jobs.owner_id, request, horizon_days=horizon_days)
 
-    def _let_an_ended_plan_go(self) -> None:
-        """Record as expired a plan of this person's whose last day has ended, before asking
-        whether one is pending. Reading already calls it expired (ADR-0033), but the check
-        below and the unique index read the stored status, so until the sweep recorded it
-        the plan held the place: for a tick with a worker, for ever without one, and a plan
-        by hand needs none (ADR-0047, ADR-0050)."""
+    def _let_what_has_ended_go(self) -> None:
+        """Record as ended a plan of this person's whose last day has passed, and a request
+        of theirs no worker will ever take, before asking whether either is in progress.
+
+        Reading already calls them expired and failed (ADR-0033, ADR-0057), but the check
+        below and the unique indexes read the stored status, so until the sweep recorded
+        them they held the place: for a tick with a worker, for ever without one, and a plan
+        by hand needs none (ADR-0047, ADR-0050).
+        """
         expire_drafts(self._session, owner=self._jobs.owner_id)
+        sweep(self._session, owner=self._jobs.owner_id)
 
     def _refuse_past_the_rate_limit(self) -> None:
         full = []
@@ -129,7 +133,7 @@ class PlanService:
         by the same index on drafts if two arrive at once. Not a job, so neither the rate
         limit, the ceilings nor the breaker read it: there is no model to protect.
         """
-        self._let_an_ended_plan_go()
+        self._let_what_has_ended_go()
         if self._jobs.any_in_progress() or self._drafts.any_pending():
             raise PlanInProgressError
         today = self._today(now)
@@ -176,11 +180,12 @@ class PlanService:
         return _item(item, [], draft, now)
 
     def job(self, job_id: uuid.UUID) -> JobRead:
-        job = self._jobs.get(job_id)
-        if job is None:
+        found = self._jobs.read(job_id)
+        if found is None:
             raise PlanJobNotFoundError
+        job, status = found
         draft = self._drafts.for_job(job.id)
-        return _job(job, draft.id if draft else None)
+        return _job(job, status, draft.id if draft else None)
 
     def jobs(self, *, statuses: Collection[str], limit: int, offset: int) -> list[JobRead]:
         """The person's plan requests, newest first (ADR-0050): the one to follow after a
@@ -188,8 +193,8 @@ class PlanService:
         jobs = self._jobs.newest_first(
             statuses=statuses, limit=min(limit, MAX_PAGE_SIZE), offset=offset
         )
-        plans = self._drafts.ids_for_jobs([job.id for job in jobs])
-        return [_job(job, plans.get(job.id)) for job in jobs]
+        plans = self._drafts.ids_for_jobs([job.id for job, _ in jobs])
+        return [_job(job, status, plans.get(job.id)) for job, status in jobs]
 
     def plan(self, plan_id: uuid.UUID, *, now: datetime) -> PlanRead:
         draft = self._drafts.get_for_review(plan_id)
@@ -453,11 +458,14 @@ def _progress(
     return PlanProgressRead(done=done, total=total)
 
 
-def _job(job: AiJob, plan_id: uuid.UUID | None) -> JobRead:
+def _job(job: AiJob, status: str, plan_id: uuid.UUID | None) -> JobRead:
+    """``status`` is the job's as it reads now. One that reads failed before the sweep has
+    recorded it is given the sentence the sweep will write (ADR-0057)."""
+    unrecorded = status == "failed" and job.status != "failed"
     return JobRead(
         job_id=job.id,
-        status=job.status,
-        failure_reason=job.failure_reason,
+        status=status,
+        failure_reason=failure_of(job.status) if unrecorded else job.failure_reason,
         plan_id=plan_id,
     )
 

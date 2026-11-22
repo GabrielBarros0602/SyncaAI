@@ -25,12 +25,11 @@ from sqlalchemy.orm import Session
 from syncaai.config import get_settings
 from syncaai.db import get_session_factory
 from syncaai.errors import PlanInProgressError
-from syncaai.models import AiJob, AiJobAnswer, User
+from syncaai.models import MAX_QUEUED, AiJob, AiJobAnswer, User
 from syncaai.planning.context import PROMPT_VERSION
 from syncaai.services.ai_queue import (
     CHANNEL,
     GAVE_UP,
-    MAX_QUEUED,
     VISIBILITY_TIMEOUT,
     WAITED_TOO_LONG,
     claim_next,

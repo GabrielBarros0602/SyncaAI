@@ -22,11 +22,11 @@ from sqlalchemy.orm import Session
 from syncaai.api.dependencies import get_current_user_id
 from syncaai.db import get_session_factory
 from syncaai.errors import PlanInProgressError
-from syncaai.models import AiJob, AiUsage, PlanDraft, Task, User
+from syncaai.models import MAX_QUEUED, AiJob, AiUsage, PlanDraft, Task, User
 from syncaai.planning.contract import MAX_PLAN_ITEMS
 from syncaai.planning.generator import FakeGenerator
 from syncaai.schemas.plans import PlanItemCreate
-from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
+from syncaai.services.ai_queue import VISIBILITY_TIMEOUT, WAITED_TOO_LONG
 from syncaai.services.plan_jobs import PLAN_IN_PROGRESS, run_plan_job
 from syncaai.services.plans import PlanService
 
@@ -203,6 +203,57 @@ def test_a_plan_whose_last_day_has_ended_makes_room_without_the_sweep(
     assert response.status_code in (201, 202), response.text
     draft = _draft(ended)
     assert (draft.status, draft.ended_at is not None) == ("expired", True)
+
+
+def _strand_request(client: TestClient) -> uuid.UUID:
+    """A request no worker took, queued past its bound: what the queue holds when the worker
+    is down."""
+    response = client.post("/api/v1/ai/plans", json={"request": "Plano parado"})
+    assert response.status_code == 202, response.text
+    job = uuid.UUID(response.json()["job_id"])
+    with get_session_factory()() as session:
+        session.execute(
+            update(AiJob)
+            .where(AiJob.id == job)
+            .values(created_at=func.now() - MAX_QUEUED - timedelta(seconds=1))
+        )
+        session.commit()
+    return job
+
+
+@pytest.mark.parametrize("path", [PLANS, "/api/v1/ai/plans"])
+def test_a_request_no_worker_took_makes_room_without_the_sweep(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID], path: str
+) -> None:
+    """It already reads as failed; asking for the next records it, so a queue with no worker
+    does not hold the place for ever, nor keep a plan from being written by hand (ADR-0057)."""
+    _as(app, people[0])
+    stranded = _strand_request(client)
+
+    response = client.post(path, json={"request": "O próximo plano"})
+
+    assert response.status_code in (201, 202), response.text
+    with get_session_factory()() as session:
+        job = session.get_one(AiJob, stranded)
+        assert (job.status, job.failure_reason, job.finished_at is not None) == (
+            "failed",
+            WAITED_TOO_LONG,
+            True,
+        )
+
+
+def test_asking_for_a_plan_lets_go_only_of_one_s_own_request(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Somebody else's stranded request is the sweep's to record, not this request's."""
+    _as(app, people[1])
+    theirs = _strand_request(client)
+
+    _as(app, people[0])
+    assert client.post(PLANS, json={"request": "O meu plano"}).status_code == 201
+
+    with get_session_factory()() as session:
+        assert session.get_one(AiJob, theirs).status == "queued"
 
 
 def test_asking_for_a_plan_lets_go_only_of_one_s_own(

@@ -9,10 +9,17 @@ from collections import defaultdict
 from collections.abc import Collection, Sequence
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import ColumnElement, Select, and_, exists, func, or_, select
+from sqlalchemy import ColumnElement, Select, and_, case, exists, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from syncaai.models import AiJob, PlanDraft, PlanDraftItem, PlanDraftItemPrerequisite
+from syncaai.models import (
+    MAX_JOB_ATTEMPTS,
+    MAX_QUEUED,
+    AiJob,
+    PlanDraft,
+    PlanDraftItem,
+    PlanDraftItemPrerequisite,
+)
 from syncaai.repositories.base import OwnedRepository
 
 IN_PROGRESS = ("queued", "running")
@@ -24,6 +31,27 @@ FOR_REVIEW = (
 )
 
 
+def can_no_longer_run() -> ColumnElement[bool]:
+    """A job no worker will ever take: queued past ``MAX_QUEUED``, or running under a lock
+    that ran out on its last attempt (ADR-0031). Measured with the database's clock, the one
+    ``created_at`` and ``locked_until`` are written with."""
+    now = func.now()
+    return or_(
+        and_(AiJob.status == "queued", AiJob.created_at <= now - MAX_QUEUED),
+        and_(
+            AiJob.status == "running",
+            AiJob.locked_until < now,
+            AiJob.attempts >= MAX_JOB_ATTEMPTS,
+        ),
+    )
+
+
+def _status_read() -> ColumnElement[str]:
+    """Failed as soon as a job can no longer run, whether or not the sweep has recorded it
+    yet (ADR-0057), as a plan reads expired once its last day has ended (ADR-0033)."""
+    return case((can_no_longer_run(), "failed"), else_=AiJob.status)
+
+
 class AiJobRepository(OwnedRepository[AiJob]):
     model = AiJob
     owner_column = AiJob.user_id
@@ -32,20 +60,29 @@ class AiJobRepository(OwnedRepository[AiJob]):
         statement = self._scoped().where(AiJob.status.in_(IN_PROGRESS))
         return bool(self._session.scalar(select(exists(statement))))
 
+    def read(self, job_id: uuid.UUID) -> tuple[AiJob, str] | None:
+        """The job, with its status as it reads now."""
+        statement = self._scoped().add_columns(_status_read()).where(AiJob.id == job_id)
+        row = self._session.execute(statement).tuples().one_or_none()
+        return None if row is None else (row[0], row[1])
+
     def newest_first(
         self, *, statuses: Collection[str], limit: int, offset: int
-    ) -> Sequence[AiJob]:
-        """A page of the owner's jobs in any of ``statuses``, or in any status when none is
-        given (ADR-0050). The id breaks a tie, so a page never shows a row twice."""
+    ) -> list[tuple[AiJob, str]]:
+        """A page of the owner's jobs, each with its status as it reads now, in any of
+        ``statuses`` as they read, or in any status when none is given (ADR-0050). The id
+        breaks a tie, so a page never shows a row twice."""
+        status = _status_read()
         statement = (
             self._scoped()
+            .add_columns(status)
             .order_by(AiJob.created_at.desc(), AiJob.id.desc())
             .limit(limit)
             .offset(offset)
         )
         if statuses:
-            statement = statement.where(AiJob.status.in_(statuses))
-        return self._session.scalars(statement).all()
+            statement = statement.where(status.in_(statuses))
+        return [(job, read) for job, read in self._session.execute(statement).tuples()]
 
     def holding_statement(self, *, window: timedelta, limit: int) -> Select[tuple[datetime]]:
         """The job that keeps a moving window full: the ``limit``-th newest in it, or no row
