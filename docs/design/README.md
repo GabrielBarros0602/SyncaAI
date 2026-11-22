@@ -113,6 +113,11 @@ the copy here only renders the screens.
   whichever panel is open, and an item is renamed in place and saved as the field is left.
   The drawing swaps the verbs out for the panel and gives a rename its own Save and Cancel.
   One set of panels keeps a task offering the same things at every width.
+- **A form below 1100px is the desktop's form in a sheet.** Its fields stay editable while it
+  saves, as the desktop's do, where the drawing locks them; save refusing a second press is
+  what stops a double write. Save stays "save" when a new tag is typed, the one word that
+  changes at 1100px: the tag field already says saving creates it, and a bar 320px wide has
+  no room for the tag's name beside the heading.
 - **Two lines that do not wrap at 200% text are made to wrap:**
   - the late completion line on a phone;
   - the day field when a plan's step is edited at 320px.
