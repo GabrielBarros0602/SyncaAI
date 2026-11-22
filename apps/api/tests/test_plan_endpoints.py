@@ -208,8 +208,18 @@ def test_the_job_names_its_plan_once_there_is_one(
     _make_the_plan(job_id)
     after = client.get(f"{PLANS}/{job_id}").json()
 
-    assert before == {"job_id": job_id, "status": "queued", "failure_reason": None, "plan_id": None}
+    assert {key: before[key] for key in before if key != "created_at"} == {
+        "job_id": job_id,
+        "status": "queued",
+        "failure_reason": None,
+        "plan_id": None,
+        "request": REQUEST,
+        "horizon_days": 14,
+    }
+    assert datetime.fromisoformat(before["created_at"]).tzinfo is not None
     assert after["status"] == "done" and after["plan_id"] is not None
+    # And the plan names its request back, which is what tells it from one written by hand.
+    assert client.get(f"/api/v1/plans/{after['plan_id']}").json()["job_id"] == job_id
 
 
 def test_a_failed_job_says_why_and_names_no_plan(

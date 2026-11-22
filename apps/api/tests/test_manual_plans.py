@@ -87,10 +87,11 @@ def test_a_plan_written_by_hand_starts_empty_with_no_job_and_no_prompt(
 
     plan = _write(client, "  Mudança de apartamento  ")
 
-    assert (plan["status"], plan["request"], plan["items"]) == (
+    assert (plan["status"], plan["request"], plan["items"], plan["job_id"]) == (
         "pending",
         "Mudança de apartamento",
         [],
+        None,
     )
     draft = _draft(plan)
     assert (draft.job_id, draft.prompt_version) == (None, None)

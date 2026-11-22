@@ -51,7 +51,8 @@ def request_plan(payload: PlanRequest, service: ServiceDep, session: SessionDep)
     job = service.request(payload.request, horizon_days=payload.horizon_days)
     # The commit is what delivers the worker's notification (ADR-0031).
     session.commit()
-    return JobRead(job_id=job.id, status="queued")
+    # Read back rather than assumed queued: a worker may already hold it.
+    return service.job(job.id)
 
 
 @router.post("/plans", status_code=status.HTTP_201_CREATED, summary="Start a plan to write by hand")

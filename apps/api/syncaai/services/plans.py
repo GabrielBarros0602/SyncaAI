@@ -222,6 +222,8 @@ class PlanService:
         return [
             PlanRead(
                 id=draft.id,
+                job_id=draft.job_id,
+                created_at=draft.created_at,
                 # Expired once its last day has ended where its owner lives, whether or not
                 # the sweep has recorded it yet (ADR-0033).
                 status="expired" if self._ended(draft, now) else draft.status,
@@ -467,6 +469,9 @@ def _job(job: AiJob, status: str, plan_id: uuid.UUID | None) -> JobRead:
         status=status,
         failure_reason=failure_of(job.status) if unrecorded else job.failure_reason,
         plan_id=plan_id,
+        request=job.request,
+        horizon_days=job.horizon_days,
+        created_at=job.created_at,
     )
 
 
