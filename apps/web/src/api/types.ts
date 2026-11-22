@@ -68,6 +68,8 @@ export interface Me {
    * this zone and not the browser's, and the two can differ. */
   timezone: string;
   verified_at: string | null;
+  /** ISO weekdays, Monday is 1, the planner proposes nothing on (ADR-0032). */
+  days_off: number[];
 }
 
 /**
@@ -85,6 +87,23 @@ export interface TaskChanges {
   duration_minutes?: number;
   notes?: string | null;
   tag?: string | null;
+}
+
+/** `failed` is read, too, for a request no worker will ever take (ADR-0057). */
+export type JobStatus = "queued" | "running" | "done" | "failed";
+
+/** A request for a plan, as it is going (ADR-0038, ADR-0058). */
+export interface Job {
+  job_id: string;
+  status: JobStatus;
+  /** A sentence for the person, once it has failed. */
+  failure_reason: string | null;
+  /** The plan it made, once there is one. */
+  plan_id: string | null;
+  /** As the person wrote it; null once the purge has cleared it (ADR-0031). */
+  request: string | null;
+  horizon_days: number;
+  created_at: string;
 }
 
 /**
