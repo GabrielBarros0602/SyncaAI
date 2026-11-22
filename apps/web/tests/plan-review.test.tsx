@@ -4,9 +4,11 @@
  * What earns a test here is what the server decides and the screen must not guess: which
  * request is being made, which plan is waiting and whether a failure is still the news come
  * from the server after a reload; a request is read on the decided pace and not while the tab
- * is hidden; a refusal says when to ask again; a commit retried after a lost answer sends the
- * same key, every step a commit is refused for is shown at once, and a plan read again after a
- * refusal may turn out to be closed.
+ * is hidden; a refusal says when to ask again; a change to a step sends only what moved and
+ * shows the server's refusal where it applies; a removed step is offered back and the server
+ * hears of it only when the offer ends or before the plan is approved; a commit retried after a
+ * lost answer sends the same key, every step a commit is refused for is shown at once, and a
+ * plan read again after a refusal may turn out to be closed.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
@@ -17,6 +19,7 @@ import { setAccessToken } from "../src/api/token";
 import type { DayCapacity, Job, Plan, PlanItem } from "../src/api/types";
 import { SessionProvider } from "../src/auth/session";
 import { daysFrom, mondayOf, toLocalDate, todayIn } from "../src/lib/time";
+import { shortDay } from "../src/plan/steps";
 import { RouteFocus } from "../src/ui/RouteFocus";
 import { WeekScreen } from "../src/week/WeekScreen";
 import { expectNoViolations } from "./a11y";
@@ -28,6 +31,7 @@ const ME = {
   timezone: "UTC",
   verified_at: "2026-08-01T12:00:00Z",
   days_off: [6, 7],
+  preferred_block_minutes: 60,
 };
 
 const WEEK = daysFrom(mondayOf(todayIn("UTC"))).map(toLocalDate);
@@ -466,7 +470,8 @@ describe("from 1640px, where all seven days fit beside it", () => {
     renderAt("/plan");
 
     const steps = await screen.findByRole("list", { name: "Steps" });
-    const [first, second] = within(steps).getAllByRole("listitem").filter((item) => item.id !== "");
+    // The steps' own rows, not the links listed inside them.
+    const [first, second] = within(steps).getAllByRole("listitem").filter((item) => item.parentElement === steps);
     expect(screen.getByText("Study for Wednesday's calculus exam").tagName).toBe("BLOCKQUOTE");
     expect(screen.getByText("2 kept · 1 discarded")).toBeDefined();
     expect(within(first as HTMLElement).getByText("Step 1")).toBeDefined();
@@ -571,6 +576,224 @@ describe("below 1100px", () => {
     await screen.findByRole("button", { name: "Approve: make 2 tasks" });
 
     await expectNoViolations(container);
+  });
+});
+
+function bodyOf(init: RequestInit | undefined): unknown {
+  return typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+}
+
+describe("changing the plan", () => {
+  function editForm(): HTMLElement {
+    return screen.getByRole("form", { name: "Edit step" });
+  }
+
+  it("opens a step on its verbs, and gives one with no time a start, sending only that", async () => {
+    let sent: unknown = null;
+    const limits = aPlan().items[0] as PlanItem;
+    const given = { ...(aPlan().items[1] as PlanItem), start_at: `${WEEK[6] as string}T16:30:00Z`, state: "placed" as const, reason: null };
+    serve(aPlan(), {
+      "PATCH /plans/p1/items/exercises": (init) => {
+        sent = bodyOf(init);
+        return json(200, given);
+      },
+      "GET /plans/p1": () => json(200, aPlan({ items: [limits, given] })),
+    });
+    renderAt("/plan");
+    const row = await screen.findByRole("button", { name: /Limits: exercises 1 to 15/ });
+
+    fireEvent.click(row);
+    expect(row.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Give it a time" }));
+    expect(screen.getByRole("button", { name: "Remove" })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Give it a time" }));
+    fireEvent.change(within(editForm()).getByLabelText("Day"), { target: { value: WEEK[6] } });
+    fireEvent.change(within(editForm()).getByLabelText("Time"), { target: { value: "16:30" } });
+    fireEvent.click(within(editForm()).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("form", { name: "Edit step" })).toBeNull();
+    });
+    // The title and the length did not move, so they are not sent to be checked again.
+    expect(sent).toEqual({ start_at: `${WEEK[6] as string}T16:30:00.000Z` });
+    expect(document.activeElement?.id).toBe("step-exercises");
+  });
+
+  it("shows what the server refuses a start for under it, and keeps what was typed", async () => {
+    serve(aPlan(), {
+      "PATCH /plans/p1/items/exercises": () => json(409, { detail: "That time is already taken by a task." }),
+    });
+    renderAt("/plan");
+    fireEvent.click(await screen.findByRole("button", { name: /Limits: exercises 1 to 15/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Give it a time" }));
+    const time = within(editForm()).getByLabelText<HTMLInputElement>("Time");
+
+    fireEvent.change(time, { target: { value: "16:30" } });
+    fireEvent.click(within(editForm()).getByRole("button", { name: "Save" }));
+
+    expect(await within(editForm()).findByText("That time is already taken by a task.")).toBeDefined();
+    expect(time.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(time);
+    expect(time.value).toBe("16:30");
+  });
+
+  it("catches an empty title and a length it cannot read before anything is sent", async () => {
+    serve(aPlan());
+    renderAt("/plan");
+    fireEvent.click(await screen.findByRole("button", { name: /Limits: the theory/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    fireEvent.change(within(editForm()).getByLabelText("Title"), { target: { value: "  " } });
+    fireEvent.change(within(editForm()).getByLabelText("Duration"), { target: { value: "a while" } });
+    fireEvent.click(within(editForm()).getByRole("button", { name: "Save" }));
+
+    expect(within(editForm()).getByText("A step needs a title.")).toBeDefined();
+    expect(within(editForm()).getByText("Between 1m and 24h, like 2h30.")).toBeDefined();
+    expect(document.activeElement).toBe(within(editForm()).getByLabelText("Title"));
+    expect(calls("PATCH", "/plans/p1/items/limits")).toHaveLength(0);
+  });
+
+  it("adds a step at the first free time, starting at the person's block, and says where it went", async () => {
+    let sent: unknown = null;
+    const added = aStep("review", {
+      title: "Review the lists",
+      minutes: 60,
+      start_at: `${THURSDAY}T15:00:00Z`,
+      state: "placed",
+    });
+    serve(aPlan(), {
+      "POST /plans/p1/items": (init) => {
+        sent = bodyOf(init);
+        return json(201, added);
+      },
+      "GET /plans/p1": () => json(200, aPlan({ items: [...aPlan().items, added] })),
+    });
+    renderAt("/plan");
+
+    fireEvent.click(await screen.findByRole("button", { name: "+ Add a step" }));
+    const form = screen.getByRole("form", { name: "New step" });
+    expect(within(form).getByLabelText<HTMLInputElement>("Duration").value).toBe("1h");
+    fireEvent.change(within(form).getByLabelText("Title"), { target: { value: "Review the lists" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Add" }));
+
+    expect(
+      await screen.findByText(`Added “Review the lists” at ${shortDay(THURSDAY)}, 15:00, the first free time.`),
+    ).toBeDefined();
+    expect(sent).toEqual({ title: "Review the lists", minutes: 60, description: "" });
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("step-review");
+    });
+  });
+
+  it("sends what did not fit to next week, and says where it went", async () => {
+    const monday = daysFromDate(WEEK[6] as string, 2)[1]?.day as string;
+    const limits = aPlan().items[0] as PlanItem;
+    const waiting = {
+      ...(aPlan().items[1] as PlanItem),
+      state: "not_this_week" as const,
+      reason: "It does not fit before Sunday. It can go next week.",
+    };
+    const later = { last_day: daysFromDate(monday, 7)[6]?.day as string };
+    const sentOn = { ...waiting, start_at: `${monday}T08:00:00Z`, state: "placed" as const, reason: null };
+    serve(aPlan({ ...later, items: [limits, waiting] }), {
+      "POST /plans/p1/next-week": () => json(200, aPlan({ ...later, items: [limits, sentOn] })),
+    });
+    renderAt("/plan");
+
+    expect(
+      await screen.findByText(`1 step waits for next week: step 2. It’d go from ${shortDay(monday)}.`),
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Send 1 to next week" }));
+
+    expect(await screen.findByText(`1 step placed next week, at ${shortDay(monday)}, 08:00.`)).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Send 1 to next week" })).toBeNull();
+  });
+
+  it("has nothing an automated accessibility check can find, with a step and a new one open", async () => {
+    serve(aPlan());
+    const container = renderAt("/plan");
+    fireEvent.click(await screen.findByRole("button", { name: /Limits: exercises 1 to 15/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Give it a time" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Add a step" }));
+
+    await expectNoViolations(container);
+  });
+});
+
+describe("removing a step", () => {
+  // The notice's nine seconds, on a fake clock Testing Library can see (as for the polling).
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.stubGlobal("jest", { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const limitsOnly = (): Response => json(200, aPlan({ items: [aPlan().items[0] as PlanItem] }));
+
+  function deletes(): number {
+    return calls("DELETE", "/plans/p1/items/exercises").length;
+  }
+
+  async function removeTheSecond(): Promise<void> {
+    fireEvent.click(await screen.findByRole("button", { name: /Limits: exercises 1 to 15/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+  }
+
+  it("takes it out at once, offers it back for nine seconds, and only then tells the server", async () => {
+    serve(aPlan(), {
+      "DELETE /plans/p1/items/exercises": () => new Response(null, { status: 204 }),
+      "GET /plans/p1": limitsOnly,
+    });
+    renderAt("/plan");
+
+    await removeTheSecond();
+
+    expect(screen.queryByRole("button", { name: /Limits: exercises 1 to 15/ })).toBeNull();
+    expect(screen.getByText("Removed step 2, “Limits: exercises 1 to 15”.")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Approve: make 1 task" })).toBeDefined();
+    expect(document.activeElement?.id).toBe("step-limits");
+    await act(() => vi.advanceTimersByTimeAsync(8000));
+    expect(deletes()).toBe(0);
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    expect(deletes()).toBe(1);
+  });
+
+  it("puts it back on undo, with focus on it, and tells the server nothing", async () => {
+    serve(aPlan(), { "DELETE /plans/p1/items/exercises": () => new Response(null, { status: 204 }) });
+    renderAt("/plan");
+
+    await removeTheSecond();
+    fireEvent.click(screen.getByRole("button", { name: "undo" }));
+
+    expect(document.activeElement?.id).toBe("step-exercises");
+    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    expect(deletes()).toBe(0);
+  });
+
+  it("tells the server of a removal still on offer before the plan is approved", async () => {
+    const order: string[] = [];
+    serve(aPlan(), {
+      "DELETE /plans/p1/items/exercises": () => {
+        order.push("delete");
+        return new Response(null, { status: 204 });
+      },
+      "GET /plans/p1": limitsOnly,
+      "POST /plans/p1/commit": () => {
+        order.push("commit");
+        return json(200, { plan_id: "p1", task_ids: ["t1"] });
+      },
+    });
+    renderAt("/plan");
+
+    await removeTheSecond();
+    fireEvent.click(screen.getByRole("button", { name: "Approve: make 1 task" }));
+
+    expect(await screen.findByText("1 task added to your week from the plan.")).toBeDefined();
+    expect(order).toEqual(["delete", "commit"]);
   });
 });
 
