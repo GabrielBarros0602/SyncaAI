@@ -67,6 +67,9 @@ class PlanItemRead(BaseModel):
     start_at: datetime | None
     #: As stored, except that a placed step whose start has passed reads as passed.
     state: ItemState
+    #: Why it has no time ahead of it, as a sentence that says what to change; None for a
+    #: step placed ahead (ADR-0059).
+    reason: str | None
     prerequisites: list[uuid.UUID]
     links: list[PlanLinkRead]
 

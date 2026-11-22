@@ -284,6 +284,7 @@ def test_a_plan_reads_back_its_steps_their_links_and_what_was_discarded(
         45,
     )
     assert first["start_at"] == "2031-06-04T15:05:00Z"
+    assert first["reason"] is None
     assert first["links"] == [{"label": "SQLBolt", "url": "https://sqlbolt.com/lesson/6"}]
     assert second["prerequisites"] == [first["id"]]
     assert plan["discarded"] == [
@@ -312,6 +313,8 @@ def test_a_step_whose_start_has_passed_reads_as_passed(
     again = client.get(f"/api/v1/plans/{plan['id']}").json()
 
     assert [item["state"] for item in again["items"]] == ["passed", "placed"]
+    # In the words a commit would refuse it with, so the review warns before Approve does.
+    assert again["items"][0]["reason"] == "Its start has passed. Move it, or remove it."
     with get_session_factory()() as session:
         assert session.get_one(PlanDraftItem, uuid.UUID(first["id"])).placement == "placed"
 
@@ -338,6 +341,28 @@ def test_only_a_pending_plan_has_steps_that_passed(
 
     assert again["status"] == "approved"
     assert [item["state"] for item in again["items"]] == ["placed", "placed"]
+    assert [item["reason"] for item in again["items"]] == [None, None]
+
+
+def test_a_step_with_no_time_says_why_from_the_plan_as_it_is_now(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Derived when read, never stored (ADR-0059). Once the step it waited for is removed,
+    nothing is in its way but its own missing time, and the sentence says that instead."""
+    plan = _plan(app, client, people[0])
+    first, second = plan["items"]  # type: ignore[misc]
+    _move(first["id"], start_at=None, placement="no_room")
+    _move(second["id"], start_at=None, placement="after_unplaced")
+
+    before = client.get(f"/api/v1/plans/{plan['id']}").json()["items"]
+    client.delete(_step_url(plan, 0))
+    [after] = client.get(f"/api/v1/plans/{plan['id']}").json()["items"]
+
+    assert [item["reason"] for item in before] == [
+        "No free time in the plan's days holds 45 minutes in one piece.",
+        "A step it depends on has no time yet. Place that first.",
+    ]
+    assert after["reason"] == "It has no time yet. Give it one, or remove it."
 
 
 # --- Reviewing: changing a step (ADR-0030) -------------------------------------------------
@@ -906,6 +931,22 @@ def test_placing_again_fills_this_week_first(
     placed = _service_call(people[0], "replace", plan, _at(8, 21))
 
     assert _starts(placed) == [(_at(8, 21, 5), "placed"), (None, "not_this_week")]
+    assert placed.items[1].reason == "It does not fit before Sunday. It can go next week."
+
+
+def test_a_step_that_waits_for_one_going_next_week_says_it_goes_too(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Sunday at 21:30: twenty-five minutes are left, and neither 45-minute step fits. Both
+    read not this week, for two different reasons (ADR-0059)."""
+    plan = _plan(app, client, people[0])
+
+    placed = _service_call(people[0], "replace", plan, _at(8, 21, 30))
+
+    assert [(item.state, item.reason) for item in placed.items] == [
+        ("not_this_week", "It does not fit before Sunday. It can go next week."),
+        ("not_this_week", "A step it depends on goes next week, so this one does too."),
+    ]
 
 
 def test_sent_on_a_step_takes_the_week_after_and_still_waits_for_its_prerequisite(
