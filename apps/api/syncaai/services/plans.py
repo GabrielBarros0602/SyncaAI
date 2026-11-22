@@ -29,8 +29,12 @@ from syncaai.models import AiJob, PlanDraft, PlanDraftItem, Task, User
 from syncaai.planning.contract import MAX_PLAN_ITEMS
 from syncaai.planning.notes import compose_note
 from syncaai.planning.scheduler import (
+    GOES_WITH_A_STEP,
+    NOT_BEFORE_SUNDAY,
+    WAITS_FOR_A_STEP,
     Step,
     Unplaced,
+    no_room,
     schedule_next_week,
     schedule_this_week,
     week_end,
@@ -59,6 +63,11 @@ from syncaai.services.tasks import MAX_PAGE_SIZE, OVERLAP_CONSTRAINT
 
 # What a step sent on carries until it is placed again (ADR-0033).
 NOT_THIS_WEEK = Unplaced.NOT_THIS_WEEK.value
+
+# Said by the read and by the commit's refusal alike, so the review warns in the words the
+# refusal will use (ADR-0059).
+PASSED = "Its start has passed. Move it, or remove it."
+NO_TIME = "It has no time yet. Give it one, or remove it."
 
 # ADR-0006's numbers, over moving windows of a person's own jobs (ADR-0042): the window, how
 # many jobs it holds, and how the refusal names it.
@@ -340,9 +349,9 @@ class PlanService:
         tasks = self._tasks()
         for item in draft.items:
             if item.start_at is None:
-                reason = "It has no time yet. Give it one, or remove it."
+                reason = NO_TIME
             elif item.start_at <= now:
-                reason = "Its start has passed. Move it, or remove it."
+                reason = PASSED
             elif _holds_time(tasks, item.start_at, item.minutes):
                 reason = "A task was booked on its time since. Move it, or remove it."
             else:
@@ -503,6 +512,8 @@ def _step_of(draft: PlanDraft, item_id: uuid.UUID) -> PlanDraftItem:
 def _item(
     item: PlanDraftItem, prerequisites: list[uuid.UUID], draft: PlanDraft, now: datetime
 ) -> PlanItemRead:
+    state = _state(item, draft, now)
+    waits_on = [step for step in draft.items if step.id in prerequisites]
     return PlanItemRead(
         id=item.id,
         position=item.position,
@@ -510,10 +521,29 @@ def _item(
         description=item.description,
         minutes=item.minutes,
         start_at=item.start_at,
-        state=_state(item, draft, now),
+        state=state,
+        reason=_reason(item, state, waits_on),
         prerequisites=prerequisites,
         links=[PlanLinkRead(label=link.label, url=link.url) for link in item.links],
     )
+
+
+def _reason(item: PlanDraftItem, state: ItemState, waits_on: list[PlanDraftItem]) -> str | None:
+    """Read from the plan as it is now, as ``passed`` is read from the clock (ADR-0059).
+
+    A prerequisite given a time or removed since the step was placed changes the answer: a
+    step left waiting for one that now has a time no longer waits on it.
+    """
+    if state == "passed":
+        return PASSED
+    if state == "no_room":
+        return no_room(item.minutes)
+    if state == "after_unplaced":
+        return WAITS_FOR_A_STEP if any(step.start_at is None for step in waits_on) else NO_TIME
+    if state == "not_this_week":
+        goes_with = any(step.placement == NOT_THIS_WEEK for step in waits_on)
+        return GOES_WITH_A_STEP if goes_with else NOT_BEFORE_SUNDAY
+    return None
 
 
 def _state(item: PlanDraftItem, draft: PlanDraft, now: datetime) -> ItemState:
