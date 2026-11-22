@@ -46,6 +46,17 @@ class Unplaced(StrEnum):
     AFTER_UNPLACED = "after_unplaced"
 
 
+# The same, for the person reading the review: each says what to change. Written here once,
+# and read again from the plan as it is now, since the draft stores only the word (ADR-0059).
+WAITS_FOR_A_STEP = "A step it depends on has no time yet. Place that first."
+NOT_BEFORE_SUNDAY = "It does not fit before Sunday. It can go next week."
+GOES_WITH_A_STEP = "A step it depends on goes next week, so this one does too."
+
+
+def no_room(minutes: int) -> str:
+    return f"No free time in the plan's days holds {minutes} minutes in one piece."
+
+
 @dataclass(frozen=True)
 class Placement:
     key: int
@@ -99,14 +110,7 @@ def schedule(
         prerequisite_ends = [ends.get(key) for key in step.after]
         if any(end is None for end in prerequisite_ends):
             ends[step.key] = None
-            placements.append(
-                Placement(
-                    step.key,
-                    None,
-                    Unplaced.AFTER_UNPLACED,
-                    "A step it depends on has no time yet. Place that first.",
-                )
-            )
+            placements.append(Placement(step.key, None, Unplaced.AFTER_UNPLACED, WAITS_FOR_A_STEP))
             continue
 
         # Right after a prerequisite is fine: ranges are half-open, so back to back is not an
@@ -115,14 +119,7 @@ def schedule(
         start = _place(step.minutes, earliest, remaining)
         if start is None:
             ends[step.key] = None
-            placements.append(
-                Placement(
-                    step.key,
-                    None,
-                    Unplaced.NO_ROOM,
-                    f"No free time in the plan's days holds {step.minutes} minutes in one piece.",
-                )
-            )
+            placements.append(Placement(step.key, None, Unplaced.NO_ROOM, no_room(step.minutes)))
             continue
 
         ends[step.key] = start + timedelta(minutes=step.minutes)
@@ -176,11 +173,7 @@ def schedule_next_week(
 
 
 def _not_this_week(placement: Placement) -> Placement:
-    reason = (
-        "It does not fit before Sunday. It can go next week."
-        if placement.unplaced is Unplaced.NO_ROOM
-        else "A step it depends on goes next week, so this one does too."
-    )
+    reason = NOT_BEFORE_SUNDAY if placement.unplaced is Unplaced.NO_ROOM else GOES_WITH_A_STEP
     return Placement(placement.key, None, Unplaced.NOT_THIS_WEEK, reason)
 
 
