@@ -291,6 +291,22 @@ export function WeekScreen(): React.ReactNode {
         setTrash(null);
         setSaid(null);
       }}
+      onDismiss={
+        layout === "week"
+          ? undefined
+          : () => {
+              // The ✕ goes with the notice. Focus that was on it lands on the day rather than
+              // the page; without scrolling, since the day's head may be far above.
+              const held = (document.activeElement?.closest('[role="status"]') ?? null) !== null;
+              setTrash(null);
+              setSaid(null);
+              if (held) {
+                document
+                  .querySelector<HTMLElement>('[data-cell$=":0"]')
+                  ?.focus({ preventScroll: true });
+              }
+            }
+      }
     />
   );
 

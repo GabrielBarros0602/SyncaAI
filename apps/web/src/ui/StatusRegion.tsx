@@ -37,11 +37,22 @@ interface Props {
    * screen it is stacked above the bar between days, never over it (day-phone.dc.html).
    */
   docked?: boolean;
+  /**
+   * Takes the notice away now, from its ✕ (day-phone.dc.html): docked, it covers the foot of
+   * the day for its nine seconds. Not offered while the notice is busy, whose end is the
+   * work's, and whose refusal, if it comes, has to have a notice to land in.
+   */
+  onDismiss?: (() => void) | undefined;
 }
 
 export const NOTICE_MS = 9000;
 
-export function StatusRegion({ notice, onExpire, docked = false }: Props): React.ReactNode {
+export function StatusRegion({
+  notice,
+  onExpire,
+  docked = false,
+  onDismiss,
+}: Props): React.ReactNode {
   const [held, setHeld] = useState(false);
   const remaining = useRef(NOTICE_MS);
   // The latest of each, read when they fire, so a re-render with a new function does not
@@ -130,6 +141,11 @@ export function StatusRegion({ notice, onExpire, docked = false }: Props): React
                   Ctrl Z
                 </kbd>
               )}
+            </button>
+          )}
+          {onDismiss !== undefined && !busy && (
+            <button type="button" className={styles.dismiss} aria-label="Dismiss" onClick={onDismiss}>
+              ✕
             </button>
           )}
         </div>

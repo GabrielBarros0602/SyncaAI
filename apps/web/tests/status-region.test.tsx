@@ -4,7 +4,7 @@
  * The claims: it is always in the page, so the first notice is announced; a notice lasts nine
  * seconds of being unattended, never less, and never while somebody is pointing at it or has
  * focus in it; work in progress does not time out; and Ctrl+Z undoes, except inside a field,
- * where it belongs to the text.
+ * where it belongs to the text. Docked, it can be dismissed.
  */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -173,4 +173,28 @@ it("has nothing an automated accessibility check can find", async () => {
   );
 
   await expectNoViolations(document.body);
+});
+
+it("takes a notice away from its ✕ when asked to, and offers none while the notice is busy", () => {
+  const onDismiss = vi.fn();
+  const { rerender } = render(
+    <StatusRegion notice={DELETED} onExpire={vi.fn()} docked onDismiss={onDismiss} />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+  expect(onDismiss).toHaveBeenCalledOnce();
+
+  // A refusal of the work in progress has to have a notice to land in.
+  rerender(
+    <StatusRegion
+      notice={{ id: "1:restoring", text: "Restoring “Thesis”…", busy: true }}
+      onExpire={vi.fn()}
+      docked
+      onDismiss={onDismiss}
+    />,
+  );
+  expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+
+  rerender(<StatusRegion notice={DELETED} onExpire={vi.fn()} />);
+  expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
 });
