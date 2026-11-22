@@ -18,6 +18,8 @@ import { heavyDayOffer } from "./move";
 import { type Panel, TaskRow } from "./TaskRow";
 import type { ChecklistChange } from "./useWeek";
 import { cx } from "../lib/cx";
+import { type Proposed, ProposedCell } from "../plan/ProposedRow";
+import plan from "../plan/Plan.module.css";
 import day from "./Day.module.css";
 
 /**
@@ -116,6 +118,10 @@ interface Props {
   onOpenForm: (day: string) => void;
   onToggle: (task: Task) => Promise<void>;
   onChecklist: (taskId: string, change: ChecklistChange) => Promise<void>;
+  /** The steps of the plan under review that would land on this day (plan.dc.html). */
+  proposed?: Proposed[];
+  /** Open the review on a step. */
+  onOpenStep?: (itemId: string) => void;
 }
 
 export function DayColumn({
@@ -140,6 +146,8 @@ export function DayColumn({
   onOpenForm,
   onToggle,
   onChecklist,
+  proposed = [],
+  onOpenStep,
 }: Props): React.ReactNode {
   const over = capacity.over_capacity;
   // Against the budget, the same thing `over_capacity` is measured against. Against the
@@ -155,11 +163,17 @@ export function DayColumn({
   // header whose only other hours are the booked figure and the budget.
   const trail = `${String(capacity.total_minutes / 60)}-hour day, ${formatCompact(capacity.occupied_minutes)} booked against a ${budget} budget`;
 
-  // The day's cells, top to bottom: its header, the band it inherits, its rows, and the way to
-  // a new task when it can take one. The arrows walk them in this order (ADR-0053).
+  // The day's cells, top to bottom: its header, the band it inherits, its rows and the plan's
+  // proposed steps in the order they start, and the way to a new task when it can take one.
+  // The arrows walk them in this order (ADR-0053).
   const band = carried.length > 0 ? 1 : 0;
-  const footCell = !past ? 1 + band + tasks.length : null;
-  const last = footCell ?? band + tasks.length;
+  const rows = [
+    ...tasks.map((task) => ({ task, at: Date.parse(task.start_at) })),
+    ...proposed.map((step) => ({ step, at: Date.parse(step.item.start_at) })),
+  ].sort((a, b) => a.at - b.at);
+  const added = proposed.reduce((sum, step) => sum + step.item.minutes, 0);
+  const footCell = !past ? 1 + band + rows.length : null;
+  const last = footCell ?? band + rows.length;
   const stop = focusedCell === null ? null : Math.min(focusedCell, last);
   const cellProps = (cell: number): { cell: string; tabStop: boolean; onFocusCell: () => void } => ({
     cell: `${String(index)}:${String(cell)}`,
@@ -221,6 +235,11 @@ export function DayColumn({
           </span>
         </div>
         {over && <span className={day.over}>over by {formatCompact(overBy)}</span>}
+        {added > 0 && (
+          <span className={plan.added}>
+            +{formatCompact(added)} proposed → {formatCompact(capacity.occupied_minutes + added)}
+          </span>
+        )}
         <div role="img" aria-label={trail} className={day.trail}>
           <span data-track className={day.track} style={{ width: onRuler(capacity.total_minutes) }} />
           {/* Clipped at the day's end: minutes past midnight belong to the next day's trail. */}
@@ -273,7 +292,22 @@ export function DayColumn({
         />
       )}
 
-      {tasks.map((task, position) => {
+      {rows.map((row, position) => {
+        if ("step" in row) {
+          const { step } = row;
+          return (
+            <ProposedCell
+              key={step.item.id}
+              {...step}
+              timezone={timezone}
+              {...cellProps(1 + band + position)}
+              onOpen={() => {
+                onOpenStep?.(step.item.id);
+              }}
+            />
+          );
+        }
+        const { task } = row;
         const split = splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday);
         return (
           <TaskRow

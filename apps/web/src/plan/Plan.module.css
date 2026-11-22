@@ -396,3 +396,62 @@
 .confirm .button {
   flex: none;
 }
+
+/* A step proposed in its day, before it is a task: a dashed edge, in ink-2, with no verbs. */
+.proposed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--pad-row-y) var(--pad-row-x);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-3);
+  color: var(--ink-2);
+}
+
+.proposedTime {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.proposedTitle {
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.proposedLink {
+  align-self: flex-start;
+  min-height: var(--target);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* In the list below 1100px, where every target is a thumb's. */
+.proposedItem .proposedTitle {
+  font-size: var(--text-3);
+  line-height: var(--leading-3);
+}
+
+.proposedItem .proposedLink {
+  min-height: var(--target-touch);
+  margin: calc(var(--space-2) * -1) 0 calc(var(--space-2) * -1) calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-2);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.proposedItem .proposedLink:active {
+  background: var(--pressed);
+}
+
+/* What a day's proposed steps would add, under its figures. */
+.added {
+  font: var(--weight-medium) var(--text-1) / var(--leading-1) var(--font-sans);
+  color: var(--ink-2);
+}

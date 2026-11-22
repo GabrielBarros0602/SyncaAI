@@ -205,7 +205,7 @@ describe("from 1640px, where all seven days fit beside it", () => {
     setViewportWidth(1640);
   });
 
-  it("opens the review beside the week, which stays", async () => {
+  it("opens the review beside the week, with the plan's steps proposed in their days", async () => {
     serve(aPlan());
     renderAt("/");
     fireEvent.click(await screen.findByRole("button", { name: "Plan, ready to review" }));
@@ -215,6 +215,10 @@ describe("from 1640px, where all seven days fit beside it", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(heading);
     });
+    // The week stays, with the step that has a time in Thursday's column.
+    const thursday = screen.getByRole("grid").querySelector(`[data-day="${THURSDAY}"]`) as HTMLElement;
+    expect(within(thursday).getByText("10:00 – 10:30 · proposed")).toBeDefined();
+    expect(within(thursday).getByText("+30m proposed → 30m")).toBeDefined();
     expect(screen.getByRole("button", { name: "Close" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Plan, ready to review" }).getAttribute("aria-expanded")).toBe("true");
   });
@@ -246,6 +250,18 @@ describe("from 1640px, where all seven days fit beside it", () => {
         "1 step has no usable time yet. Approving would be refused until each has one or is removed.",
       ),
     ).toBeDefined();
+  });
+
+  it("leads from a proposed step to that step in the review", async () => {
+    serve(aPlan());
+    renderAt("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "step 1 of your plan" }));
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("step-limits");
+    });
+    expect(path()).toBe("/plan");
   });
 
   it("has nothing an automated accessibility check can find", async () => {
@@ -435,6 +451,7 @@ describe("discarding", () => {
       expect(path()).toBe("/");
     });
     expect(screen.getByRole("button", { name: "Plan" })).toBeDefined();
+    expect(screen.queryByText("10:00 – 10:30 · proposed")).toBeNull();
   });
 });
 
