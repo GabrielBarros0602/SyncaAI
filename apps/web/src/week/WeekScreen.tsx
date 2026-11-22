@@ -305,6 +305,9 @@ export function WeekScreen(): React.ReactNode {
       // A shortcut that fires while somebody is typing is not a shortcut, it is a bug that
       // eats a letter.
       if (tag === "input" || tag === "textarea") return;
+      // Nor while a dialog is in front: its keys are its own. Esc on a sheet's select would
+      // otherwise shut the row the sheet was opened from, and T move the week behind it.
+      if (target instanceof Element && target.closest("dialog") !== null) return;
 
       if (event.key === "Escape") {
         setOpenDay(null);

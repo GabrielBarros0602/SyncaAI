@@ -542,6 +542,33 @@ describe("the keyboard below 1100px (ADR-0056)", () => {
   });
 });
 
+describe("edit below 1100px", () => {
+  it("closes the sheet and not the row on Esc, and keeps the week's keys out of it", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [aTask("Read", "2026-08-26T14:00:00", "2026-08-26T15:00:00")] });
+    renderWeek();
+    await showing("2026-08-26");
+    const row = await screen.findByRole("button", { name: /Read/ });
+    fireEvent.click(row);
+    const edit = await screen.findByRole("button", { name: /^edit/ });
+    edit.focus();
+    fireEvent.click(edit);
+    const sheet = await screen.findByRole("dialog", { name: "Edit task" });
+
+    // The week's own keys would act on a screen the sheet is covering.
+    fireEvent.keyDown(within(sheet).getByRole("button", { name: "cancel" }), { key: "]" });
+    expect(daysOnScreen()).toEqual(["2026-08-26"]);
+
+    fireEvent.keyDown(within(sheet).getByLabelText("Start day"), { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Edit task" })).toBeNull();
+    });
+    expect(row.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^edit/ }));
+  });
+});
+
 describe("a task the night before is still running", () => {
   it("follows the band to the day that owns the task, with its row open and focused", async () => {
     setViewportWidth(PHONE);
