@@ -15,8 +15,10 @@
   pointer-events: none;
 }
 
-/* Stacked above the bar it is docked with, so the notice never covers New task or a day. */
+/* Stacked above the bar it is docked with, so the notice never covers New task or a day. Its
+   buttons are 44px whatever the pointer, as the rest of the day below 1100px is drawn. */
 .docked {
+  --target: var(--target-touch);
   position: static;
   transform: none;
   justify-content: center;
@@ -69,6 +71,26 @@
 }
 
 .action:active {
+  background: var(--pressed);
+}
+
+.dismiss {
+  min-width: max(32px, var(--target));
+  min-height: max(32px, var(--target));
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-strong) var(--text-3) / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  background: var(--hover);
+}
+
+.dismiss:active {
   background: var(--pressed);
 }
 
