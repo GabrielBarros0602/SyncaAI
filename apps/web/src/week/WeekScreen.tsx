@@ -111,6 +111,21 @@ export function WeekScreen(): React.ReactNode {
   // renders from it, and it is the arrival of the week that has to trigger it.
   const pendingFocus = useRef<{ target: FocusTarget; after: number } | null>(null);
   const { loaded, status } = week;
+  // Which way the one day on screen last changed, so the day that comes on slides in from that
+  // side, as the drawing has it. Kept from the render before, the way React keeps a previous
+  // value, rather than read from a ref during render.
+  const shownAt = 7 * week.offset + current.day;
+  const [slide, setSlide] = useState({ at: shownAt, by: 0 });
+  if (slide.at !== shownAt) setSlide({ at: shownAt, by: Math.sign(shownAt - slide.at) });
+  // Where a finger went down on the day, while it may still be a swipe.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+
+  // Another day starts at its head, as the drawing's does, rather than at however far down the
+  // last one was read. Before the focus below, which may then bring a row into view.
+  useEffect(() => {
+    if (layout !== "week" && slide.by !== 0) window.scrollTo({ top: 0 });
+  }, [slide.at, slide.by, layout]);
+
   // The last restorable delete, for as long as it can be undone. One across the week, like the
   // open row: a second delete replaces the first notice, as the design does. The region times
   // it out; a refusal is a new notice, so its sentence gets its own nine seconds to be read.
@@ -484,7 +499,36 @@ export function WeekScreen(): React.ReactNode {
           </DayHeader>
           <div className={cx(styles.body, layout === "beside" && styles.beside)}>
             {layout === "beside" && glance}
-            <div className={styles.pane}>
+            <div
+              className={styles.pane}
+              data-slide={slide.by}
+              // Swiping the day is a touch shortcut for the bar's two days, never the only way
+              // there (day-phone.dc.html). Not a mouse's, whose drag selects text, and not from
+              // a sheet over the day, whose events pass through here on their way up.
+              onPointerDown={(event) => {
+                const inDialog =
+                  event.target instanceof Element && event.target.closest("dialog") !== null;
+                swipe.current =
+                  event.pointerType === "mouse" || inDialog
+                    ? null
+                    : { x: event.clientX, y: event.clientY };
+              }}
+              onPointerUp={(event) => {
+                const from = swipe.current;
+                swipe.current = null;
+                if (from === null) return;
+                const across = event.clientX - from.x;
+                const down = event.clientY - from.y;
+                // Far enough to be meant, and mostly sideways, so a scroll that drifts is not
+                // taken for one.
+                if (Math.abs(across) > 64 && Math.abs(across) > 2 * Math.abs(down)) {
+                  stepDay(across < 0 ? 1 : -1);
+                }
+              }}
+              onPointerCancel={() => {
+                swipe.current = null;
+              }}
+            >
               {legend}
               {content}
             </div>
