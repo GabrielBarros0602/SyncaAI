@@ -38,6 +38,10 @@ class JobRead(BaseModel):
     failure_reason: str | None = None
     #: The plan the job produced, once there is one (ADR-0038).
     plan_id: uuid.UUID | None = None
+    #: What was asked, as the person wrote it; None once the purge has cleared it (ADR-0031).
+    request: str | None
+    horizon_days: int
+    created_at: datetime
 
 
 class JobPage(BaseModel):
@@ -83,6 +87,9 @@ class PlanProgressRead(BaseModel):
 
 class PlanRead(BaseModel):
     id: uuid.UUID
+    #: The request that made the plan; None for a plan written by hand (ADR-0047).
+    job_id: uuid.UUID | None
+    created_at: datetime
     status: PlanStatus
     request: str
     first_day: date
