@@ -5,17 +5,21 @@
  * back: its label carries the state, as a word, so nothing moves and reduced motion changes
  * nothing. Pressed while the review is open.
  */
-import type { Plan } from "../api/types";
+import type { Job, Plan } from "../api/types";
 import { cx } from "../lib/cx";
 import styles from "./Plan.module.css";
 
 /**
  * What the button adds to "Plan", or null for nothing.
  *
- * A plan the model made is "ready to review"; one written by hand is a "draft", since nobody
- * but its author made it and there is nothing to review but their own steps (ADR-0058).
+ * A request says where it is, and a failed one says so until something newer happens. A plan
+ * the model made is "ready to review"; one written by hand is a "draft", since nobody but its
+ * author made it and there is nothing to review but their own steps (ADR-0058).
  */
-export function planState(plan: Plan | null): string | null {
+export function planState(plan: Plan | null, job: Job | null): string | null {
+  if (job?.status === "queued") return "queued";
+  if (job?.status === "running") return "making…";
+  if (job?.status === "failed") return "didn’t work";
   if (plan?.status !== "pending") return null;
   return plan.job_id === null ? "draft" : "ready to review";
 }

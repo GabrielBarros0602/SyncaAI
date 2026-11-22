@@ -1,22 +1,32 @@
 /**
- * The plan under review, as plan.dc.html draws it (ADR-0052).
+ * The plan screen, as plan.dc.html draws it (ADR-0052): asking for a plan, waiting for it,
+ * the failure if it does not come, and the plan under review.
  *
  * A full view in place of the week, with ‹ Week to go back; from 1640px, where all seven days
- * still fit beside it, a panel beside the week, whose days show the proposed steps. What was
- * asked, the days it covers, how many steps were kept and discarded, what it adds to each day,
- * the steps in order and the steps the check discarded. Approve and Discard sit at its foot,
- * and below 1100px where the bar between days is.
+ * still fit beside it, a panel beside the week, whose days show the proposed steps. Under
+ * review: what was asked, the days it covers, how many steps were kept and discarded, what it
+ * adds to each day, the steps in order and the steps the check discarded. Approve and Discard
+ * sit at its foot, and below 1100px where the bar between days is.
  *
- * Read only, for now: giving a step a time, editing, removing and adding come with the next
- * steps of the screen (docs/backlog.md, "As telas do plano").
+ * The review is read only, for now: giving a step a time, editing, removing and adding come
+ * with the next steps of the screen (docs/backlog.md, "As telas do plano").
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ApiError } from "../api/client";
-import type { Plan, PlanItem } from "../api/types";
+import type { Job, Plan, PlanItem } from "../api/types";
 import { cx } from "../lib/cx";
-import { formatCompact } from "../lib/time";
+import { formatCompact, toLocalDate, todayIn } from "../lib/time";
+import {
+  MAX_HORIZON,
+  MAX_REQUEST,
+  horizonHelp,
+  horizonOptions,
+  retryText,
+  waitLine,
+  waitWord,
+} from "./asking";
 import styles from "./Plan.module.css";
 import {
   afterText,
@@ -68,10 +78,23 @@ interface Props {
    */
   docked: boolean;
   barSlot: HTMLElement | null;
+  /** The person's days off, which the form's help names when the plan stays in this week. */
+  daysOff: readonly number[];
   onClose: () => void;
   onApproved: (tasks: number) => void;
   onDiscarded: () => void;
 }
+
+/** Which of the screen's views is showing, from what the server said and what was asked here. */
+type View = "loading" | "review" | "wait" | "ask" | "failed" | "expired";
+
+const TITLES: Record<Exclude<View, "review">, string> = {
+  loading: "The plan",
+  wait: "Your plan",
+  ask: "Ask for a plan",
+  failed: "The plan didn’t come",
+  expired: "The plan",
+};
 
 export function PlanReview({
   wide,
@@ -80,16 +103,49 @@ export function PlanReview({
   focusStep,
   docked,
   barSlot,
+  daysOff,
   onClose,
   onApproved,
   onDiscarded,
 }: Props): React.ReactNode {
   const heading = useId();
-  const { plan } = state;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const { plan, job } = state;
   const pending = plan?.status === "pending" ? plan : null;
+  // The form, opened from a failure or a closed plan with what it asked written in again.
+  const [asking, setAsking] = useState<string | null>(null);
+
+  const view: View =
+    state.status !== "ready"
+      ? "loading"
+      : pending !== null
+        ? "review"
+        : job !== null && job.status !== "failed"
+          ? "wait"
+          : asking !== null
+            ? "ask"
+            : job?.status === "failed"
+              ? "failed"
+              : plan?.status === "expired"
+                ? "expired"
+                : "ask";
+
+  // The view changed under whoever was in it: the form went once sent, the wait once the plan
+  // came. Focus left on what went lands on the heading rather than on the page; arrival is the
+  // router's to place.
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (!arrived.current) {
+      arrived.current = true;
+      return;
+    }
+    if (document.activeElement === null || document.activeElement === document.body) {
+      headingRef.current?.focus();
+    }
+  }, [view]);
 
   const title =
-    pending === null ? "The plan" : pending.job_id === null ? "Your plan" : "Review the plan";
+    view !== "review" ? TITLES[view] : pending?.job_id === null ? "Your plan" : "Review the plan";
 
   return (
     <div className={wide ? styles.panel : styles.view}>
@@ -101,7 +157,13 @@ export function PlanReview({
             </button>
           )}
           {/* Where the router puts focus on arrival, unless a step was asked for. */}
-          <h2 id={heading} className={styles.heading} data-route-focus={focusStep === null ? "" : undefined}>
+          <h2
+            ref={headingRef}
+            id={heading}
+            tabIndex={-1}
+            className={styles.heading}
+            data-route-focus={focusStep === null ? "" : undefined}
+          >
             {title}
           </h2>
           {wide && (
@@ -110,7 +172,7 @@ export function PlanReview({
             </button>
           )}
         </div>
-        {pending !== null ? (
+        {view === "review" && pending !== null && (
           <Review
             // Another plan is another review: nothing refused or confirmed carries over.
             key={pending.id}
@@ -123,50 +185,261 @@ export function PlanReview({
             onApproved={onApproved}
             onDiscarded={onDiscarded}
           />
-        ) : (
-          <Elsewhere state={state} />
+        )}
+        {view === "loading" && <Unread state={state} />}
+        {view === "wait" && job !== null && <Waiting job={job} timezone={timezone} wide={wide} onClose={onClose} />}
+        {view === "ask" && (
+          <AskForm
+            state={state}
+            timezone={timezone}
+            daysOff={daysOff}
+            initial={asking ?? ""}
+            onSent={() => {
+              setAsking(null);
+            }}
+          />
+        )}
+        {view === "failed" && job !== null && (
+          <div role="alert" className={styles.alert}>
+            <strong>{job.failure_reason}</strong>
+            {job.request !== null && <blockquote className={styles.request}>{job.request}</blockquote>}
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => {
+                  setAsking(job.request ?? "");
+                }}
+              >
+                Ask for it again
+              </button>
+            </div>
+          </div>
+        )}
+        {view === "expired" && plan !== null && (
+          <>
+            <p role="alert" className={styles.expired}>
+              This plan is no longer open for review.
+            </p>
+            <p className={styles.quiet}>
+              It covered {shortDate(plan.first_day)} – {shortDate(plan.last_day)}, and the last day
+              passed before it was reviewed. Nothing from it was written.
+            </p>
+            <p className={styles.request}>{plan.request}</p>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => {
+                  setAsking(plan.request);
+                }}
+              >
+                Ask for a new plan
+              </button>
+            </div>
+          </>
         )}
       </section>
     </div>
   );
 }
 
-/** What the review shows when there is no plan to review in it. */
-function Elsewhere({ state }: { state: PlanState }): React.ReactNode {
-  const { plan, status } = state;
-  if (status === "loading") return <p className={styles.quiet}>Reading the plan…</p>;
-  if (status === "unreachable") {
-    return (
-      <div role="alert" className={styles.alert}>
-        <strong>Couldn’t reach the server.</strong>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={() => {
-            void state.reload().catch(() => undefined);
+/** Before the server has said what there is, or when it could not be reached. */
+function Unread({ state }: { state: PlanState }): React.ReactNode {
+  if (state.status === "loading") return <p className={styles.quiet}>Reading the plan…</p>;
+  return (
+    <div role="alert" className={styles.alert}>
+      <strong>Couldn’t reach the server.</strong>
+      <button
+        type="button"
+        className={styles.button}
+        onClick={() => {
+          void state.reload().catch(() => undefined);
+        }}
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+interface WaitingProps {
+  job: Job;
+  timezone: string;
+  wide: boolean;
+  onClose: () => void;
+}
+
+/** A request being made. Nothing moves: the word changes, so reduced motion changes nothing. */
+function Waiting({ job, timezone, wide, onClose }: WaitingProps): React.ReactNode {
+  return (
+    <div aria-busy="true" className={styles.wait}>
+      <p role="status" className={styles.waitWord}>
+        {waitWord(job)}
+      </p>
+      <p className={styles.quiet}>{waitLine(job, timezone)}</p>
+      {job.request !== null && <blockquote className={styles.request}>{job.request}</blockquote>}
+      <p className={styles.quiet}>
+        You can go back to the week. The request keeps its place here, and the notice at the bottom
+        says when the plan is ready.
+      </p>
+      {!wide && (
+        <button type="button" className={cx(styles.button, styles.close)} onClick={onClose}>
+          Back to the week
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** A refused request: the server's sentence, and when it may be sent again. */
+interface AskRefusal {
+  detail: string;
+  retry: string | null;
+  /** One plan at a time: the one there is can be opened from here. */
+  open: boolean;
+}
+
+function refusalOfAsk(problem: unknown, timezone: string): AskRefusal {
+  if (!(problem instanceof ApiError)) {
+    return { detail: "Couldn’t reach the server.", retry: null, open: false };
+  }
+  return {
+    detail: problem.detail,
+    retry: problem.retryAfter === null ? null : retryText(problem.retryAfter, timezone),
+    open: problem.status === 409,
+  };
+}
+
+interface AskFormProps {
+  state: PlanState;
+  timezone: string;
+  daysOff: readonly number[];
+  /** What to write in the field: a failed or closed plan's request, asked for again. */
+  initial: string;
+  /** Queued: what was asked for again is asked, and a failure of it shows as one. */
+  onSent: () => void;
+}
+
+/** What to plan and for how many days. Sent, the server queues it or says why not. */
+function AskForm({ state, timezone, daysOff, initial, onSent }: AskFormProps): React.ReactNode {
+  const id = useId();
+  const field = useRef<HTMLTextAreaElement>(null);
+  const [text, setText] = useState(initial);
+  const [days, setDays] = useState(MAX_HORIZON);
+  const [tried, setTried] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<AskRefusal | null>(null);
+  const today = toLocalDate(todayIn(timezone));
+  const empty = text.trim() === "";
+  const bad = tried && empty;
+
+  async function send(): Promise<void> {
+    if (busy) return;
+    if (empty) {
+      setTried(true);
+      field.current?.focus();
+      return;
+    }
+    setBusy(true);
+    setRefusal(null);
+    try {
+      // Sent, the wait takes the form's place.
+      await state.ask(text.trim(), days);
+      onSent();
+    } catch (problem) {
+      setRefusal(refusalOfAsk(problem, timezone));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      className={styles.form}
+      aria-busy={busy}
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        void send();
+      }}
+    >
+      <div className={styles.field}>
+        <label htmlFor={`${id}-request`} className={styles.fieldLabel}>
+          What do you want to plan?
+        </label>
+        <textarea
+          ref={field}
+          id={`${id}-request`}
+          className={cx(styles.textarea, bad && styles.fieldBad)}
+          rows={4}
+          maxLength={MAX_REQUEST}
+          value={text}
+          aria-invalid={bad}
+          aria-describedby={`${id}-help ${id}-error`}
+          onChange={(event) => {
+            setText(event.target.value);
+          }}
+        />
+        <div className={styles.fieldFoot}>
+          <span id={`${id}-error`} className={styles.fieldError}>
+            {bad ? "Write what you want to plan." : ""}
+          </span>
+          <span className={styles.counter}>
+            {text.length} / {MAX_REQUEST}
+          </span>
+        </div>
+        <p id={`${id}-help`} className={styles.quiet}>
+          The steps come back in your words and go into your free time. The model sees how much of
+          each day is free, never what your tasks are.
+        </p>
+      </div>
+      <div className={styles.field}>
+        <label htmlFor={`${id}-days`} className={styles.label}>
+          Days ahead
+        </label>
+        <select
+          id={`${id}-days`}
+          className={styles.select}
+          value={days}
+          aria-describedby={`${id}-days-help`}
+          onChange={(event) => {
+            setDays(Number(event.target.value));
           }}
         >
-          Try again
+          {horizonOptions(today).map((option) => (
+            <option key={option.days} value={option.days}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <p id={`${id}-days-help`} className={styles.quiet}>
+          {horizonHelp(today, days, daysOff)}
+        </p>
+      </div>
+      {refusal !== null && (
+        <div role="alert" className={styles.alert}>
+          <strong>{refusal.detail}</strong>
+          {refusal.retry !== null && <span className={styles.problem}>{refusal.retry}</span>}
+          {refusal.open && (
+            <button
+              type="button"
+              className={styles.button}
+              onClick={() => {
+                void state.reload().catch(() => undefined);
+              }}
+            >
+              Open the plan you have
+            </button>
+          )}
+        </div>
+      )}
+      <div className={styles.actions}>
+        <button type="submit" className={styles.primary} aria-busy={busy}>
+          {busy ? "Sending…" : "Make a plan"}
         </button>
       </div>
-    );
-  }
-  if (plan?.status === "expired") {
-    return (
-      <>
-        <p role="alert" className={styles.expired}>
-          This plan is no longer open for review.
-        </p>
-        <p className={styles.quiet}>
-          It covered {shortDate(plan.first_day)} – {shortDate(plan.last_day)}, and the last day
-          passed before it was reviewed. Nothing from it was written.
-        </p>
-        <p className={styles.request}>{plan.request}</p>
-      </>
-    );
-  }
-  // shortcut: asking for a plan arrives with the next step of the screen, and replaces this.
-  return <p className={styles.quiet}>No plan is waiting for review.</p>;
+    </form>
+  );
 }
 
 interface ReviewProps {

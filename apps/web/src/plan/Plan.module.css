@@ -397,6 +397,91 @@
   flex: none;
 }
 
+/* Asking for a plan: a field per line, each with its label, its help and its own error, as the
+   week's forms have them. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fieldLabel {
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.textarea,
+.select {
+  min-width: 0;
+  border: 0;
+  border-radius: var(--radius-2);
+  background: var(--field);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.textarea {
+  min-height: 112px;
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+}
+
+.select {
+  max-width: 320px;
+  min-height: var(--target-touch);
+  padding: 0 var(--space-3);
+}
+
+/* A field that stopped the request is ringed in the accent, which means trouble. */
+.fieldBad {
+  box-shadow: inset 0 0 0 2px var(--alert);
+}
+
+.fieldFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+}
+
+.fieldError {
+  color: var(--alert-ink);
+  font-weight: var(--weight-strong);
+}
+
+.counter {
+  margin-left: auto;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+}
+
+/* A request being made: a word that changes, and nothing that moves. */
+.wait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+}
+
+.waitWord {
+  margin: 0;
+  font: var(--weight-strong) var(--text-5) / var(--leading-5) var(--font-sans);
+}
+
+.wait .close {
+  align-self: flex-start;
+}
+
 /* A step proposed in its day, before it is a task: a dashed edge, in ink-2, with no verbs. */
 .proposed {
   display: flex;
