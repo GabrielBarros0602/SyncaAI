@@ -70,6 +70,8 @@ export interface Me {
   verified_at: string | null;
   /** ISO weekdays, Monday is 1, the planner proposes nothing on (ADR-0032). */
   days_off: number[];
+  /** How long a step the planner proposes may be: what a step added by hand starts at. */
+  preferred_block_minutes: number;
 }
 
 /**
@@ -135,6 +137,20 @@ export interface PlanItem {
   /** Steps of the same plan that must end before this one starts. */
   prerequisites: string[];
   links: PlanLink[];
+}
+
+/** A partial change to a step (ADR-0030). None of the three can be cleared. */
+export interface PlanItemChanges {
+  title?: string;
+  minutes?: number;
+  start_at?: string;
+}
+
+/** A step added by hand. It is placed where the plan would place it (ADR-0047). */
+export interface NewPlanItem {
+  title: string;
+  minutes: number;
+  description: string;
 }
 
 export interface PlanDiscard {
