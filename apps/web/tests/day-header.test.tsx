@@ -18,6 +18,7 @@ const ME: Me = {
   timezone: "America/Sao_Paulo",
   verified_at: "2026-08-01T12:00:00Z",
   days_off: [],
+  preferred_block_minutes: 60,
 };
 
 const AUGUST = ["2026-08-24", "2026-08-25", "2026-08-26", "2026-08-27", "2026-08-28", "2026-08-29", "2026-08-30"];
