@@ -108,8 +108,9 @@ export function WeekScreen(): React.ReactNode {
   // the new week arrives: moved to another day, deleted, or brought back under a new id. Focus
   // is put on the week that arrives after the write — `after` is the load it has to be newer
   // than, so it is never applied to the week the write was made on. A ref, not state: nothing
-  // renders from it, and it is the arrival of the week that has to trigger it.
-  const pendingFocus = useRef<{ target: FocusTarget; after: number } | null>(null);
+  // renders from it, and it is the arrival of the week that has to trigger it. `day` is the
+  // day it waits to be on screen, when another day of the same week is coming on.
+  const pendingFocus = useRef<{ target: FocusTarget; after: number; day?: number } | null>(null);
   const { loaded, status } = week;
   // Which way the one day on screen last changed, so the day that comes on slides in from that
   // side, as the drawing has it. Kept from the render before, the way React keeps a previous
@@ -144,6 +145,10 @@ export function WeekScreen(): React.ReactNode {
   useEffect(() => {
     const pending = pendingFocus.current;
     if (pending === null || status !== "ready" || loaded <= pending.after) return;
+    // Not on a render from before its day came on. A week that arrives just before a press
+    // leaves its effects to run after it, with the old day still on screen, and they would
+    // spend the focus on that day's heading, which then goes with the day.
+    if (pending.day !== undefined && pending.day !== current.day) return;
     pendingFocus.current = null;
 
     const { target } = pending;
@@ -169,7 +174,7 @@ export function WeekScreen(): React.ReactNode {
     setOpenTask(null);
     setFocus({ offset: week.offset, day, cell: 0 });
     // This week is already here, so the day's arrival is the one to wait for.
-    if (then !== undefined) pendingFocus.current = { target: then, after: loaded - 1 };
+    if (then !== undefined) pendingFocus.current = { target: then, after: loaded - 1, day };
   }
 
   /** The day before or after the one on screen, into the next week when the week ends. */
@@ -255,7 +260,7 @@ export function WeekScreen(): React.ReactNode {
         task !== undefined &&
         (week.saving.has(task) || !week.tasks.some((candidate) => candidate.id === task));
       if (header !== null) header.focus();
-      else pendingFocus.current = { target, after: arriving ? loaded : loaded - 1 };
+      else pendingFocus.current = { target, after: arriving ? loaded : loaded - 1, day };
       return;
     }
     focusOnceReloaded(target);
