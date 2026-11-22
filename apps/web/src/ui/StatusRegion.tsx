@@ -8,7 +8,8 @@
  *
  * A notice lasts nine seconds (ADR-0025), and its clock stops while the pointer is over it or
  * focus is inside it, so it is never taken away from somebody reading or about to press it. A
- * notice that is busy has no clock at all: it ends when the work does.
+ * notice that is busy has no clock at all: it ends when the work does, and neither has one that
+ * waits to be acted on.
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -21,6 +22,8 @@ export interface Notice {
   text: string;
   /** Still in progress: read as aria-busy, and never timed out. */
   busy?: boolean;
+  /** Waits to be acted on or dismissed, and is never timed out: a plan that is ready. */
+  sticky?: boolean;
   action?: {
     label: string;
     run: () => void;
@@ -66,13 +69,14 @@ export function StatusRegion({
 
   const id = notice?.id ?? null;
   const busy = notice?.busy === true;
+  const sticky = notice?.sticky === true;
 
   useEffect(() => {
     remaining.current = NOTICE_MS;
   }, [id]);
 
   useEffect(() => {
-    if (id === null || busy || held) return;
+    if (id === null || busy || sticky || held) return;
     const started = Date.now();
     const timer = setTimeout(() => {
       expire.current();
@@ -81,7 +85,7 @@ export function StatusRegion({
       clearTimeout(timer);
       remaining.current = Math.max(0, remaining.current - (Date.now() - started));
     };
-  }, [id, busy, held]);
+  }, [id, busy, sticky, held]);
 
   useEffect(() => {
     if (id === null || busy) return;

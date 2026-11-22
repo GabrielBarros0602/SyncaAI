@@ -3,8 +3,9 @@
  *
  * The claims: it is always in the page, so the first notice is announced; a notice lasts nine
  * seconds of being unattended, never less, and never while somebody is pointing at it or has
- * focus in it; work in progress does not time out; and Ctrl+Z undoes, except inside a field,
- * where it belongs to the text. Docked, it can be dismissed.
+ * focus in it; work in progress does not time out, nor does a notice waiting to be acted on;
+ * and Ctrl+Z undoes, except inside a field, where it belongs to the text. Docked, it can be
+ * dismissed.
  */
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -125,6 +126,34 @@ it("never times out work in progress, and offers nothing to press during it", ()
   expect(onExpire).not.toHaveBeenCalled();
   expect(region().getAttribute("aria-busy")).toBe("true");
   expect(screen.queryByRole("button")).toBeNull();
+});
+
+it("never times out a notice that waits to be acted on, and offers its action and its ✕", () => {
+  const onExpire = vi.fn();
+  const onDismiss = vi.fn();
+  render(
+    <StatusRegion
+      notice={{
+        id: "p1:ready",
+        text: "Your plan is ready: 6 steps, 3 discarded.",
+        sticky: true,
+        action: { label: "Review", run: vi.fn() },
+      }}
+      onExpire={onExpire}
+      onDismiss={onDismiss}
+    />,
+  );
+
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+  expect(onExpire).not.toHaveBeenCalled();
+  // Not work in progress: nothing in it is busy, and it can be acted on.
+  expect(region().getAttribute("aria-busy")).toBe("false");
+  expect(screen.getByRole("button", { name: "Review" })).toBeDefined();
+  expect(onDismiss).toHaveBeenCalledOnce();
 });
 
 it("undoes on Ctrl+Z and on ⌘Z, but not inside a field", () => {
