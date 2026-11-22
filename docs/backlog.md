@@ -426,7 +426,11 @@ outra volta de design. Os dois só aparecem com o texto a 200%:
 - ~~a linha de conclusão tardia passa da borda no celular a 320, 375 e 667px;~~ ✅ Feito em
   2026-11-21: é a frase única do desktop, que quebra em qualquer espaço. Conferida a 320, 375,
   667, 768 e 1099px com o texto a 200%;
-- o seletor de dia, ao editar um passo do plano, passa da borda a 320px.
+- ~~o seletor de dia, ao editar um passo do plano, passa da borda a 320px.~~ ✅ Feito em
+  2026-11-22: o campo do dia é um item de flex, que por padrão não fica mais estreito que o
+  conteúdo, e o conteúdo de um select é a opção mais longa ("Sat 28 Nov (day off)"). Com
+  `min-width: 0`, o select ocupa o que sobra e corta a opção. Conferido a 320, 375 e 768px com
+  o texto a 200%; sem a regra, a página rola de lado a 320px.
 
 A implementação achou um terceiro em 2026-10-29, conferindo o diálogo de nova tarefa: na semana
 a 1100px, com o texto a 200%, o nome do dia quebra no meio da palavra ("Monda" / "y"). A coluna
@@ -545,7 +549,7 @@ O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 3. ✅ Pedir e esperar: o formulário, as recusas com a hora do `Retry-After`, o polling, as três
    falhas e o aviso de "ready" que fica até a pessoa agir ou fechá-lo. O "Write it myself", que
    o desenho põe ao lado de "Make a plan", nas recusas e na falha, entra com a PR 5.
-4. Editar na revisão: dar horário, editar, remover, mandar para a semana seguinte, acrescentar
+4. ✅ Editar na revisão: dar horário, editar, remover, mandar para a semana seguinte, acrescentar
    um passo. Com o seletor de dia que passa da borda a 320px com o texto a 200%.
 5. Escrever à mão.
 6. O progresso: "Plan · 3 of 5", a página do plano e a etiqueta na linha da tarefa. Fecha o

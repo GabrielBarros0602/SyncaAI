@@ -153,6 +153,21 @@ the copy here only renders the screens.
 - **A failed request stays "didn’t work" on the Plan button until something newer happens:**
   a request sent or a plan written. The drawing clears it when "Ask for it again" is pressed,
   which nothing on the server records, so a reload would bring it back.
-- **Two lines that do not wrap at 200% text are made to wrap:**
-  - the late completion line on a phone;
-  - the day field when a plan's step is edited at 320px.
+- **A step's fields are a task's.** The duration reads like `2h30`, from 1m to 24h, which is
+  what the server takes from a person (ADR-0032, ADR-0037), rather than minutes from 15 to the
+  preferred block, which bound only what the model proposes. The start is a day of the plan's
+  and a time typed in 24-hour form, as a task's edit takes it, and a step with no time starts
+  with the time empty rather than a free minute guessed for it. A step becomes a task, and
+  should not change its words on the way.
+- **The start's hint says the rules the server holds for a step:** "Not before now: 14:20
+  today, and clear of your tasks and the plan’s other steps." The drawing adds "between 07:00
+  and 23:00, on a five-minute mark", which the server holds for what the planner proposes and
+  not for a step the person places (ADR-0030).
+- **A removed step's notice offers "undo", with Ctrl+Z,** as a deleted task's does.
+- **Steps sent to next week say where they went in the added step's words:** "1 step placed
+  next week, at Mon 26, 07:00.", and "from" for more than one. When none found room, it says
+  so, "The step found no room next week either.", where the drawing has a dash.
+- **Two lines that ran past the edge at 200% text are held inside it:**
+  - the late completion line on a phone, made to wrap;
+  - the day field when a plan's step is edited at 320px, which a select cannot wrap: it
+    shrinks to the row instead, and its longest option is clipped.
