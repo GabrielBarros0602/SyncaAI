@@ -87,8 +87,10 @@ class TaskRepository(OwnedRepository[Task]):
         offset: int = 0,
         starts_at_or_after: datetime | None = None,
         starts_before: datetime | None = None,
+        plan_id: uuid.UUID | None = None,
     ) -> Sequence[Task]:
-        """A page of this owner's tasks, soonest first, optionally inside a window.
+        """A page of this owner's tasks, soonest first, optionally inside a window and
+        optionally only those committed from one plan.
 
         The bounds are instants, not dates. Converting a local day into a UTC range happens
         once, at the edge (ADR-0009), and arrives here already done — which also keeps the
@@ -108,6 +110,8 @@ class TaskRepository(OwnedRepository[Task]):
             statement = statement.where(Task.start_at >= starts_at_or_after)
         if starts_before is not None:
             statement = statement.where(Task.start_at < starts_before)
+        if plan_id is not None:
+            statement = statement.where(Task.plan_id == plan_id)
         return self._session.scalars(statement).all()
 
     def occupied_minutes_by_day(

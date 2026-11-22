@@ -91,12 +91,14 @@ class _FakeTasks:
         offset: int,
         starts_at_or_after: datetime | None = None,
         starts_before: datetime | None = None,
+        plan_id: uuid.UUID | None = None,
     ) -> list[Task]:
         self.last_page = (limit, offset)
         self.last_window = (
             None if starts_at_or_after is None else (starts_at_or_after, starts_before)
         )
-        ordered = sorted(self.rows.values(), key=lambda task: task.start_at)
+        rows = [task for task in self.rows.values() if plan_id in (None, task.plan_id)]
+        ordered = sorted(rows, key=lambda task: task.start_at)
         return ordered[offset : offset + limit]
 
     def delete(self, task_id: uuid.UUID) -> bool:
