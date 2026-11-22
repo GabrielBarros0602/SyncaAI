@@ -1,0 +1,398 @@
+/*
+ * The plan's review as plan.dc.html draws it: a full view in place of the day below 1100px,
+ * at most 720px wide, and from 1100px a 440px panel beside the week, run to the window's right
+ * edge and bottom. Approve and Discard sit at the bottom of either, where the bar between days
+ * is below 1100px.
+ */
+
+/* The Plan button, beside Menu. Pressed while the review is open. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-touch);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.trigger:hover {
+  background: var(--hover);
+}
+
+.trigger:active {
+  transform: scale(var(--press-scale));
+}
+
+.triggerOpen,
+.triggerOpen:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.triggerOpen:active {
+  background: var(--primary-pressed);
+}
+
+.triggerState {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+/* Below 1100px: the view fills what the header leaves, and its foot is the bar's place. */
+.view {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* From 1100px: the panel runs to the window's right edge and bottom, across the shell's
+   padding, as the drawing has it flush with the frame. */
+.panel {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0 calc(var(--shell-pad) * -1) calc(var(--shell-pad) * -1) 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.body {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-6);
+}
+
+.panel .body {
+  max-width: none;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.heading {
+  flex: 1 1 auto;
+  margin: 0;
+  font: var(--weight-strong) var(--text-5) / var(--leading-5) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+.back {
+  min-height: var(--target-touch);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+}
+
+.back:active {
+  background: var(--pressed);
+}
+
+.button,
+.primary,
+.danger {
+  flex: 1 1 auto;
+  min-height: var(--target-touch);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.button:hover {
+  background: var(--hover);
+}
+
+.button:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.close {
+  flex: none;
+}
+
+.primary {
+  flex-grow: 2;
+  padding: 0 var(--space-5);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: var(--weight-strong);
+}
+
+.primary:active {
+  background: var(--primary-pressed);
+  transform: scale(var(--press-scale));
+}
+
+.danger {
+  flex: none;
+  border-color: var(--alert-solid);
+  background: var(--alert-solid);
+  color: var(--on-alert);
+  font-weight: var(--weight-strong);
+}
+
+.danger:active {
+  background: var(--alert-solid-pressed);
+  transform: scale(var(--press-scale));
+}
+
+.quiet {
+  margin: 0;
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.asked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.request {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--sunken);
+  overflow-wrap: anywhere;
+}
+
+.count {
+  margin: 0;
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+/* A refusal: the accent, which means trouble and only trouble. */
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--alert);
+  border-radius: var(--radius-3);
+  background: var(--alert-surface);
+}
+
+.alert strong {
+  color: var(--alert-ink);
+  text-wrap: pretty;
+}
+
+.alert .button {
+  flex: none;
+  align-self: flex-start;
+  background: var(--alert-surface);
+}
+
+.alert .button:active {
+  background: var(--alert-pressed);
+}
+
+.problem {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-wrap: pretty;
+}
+
+.impact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+}
+
+.impactLine {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-mono);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.steps,
+.links,
+.discards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.steps,
+.discards {
+  gap: var(--space-2);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+}
+
+/* A step the server named in a refusal. */
+.stepRefused {
+  border: 2px solid var(--alert);
+  background: var(--alert-surface);
+}
+
+.stepMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-mono);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepTitle {
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.stepNote {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* Not this week, no room, after another step: a reason and not an error, in neutral ink. */
+.reason {
+  font: var(--weight-medium) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-wrap: pretty;
+}
+
+.stepError {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--alert-ink);
+  text-wrap: pretty;
+}
+
+.link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-height: var(--target-touch);
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  overflow-wrap: anywhere;
+  text-underline-offset: 3px;
+}
+
+.host {
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-mono);
+}
+
+.discarded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.discardedHeading {
+  margin: 0;
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.discard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--sunken);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.discard .quiet {
+  color: var(--ink-2);
+}
+
+.expired {
+  margin: 0;
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+  color: var(--alert-ink);
+  text-wrap: pretty;
+}
+
+/* The bottom of the review: the status region above it below 1100px, as above the bar between
+   days, and Approve and Discard. Stays in view while the steps scroll. */
+.foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Across the review's padding, as wide as the review. */
+.foot {
+  margin: 0 calc(var(--space-3) * -1) calc(var(--space-6) * -1);
+}
+
+.bar {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.actions,
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.confirmText {
+  flex: 1 1 180px;
+  text-wrap: pretty;
+}
+
+.confirm .button {
+  flex: none;
+}

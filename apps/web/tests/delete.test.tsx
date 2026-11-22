@@ -8,6 +8,7 @@
  * requests that leave the browser.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
@@ -147,9 +148,11 @@ function deletes(server: Server): Call[] {
 
 function renderWeek(): void {
   render(
-    <SessionProvider>
-      <WeekScreen />
-    </SessionProvider>,
+    <MemoryRouter>
+      <SessionProvider>
+        <WeekScreen />
+      </SessionProvider>
+    </MemoryRouter>,
   );
 }
 

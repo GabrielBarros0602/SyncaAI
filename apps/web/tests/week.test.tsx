@@ -8,6 +8,7 @@
  * check this client is not in a position to make.
  */
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, resetClientForTests } from "../src/api/client";
@@ -950,9 +951,11 @@ function route(routes: Record<string, () => Response>): void {
 
 function renderWeek(): HTMLElement {
   const { container } = render(
-    <SessionProvider>
-      <WeekScreen />
-    </SessionProvider>,
+    <MemoryRouter>
+      <SessionProvider>
+        <WeekScreen />
+      </SessionProvider>
+    </MemoryRouter>,
   );
   return container;
 }

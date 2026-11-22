@@ -23,6 +23,22 @@
   overflow-x: auto;
 }
 
+/* What sits under the header and the legend: the week, and from 1640px the plan's review in a
+   440px panel beside it (plan.dc.html). Grows to the bottom of the window, so the panel does. */
+.area {
+  flex: 1 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* 440px as drawn, the shell's padding included: the panel runs across it to the window's edge.
+   The week keeps its 155px columns beside it, which is why the panel waits for 1640px. */
+.withPlan {
+  grid-template-columns: minmax(0, 1fr) calc(440px - var(--shell-pad));
+}
+
 /* Below 1100px the grid holds one day, the one on screen (ADR-0052). The screen chooses the
    layout in script, since the other six days are not rendered at all. */
 .oneDay {
