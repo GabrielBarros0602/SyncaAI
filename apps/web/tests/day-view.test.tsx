@@ -2,10 +2,10 @@
  * Tests for the one day on screen below 1100px (ADR-0052, day-phone.dc.html).
  *
  * What they hold the screen to: which layout a width chooses, that the day on screen can be
- * changed three ways and always says which day it is, that the week at a glance shows the
- * server's figures or none, that the bar between days never goes under a notice, and that a
- * notice about a task on another day leads to its row. Whether any of it fits the width it
- * was chosen for is measured in a browser, not here.
+ * changed three ways and a finger's swipe and always says which day it is, that the week at a
+ * glance shows the server's figures or none, that the bar between days never goes under a
+ * notice, and that a notice about a task on another day leads to its row. Whether any of it
+ * fits the width it was chosen for is measured in a browser, not here.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -807,3 +807,47 @@ describe("a notice about a task on another day, below 1100px", () => {
   });
 });
 
+describe("swiping the day, below 1100px", () => {
+  function swipe(from: [number, number], to: [number, number], pointerType = "touch", on?: Element): void {
+    const target = on ?? (document.querySelector("[data-day]") as Element);
+    fireEvent.pointerDown(target, { pointerType, clientX: from[0], clientY: from[1] });
+    fireEvent.pointerUp(target, { pointerType, clientX: to[0], clientY: to[1] });
+  }
+
+  function slide(): string | null | undefined {
+    return document.querySelector("[data-slide]")?.getAttribute("data-slide");
+  }
+
+  it("steps a day each way with a finger, and slides the day in from the side it came from", async () => {
+    setViewportWidth(PHONE);
+    serve();
+    renderWeek();
+    await showing("2026-08-26");
+
+    swipe([300, 400], [200, 410]);
+    await showing("2026-08-27");
+    expect(slide()).toBe("1");
+
+    swipe([100, 400], [200, 400]);
+    await showing("2026-08-26");
+    expect(slide()).toBe("-1");
+  });
+
+  it("leaves the day alone for a mouse, a short move, a scroll and a sheet over the day", async () => {
+    setViewportWidth(PHONE);
+    serve();
+    renderWeek();
+    await showing("2026-08-26");
+
+    swipe([300, 400], [100, 400], "mouse");
+    swipe([300, 400], [250, 400]);
+    // Further across than down, but not twice as far: a scroll that drifted.
+    swipe([300, 400], [200, 460]);
+    fireEvent.click(within(bar()).getByRole("button", { name: "+ new task" }));
+    const sheet = screen.getByRole("dialog", { name: "New task" });
+    swipe([300, 400], [100, 400], "touch", within(sheet).getByLabelText("Title"));
+
+    expect(daysOnScreen()).toEqual(["2026-08-26"]);
+    expect(slide()).toBe("0");
+  });
+});
