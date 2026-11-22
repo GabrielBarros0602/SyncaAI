@@ -2,7 +2,9 @@
 
 **Status:** Accepted; `POST /plans` and adding a step to a plan by
 [ADR-0047](0047-a-plan-can-be-written-by-hand-in-the-same-draft.md), and a listing of each
-resource by [ADR-0050](0050-plans-and-their-requests-are-listed-and-an-approved-plan-counts-its-tasks.md)
+resource by [ADR-0050](0050-plans-and-their-requests-are-listed-and-an-approved-plan-counts-its-tasks.md);
+what a request asked and which request made a plan by
+[ADR-0058](0058-a-request-says-what-it-asked-and-a-plan-s-tasks-are-listed-by-the-plan.md)
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
