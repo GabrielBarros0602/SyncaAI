@@ -167,6 +167,18 @@ the copy here only renders the screens.
 - **Steps sent to next week say where they went in the added step's words:** "1 step placed
   next week, at Mon 26, 07:00.", and "from" for more than one. When none found room, it says
   so, "The step found no room next week either.", where the drawing has a dash.
+- **"Write it myself" is offered on every refusal that spares the model:** the hour's and
+  the day's limits as well as the month's allowance, the paused month and the breaker. The
+  drawing offers it on the last three. The screen cannot tell the allowance's 429 from a
+  limit's without reading its sentence, and none of them reads a plan written by hand
+  (ADR-0047), which is the way through each of them.
+- **A plan written by hand is named before its first step goes.** "What it’s for" is asked for
+  at the first Add, "Write what the plan is for.", with focus on it, and is text from then on,
+  as "You asked" is. The drawing keeps the field open and lets it stay empty. The API takes the
+  name when it makes the plan, refuses an empty one and does not rename it, and the plan is
+  made with its first step (decided on 2026-11-22).
+- **A step written by hand waits for nothing:** it has no "after step N". The API adds a step
+  without prerequisites (ADR-0047), and the drawing's second step by hand reads "after step 1".
 - **Two lines that ran past the edge at 200% text are held inside it:**
   - the late completion line on a phone, made to wrap;
   - the day field when a plan's step is edited at 320px, which a select cannot wrap: it
