@@ -17,6 +17,7 @@ import { useLayout, useReviewBesideWeek } from "../lib/useLayout";
 import type { NewTask, Task, TaskChanges } from "../api/types";
 import { PlanButton, planState } from "../plan/PlanButton";
 import { PlanReview } from "../plan/PlanReview";
+import { readyText } from "../plan/asking";
 import { proposedByDay } from "../plan/steps";
 import { usePlan } from "../plan/usePlan";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
@@ -85,7 +86,12 @@ function dayLabel(localDate: string): string {
 export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
   const week = useWeek();
-  const plan = usePlan(week.loaded);
+  // A plan made while the screen was open, said until it is opened, set aside or dismissed:
+  // a ready plan is not something to time out (plan.dc.html).
+  const [ready, setReady] = useState<{ plan: string; text: string } | null>(null);
+  const plan = usePlan(week.loaded, (made) => {
+    setReady({ plan: made.id, text: readyText(made) });
+  });
   // The plan under review is a page of its own, so a reload, Back and a link all find it. From
   // 1640px it opens beside the week; below, in place of it, so the week is never on screen
   // with days out of view.
@@ -333,10 +339,34 @@ export function WeekScreen(): React.ReactNode {
     layout !== "week" && said?.about !== undefined && said.about.day !== dayKeys[current.day]
       ? said.about
       : null;
+  // Behind any other news, which goes in front for its nine seconds and then gives way to it.
+  // Only while that plan is still the one waiting: approved or discarded, there is nothing to
+  // review.
+  const readyShown =
+    trash === null &&
+    said === null &&
+    ready !== null &&
+    plan.plan?.id === ready.plan &&
+    plan.plan.status === "pending";
+  const readyNotice: Notice | null =
+    !readyShown
+      ? null
+      : {
+          id: `${ready.plan}:ready`,
+          text: ready.text,
+          sticky: true,
+          action: {
+            label: "Review",
+            run: () => {
+              setReady(null);
+              openPlan();
+            },
+          },
+        };
   const notice: Notice | null =
     trash === null
       ? said === null
-        ? null
+        ? readyNotice
         : {
             id: `${String(said.id)}:said`,
             text: said.text,
@@ -385,14 +415,19 @@ export function WeekScreen(): React.ReactNode {
         setSaid(null);
       }}
       onDismiss={
-        layout === "week"
+        // From 1100px a notice goes on its own, unless it is one that waits to be acted on.
+        layout === "week" && !readyShown
           ? undefined
           : () => {
               // The ✕ goes with the notice. Focus that was on it lands on the day rather than
               // the page; without scrolling, since the day's head may be far above.
               const held = (document.activeElement?.closest('[role="status"]') ?? null) !== null;
-              setTrash(null);
-              setSaid(null);
+              if (readyShown) {
+                setReady(null);
+              } else {
+                setTrash(null);
+                setSaid(null);
+              }
               if (held) {
                 document
                   .querySelector<HTMLElement>('[data-cell$=":0"]')
@@ -461,7 +496,7 @@ export function WeekScreen(): React.ReactNode {
   const legend = <ShortcutLegend shortcuts={layout === "week" ? SHORTCUTS : LIST_SHORTCUTS} />;
   const planButton = (
     <PlanButton
-      state={planState(plan.plan)}
+      state={planState(plan.plan, plan.job)}
       open={reviewing}
       onToggle={() => {
         if (reviewing) closePlan();
@@ -478,6 +513,7 @@ export function WeekScreen(): React.ReactNode {
       focusStep={focusStep}
       docked={layout !== "week"}
       barSlot={barSlot}
+      daysOff={week.me.days_off}
       onClose={closePlan}
       onApproved={(made) => {
         week.reload();
