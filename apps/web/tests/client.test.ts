@@ -212,6 +212,24 @@ describe("errors that are not about the session", () => {
     expect((error as ApiError).status).toBe(409);
   });
 
+  it("carries each step a plan's commit was refused for, so all of them can be shown at once", async () => {
+    setAccessToken(A_FRESH_TOKEN);
+    const step = { id: "s2", title: "Limites", reason: "It has no time yet. Give it one, or remove it." };
+    routeFetch({
+      "/plans/p1/commit": () =>
+        jsonResponse(409, {
+          detail: "The plan cannot become tasks as it stands. Nothing was written.",
+          items: [step, { id: 3 }],
+        }),
+    });
+
+    const error = await api.post("/plans/p1/commit", {}).catch((problem: unknown) => problem);
+
+    expect((error as ApiError).detail).toBe("The plan cannot become tasks as it stands. Nothing was written.");
+    // A shape nobody planned for is left out rather than shown as a step.
+    expect((error as ApiError).items).toEqual([step]);
+  });
+
   it("does not choke on a 204 with no body", async () => {
     setAccessToken(A_FRESH_TOKEN);
     routeFetch({ "/tasks/1": () => new Response(null, { status: 204 }) });
