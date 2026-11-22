@@ -126,6 +126,7 @@ class TaskService:
         limit: int,
         offset: int,
         window: tuple[datetime, datetime] | None = None,
+        plan_id: uuid.UUID | None = None,
     ) -> Sequence[Task]:
         """A page of tasks, optionally narrowed to a UTC window.
 
@@ -139,6 +140,7 @@ class TaskService:
             offset=offset,
             starts_at_or_after=starts_at_or_after,
             starts_before=starts_before,
+            plan_id=plan_id,
         )
 
     def list_tags(self, *, limit: int) -> Sequence[Tag]:

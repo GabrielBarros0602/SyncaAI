@@ -500,3 +500,41 @@ def test_a_task_names_the_plan_it_was_committed_from(
         by_hand.json()["id"]: None,
     }
 
+
+def test_a_plan_s_tasks_are_listed_by_the_plan_wherever_they_were_moved(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """The plan's page lists what its count counts: a task moved past the plan's last day
+    still counts, so it is asked for by the plan, not by the plan's days (ADR-0058)."""
+    _as(app, people[0])
+    plan, (first, second) = _committed(client)
+    later = datetime.now(SAO_PAULO) + timedelta(days=40)
+    moved = client.patch(f"/api/v1/tasks/{second}", json={"start_at": later.isoformat()})
+    assert moved.status_code == 200, moved.text
+    by_hand = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Ligar para a mudança",
+            "start_at": (later + timedelta(hours=1)).isoformat(),
+            "duration_minutes": 15,
+        },
+    )
+    assert by_hand.status_code == 201, by_hand.text
+
+    listed = client.get("/api/v1/tasks", params={"plan_id": plan}).json()["items"]
+
+    assert [task["id"] for task in listed] == [first, second]
+    assert client.get(f"{PLANS}/{plan}").json()["progress"]["total"] == len(listed)
+
+
+def test_someone_else_s_plan_lists_none_of_their_tasks(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """An empty page, as for a plan that does not exist: nothing says the plan is real."""
+    _as(app, people[0])
+    plan, _ = _committed(client)
+
+    _as(app, people[1])
+    response = client.get("/api/v1/tasks", params={"plan_id": plan})
+
+    assert (response.status_code, response.json()["items"]) == (200, [])

@@ -90,16 +90,21 @@ def list_tasks(
     user: CurrentUser,
     first_day: Annotated[date | None, Query(description="First local day, inclusive.")] = None,
     last_day: Annotated[date | None, Query(description="Last local day, inclusive.")] = None,
+    plan_id: Annotated[
+        uuid.UUID | None, Query(description="Only the tasks committed from this plan.")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page:
-    """Optionally narrowed to a window of local days.
+    """Optionally narrowed to a window of local days, to one plan's tasks, or both.
 
     The dates are the same vocabulary as ``/capacity``, on purpose: a week view asks both
-    for the same seven days and gets answers that line up.
+    for the same seven days and gets answers that line up. A plan's tasks are asked for by
+    the plan rather than by its days, since a task moved out of the plan's days still counts
+    towards it (ADR-0050, ADR-0058).
     """
     window = _window_for(user, first_day, last_day)
-    tasks = service.list(limit=limit, offset=offset, window=window)
+    tasks = service.list(limit=limit, offset=offset, window=window, plan_id=plan_id)
     return Page(items=[TaskRead.model_validate(task) for task in tasks], limit=limit, offset=offset)
 
 
