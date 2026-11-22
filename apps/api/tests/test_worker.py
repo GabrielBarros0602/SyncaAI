@@ -19,10 +19,10 @@ from sqlalchemy import delete, func, insert, select, update
 
 from syncaai.config import get_settings
 from syncaai.db import get_session_factory
-from syncaai.models import AiJob, AiUsage, PlanDraft, User
+from syncaai.models import MAX_QUEUED, AiJob, AiUsage, PlanDraft, User
 from syncaai.planning.context import PROMPT_VERSION, PlanPrompt
 from syncaai.planning.generator import Generation, PlanGenerator, Repair, SampleGenerator
-from syncaai.services.ai_queue import GAVE_UP, MAX_QUEUED, enqueue_plan
+from syncaai.services.ai_queue import GAVE_UP, enqueue_plan
 from syncaai.services.plan_drafts import expire_drafts
 from syncaai.services.purge import PurgeReport
 from syncaai.worker import PURGE_INTERVAL_SECONDS, SWEEP_INTERVAL_SECONDS, Worker, listen_url, main

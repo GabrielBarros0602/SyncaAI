@@ -21,8 +21,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from syncaai.errors import PlanInProgressError
-from syncaai.models import MAX_JOB_ATTEMPTS, AiJob
+from syncaai.models import MAX_JOB_ATTEMPTS, MAX_QUEUED, AiJob
 from syncaai.planning.context import PROMPT_VERSION
+from syncaai.repositories.plans import can_no_longer_run
 
 CHANNEL = "ai_jobs"
 ONE_IN_PROGRESS = "ux_ai_jobs_one_in_progress"
@@ -30,9 +31,6 @@ ONE_IN_PROGRESS = "ux_ai_jobs_one_in_progress"
 # How long a claim holds a job before another worker may take it back (ADR-0031). A worker
 # that dies leaves its lock to run out, which is the whole of the visibility timeout.
 VISIBILITY_TIMEOUT = timedelta(seconds=120)
-# A job still waiting after this fails rather than running late against a calendar that has
-# moved on: the queue waits out a provider outage, but not for ever (ADR-0006, ADR-0031).
-MAX_QUEUED = timedelta(minutes=15)
 
 # Read by the person whose plan it was, next to the manual retry ADR-0005 promises.
 WAITED_TOO_LONG = "The plan waited too long to start. Ask for it again."
@@ -107,29 +105,35 @@ def claim_next(session: Session) -> AiJob | None:
     return session.scalars(statement).one_or_none()
 
 
-def sweep(session: Session) -> list[UUID]:
-    """Fail every job that can no longer run, and return their ids. The caller commits.
+def failure_of(stored_status: str) -> str:
+    """The sentence a job that can no longer run fails with: it never started, or every
+    attempt it had was spent (ADR-0031)."""
+    return WAITED_TOO_LONG if stored_status == "queued" else GAVE_UP
+
+
+def sweep(session: Session, *, owner: UUID | None = None) -> list[UUID]:
+    """Fail every job that can no longer run, and return their ids; only ``owner``'s when
+    one is given. The caller commits.
 
     The two conditions are the complements of the claim's, so a job is either ready, or
-    failed here, or still in a worker's hands: never two of them at once.
+    failed here, or still in a worker's hands: never two of them at once. They are the ones
+    a read already calls failed by (ADR-0057), so recording a job changes how it is stored,
+    never how it reads.
     """
-    now = func.now()
-    waited_too_long = and_(AiJob.status == "queued", AiJob.created_at <= now - MAX_QUEUED)
-    out_of_attempts = and_(
-        AiJob.status == "running",
-        AiJob.locked_until < now,
-        AiJob.attempts >= MAX_JOB_ATTEMPTS,
-    )
     statement = (
         update(AiJob)
-        .where(or_(waited_too_long, out_of_attempts))
+        .where(can_no_longer_run())
         .values(
             status="failed",
-            failure_reason=case((AiJob.status == "queued", WAITED_TOO_LONG), else_=GAVE_UP),
-            finished_at=now,
+            failure_reason=case(
+                (AiJob.status == "queued", failure_of("queued")), else_=failure_of("running")
+            ),
+            finished_at=func.now(),
             locked_until=None,
         )
         .returning(AiJob.id)
         .execution_options(synchronize_session=False)
     )
+    if owner is not None:
+        statement = statement.where(AiJob.user_id == owner)
     return list(session.scalars(statement).all())

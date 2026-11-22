@@ -20,9 +20,9 @@ from sqlalchemy import delete, func, update
 
 from syncaai.api.dependencies import get_current_user_id
 from syncaai.db import get_session_factory
-from syncaai.models import AiJob, AiUsage, PlanDraft, Task, User
+from syncaai.models import MAX_JOB_ATTEMPTS, MAX_QUEUED, AiJob, AiUsage, PlanDraft, Task, User
 from syncaai.planning.generator import FakeGenerator
-from syncaai.services.ai_queue import VISIBILITY_TIMEOUT
+from syncaai.services.ai_queue import VISIBILITY_TIMEOUT, sweep
 from syncaai.services.plan_jobs import run_plan_job
 
 pytestmark = pytest.mark.integration
@@ -168,6 +168,73 @@ def test_the_requests_are_paged_by_limit_and_offset(
         1,
     )
     assert [item["job_id"] for item in past_the_end["items"]] == [done]
+
+
+def _strand(job_id: str, **values: object) -> None:
+    """Where the clock leaves a job when no worker runs to sweep it."""
+    with get_session_factory()() as session:
+        session.execute(update(AiJob).where(AiJob.id == uuid.UUID(job_id)).values(**values))
+        session.commit()
+
+
+@pytest.mark.parametrize(
+    ("stranded", "sentence"),
+    [
+        (
+            {"created_at": func.now() - MAX_QUEUED - timedelta(seconds=1)},
+            "The plan waited too long to start. Ask for it again.",
+        ),
+        (
+            {
+                "status": "running",
+                "attempts": MAX_JOB_ATTEMPTS,
+                "locked_until": func.now() - timedelta(seconds=1),
+            },
+            f"The plan could not be made in {MAX_JOB_ATTEMPTS} tries. Ask for it again.",
+        ),
+    ],
+    ids=["queued too long", "out of attempts"],
+)
+def test_a_request_no_worker_will_take_reads_as_failed_before_the_sweep(
+    app: FastAPI,
+    client: TestClient,
+    people: list[uuid.UUID],
+    stranded: dict[str, object],
+    sentence: str,
+) -> None:
+    """Read and listed as failed, with the sentence the sweep will write, while it is still
+    stored as it was: without a worker it would otherwise be followed for ever (ADR-0057)."""
+    _as(app, people[0])
+    job = _ask(client)
+    _strand(job, **stranded)
+
+    read = client.get(f"{JOBS}/{job}").json()
+
+    assert (read["status"], read["failure_reason"]) == ("failed", sentence)
+    assert client.get(JOBS, params={"status": "failed"}).json()["items"] == [read]
+    assert client.get(JOBS, params={"status": ["queued", "running"]}).json()["items"] == []
+    with get_session_factory()() as session:
+        assert session.get_one(AiJob, uuid.UUID(job)).status != "failed"
+        assert sweep(session, owner=people[0]) == [uuid.UUID(job)]
+        session.commit()
+    # Recording it changes how it is stored, never how it reads.
+    assert client.get(f"{JOBS}/{job}").json() == read
+
+
+def test_a_request_still_inside_its_time_reads_as_stored(
+    app: FastAPI, client: TestClient, people: list[uuid.UUID]
+) -> None:
+    """Short of the bound, a queued request is still a worker's to take."""
+    _as(app, people[0])
+    job = _ask(client)
+    _strand(job, created_at=func.now() - MAX_QUEUED + timedelta(seconds=30))
+
+    read = client.get(f"{JOBS}/{job}").json()
+
+    assert (read["status"], read["failure_reason"]) == ("queued", None)
+    assert [
+        item["job_id"] for item in client.get(JOBS, params={"status": "queued"}).json()["items"]
+    ] == [job]
 
 
 def test_someone_else_s_requests_are_not_listed(
@@ -432,3 +499,4 @@ def test_a_task_names_the_plan_it_was_committed_from(
         tasks[1]: plan,
         by_hand.json()["id"]: None,
     }
+

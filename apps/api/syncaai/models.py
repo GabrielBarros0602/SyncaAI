@@ -24,7 +24,7 @@ join, not a duplicated column.
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -75,6 +75,9 @@ DEFAULT_BLOCK_MINUTES = 60
 
 # How many times a job may be claimed. A worker that dies mid-job spends one (ADR-0031).
 MAX_JOB_ATTEMPTS = 3
+# A job still waiting after this fails rather than running late against a calendar that has
+# moved on: the queue waits out a provider outage, but not for ever (ADR-0006, ADR-0031).
+MAX_QUEUED = timedelta(minutes=15)
 
 # Deterministic constraint names. Without them PostgreSQL invents names, which means a
 # downgrade cannot drop what an upgrade created and every future ALTER becomes guesswork.
