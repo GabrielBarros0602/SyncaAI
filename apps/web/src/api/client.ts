@@ -33,10 +33,21 @@ export class ApiError extends Error {
      * is cautious and the person waits longer than they had to.
      */
     readonly retryAfter: number | null = null,
+    /**
+     * Each step a plan's commit was refused for, with what to change (ADR-0030). Empty for
+     * every other refusal. Kept so the review can mark them all at once, not one per attempt.
+     */
+    readonly items: RefusedStep[] = [],
   ) {
     super(detail);
     this.name = "ApiError";
   }
+}
+
+export interface RefusedStep {
+  id: string;
+  title: string;
+  reason: string;
 }
 
 /** Raised when the session is gone and the caller has to become anonymous. */
@@ -138,21 +149,33 @@ function isFieldProblem(value: unknown): value is FieldProblem {
  * "Unprocessable Content", which tells the user nothing about which field to fix.
  */
 async function detailOf(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { detail?: unknown };
-    const { detail } = body;
+  return (await refusalOf(response)).detail;
+}
 
-    if (typeof detail === "string") return detail;
+/** The sentence, and the steps a plan's commit names, which only that refusal carries. */
+async function refusalOf(response: Response): Promise<{ detail: string; items: RefusedStep[] }> {
+  try {
+    const body = (await response.json()) as { detail?: unknown; items?: unknown };
+    const { detail } = body;
+    const items = Array.isArray(body.items) ? body.items.filter(isRefusedStep) : [];
+
+    if (typeof detail === "string") return { detail, items };
 
     if (Array.isArray(detail)) {
       const messages = detail.filter(isFieldProblem).map(describeProblem);
-      if (messages.length > 0) return messages.join(" ");
+      if (messages.length > 0) return { detail: messages.join(" "), items };
     }
 
-    return response.statusText;
+    return { detail: response.statusText, items };
   } catch {
-    return response.statusText;
+    return { detail: response.statusText, items: [] };
   }
+}
+
+function isRefusedStep(value: unknown): value is RefusedStep {
+  if (typeof value !== "object" || value === null) return false;
+  const step = value as Record<string, unknown>;
+  return typeof step.id === "string" && typeof step.title === "string" && typeof step.reason === "string";
 }
 
 function describeProblem(problem: FieldProblem): string {
@@ -201,10 +224,12 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (!response.ok) {
     const header = response.headers.get("Retry-After");
     const retryAfter = header === null ? null : Number.parseInt(header, 10);
+    const { detail, items } = await refusalOf(response);
     throw new ApiError(
       response.status,
-      await detailOf(response),
+      detail,
       Number.isFinite(retryAfter) ? retryAfter : null,
+      items,
     );
   }
   if (response.status === 204) return undefined as T;
