@@ -6,9 +6,10 @@
  * from the server after a reload; a request is read on the decided pace and not while the tab
  * is hidden; a refusal says when to ask again; a change to a step sends only what moved and
  * shows the server's refusal where it applies; a removed step is offered back and the server
- * hears of it only when the offer ends or before the plan is approved; a commit retried after a
- * lost answer sends the same key, every step a commit is refused for is shown at once, and a
- * plan read again after a refusal may turn out to be closed.
+ * hears of it only when the offer ends or before the plan is approved; a plan written by hand is
+ * nothing on the server until its first step, and is named then; a commit retried after a lost
+ * answer sends the same key, every step a commit is refused for is shown at once, and a plan
+ * read again after a refusal may turn out to be closed.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
@@ -318,7 +319,10 @@ describe("asking for a plan", () => {
 
     write(REQUEST);
     fireEvent.click(screen.getByRole("button", { name: "Make a plan" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Open the plan you have" }));
+    const alert = await screen.findByRole("alert");
+    // Writing one by hand would be refused the same way: one plan at a time.
+    expect(within(alert).queryByRole("button", { name: "Write it myself" })).toBeNull();
+    fireEvent.click(within(alert).getByRole("button", { name: "Open the plan you have" }));
 
     expect(await screen.findByRole("heading", { name: "Review the plan" })).toBeDefined();
   });
@@ -913,6 +917,190 @@ describe("discarding", () => {
     });
     expect(screen.getByRole("button", { name: "Plan" })).toBeDefined();
     expect(screen.queryByText("10:00 – 10:30 · proposed")).toBeNull();
+  });
+});
+
+describe("writing a plan by hand", () => {
+  const handPlan = (items: PlanItem[]): Plan =>
+    aPlan({ id: "h1", job_id: null, request: "Move rooms", discarded: [], items });
+  const boxes = aStep("boxes", {
+    title: "Pack the boxes",
+    minutes: 60,
+    start_at: `${THURSDAY}T15:00:00Z`,
+    state: "placed",
+  });
+
+  async function startWriting(): Promise<HTMLElement> {
+    await screen.findByRole("heading", { name: "Ask for a plan" });
+    fireEvent.click(screen.getByRole("button", { name: "Write it myself" }));
+    return screen.getByRole("form", { name: "New step" });
+  }
+
+  it("opens an empty plan on what it is for, sends nothing, and makes it with its first step", async () => {
+    let made: unknown = null;
+    let step: unknown = null;
+    serve(null, {
+      "POST /plans": (init) => {
+        made = bodyOf(init);
+        return json(201, handPlan([]));
+      },
+      "POST /plans/h1/items": (init) => {
+        step = bodyOf(init);
+        return json(201, boxes);
+      },
+      "GET /plans/h1": () => json(200, handPlan([boxes])),
+    });
+    renderAt("/plan");
+    await screen.findByRole("heading", { name: "Ask for a plan" });
+    fireEvent.change(screen.getByLabelText("Days ahead"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Write it myself" }));
+
+    expect(screen.getByRole("heading", { name: "Your plan" })).toBeDefined();
+    const purpose = screen.getByLabelText("What it’s for");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(purpose);
+    });
+    expect(screen.getByText(/^Covers .+ \(3 days\)\./)).toBeDefined();
+    expect(screen.getByText("0 steps, written by you")).toBeDefined();
+    expect(calls("POST", "/plans")).toHaveLength(0);
+
+    const form = screen.getByRole("form", { name: "New step" });
+    fireEvent.change(purpose, { target: { value: "  Move rooms " } });
+    fireEvent.change(within(form).getByLabelText("Title"), { target: { value: "Pack the boxes" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Add" }));
+
+    expect(
+      await screen.findByText(`Added “Pack the boxes” at ${shortDay(THURSDAY)}, 15:00, the first free time.`),
+    ).toBeDefined();
+    expect(made).toEqual({ request: "Move rooms", horizon_days: 3 });
+    expect(step).toEqual({ title: "Pack the boxes", minutes: 60, description: "" });
+    // Named as it was made: the API takes no other name, so the field is text from here.
+    expect(screen.queryByLabelText("What it’s for")).toBeNull();
+    expect(screen.getByText("Move rooms")).toBeDefined();
+    expect(screen.getByText("1 step, written by you")).toBeDefined();
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("step-boxes");
+    });
+  });
+
+  it("asks what it is for before its first step is sent", async () => {
+    serve(null);
+    renderAt("/plan");
+    const form = await startWriting();
+    const title = within(form).getByLabelText("Title");
+
+    fireEvent.change(title, { target: { value: "Pack the boxes" } });
+    title.focus();
+    fireEvent.click(within(form).getByRole("button", { name: "Add" }));
+
+    const purpose = screen.getByLabelText("What it’s for");
+    expect(screen.getByText("Write what the plan is for.")).toBeDefined();
+    expect(purpose.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(purpose);
+    expect(calls("POST", "/plans")).toHaveLength(0);
+  });
+
+  it("keeps the plan made when its first step does not arrive, and sends the step to it again", async () => {
+    let tries = 0;
+    serve(null, {
+      "POST /plans": () => json(201, handPlan([])),
+      "POST /plans/h1/items": () => {
+        tries += 1;
+        return tries === 1 ? Promise.reject(new TypeError("Failed to fetch")) : json(201, boxes);
+      },
+      "GET /plans/h1": () => json(200, handPlan([boxes])),
+    });
+    renderAt("/plan");
+    const form = await startWriting();
+    fireEvent.change(screen.getByLabelText("What it’s for"), { target: { value: "Move rooms" } });
+    fireEvent.change(within(form).getByLabelText("Title"), { target: { value: "Pack the boxes" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Add" }));
+
+    expect(await within(form).findByText("Couldn’t reach the server.")).toBeDefined();
+    expect(within(form).getByLabelText<HTMLInputElement>("Title").value).toBe("Pack the boxes");
+    expect(screen.getByText("Move rooms")).toBeDefined();
+    fireEvent.click(within(form).getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByText("1 step, written by you")).toBeDefined();
+    expect(calls("POST", "/plans")).toHaveLength(1);
+    expect(calls("POST", "/plans/h1/items")).toHaveLength(2);
+  });
+
+  it("is offered where asking was refused to spare the model", async () => {
+    serve(null, {
+      "POST /ai/plans": () =>
+        new Response(JSON.stringify({ detail: "Planning is paused until next month." }), {
+          status: 503,
+          headers: { "Content-Type": "application/json", "Retry-After": "86400" },
+        }),
+    });
+    renderAt("/plan");
+    await screen.findByRole("heading", { name: "Ask for a plan" });
+    fireEvent.change(screen.getByLabelText("What do you want to plan?"), { target: { value: REQUEST } });
+    fireEvent.click(screen.getByRole("button", { name: "Make a plan" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText("Planning is paused until next month.")).toBeDefined();
+    fireEvent.click(within(alert).getByRole("button", { name: "Write it myself" }));
+
+    expect(screen.getByLabelText("What it’s for")).toBeDefined();
+  });
+
+  it("is offered when a plan did not come, for the days that were asked for", async () => {
+    const reason = "The plan could not be made in 3 tries. Ask for it again.";
+    serve(null, {
+      "GET /ai/plans": () =>
+        json(200, page([aJob({ status: "failed", failure_reason: reason, horizon_days: 4 })])),
+    });
+    renderAt("/plan");
+    await screen.findByRole("heading", { name: "The plan didn’t come" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Write it myself" }));
+
+    expect(screen.getByRole("heading", { name: "Your plan" })).toBeDefined();
+    expect(screen.getByText(/^Covers .+ \(4 days\)\./)).toBeDefined();
+  });
+
+  it("is offered when the plan closed, and drawn over it", async () => {
+    serve(aPlan(), {
+      "POST /plans/p1/commit": () => json(409, { detail: "This plan is no longer open for review." }),
+      "GET /plans/p1": () => json(200, aPlan({ status: "expired" })),
+    });
+    renderAt("/plan");
+    fireEvent.click(await screen.findByRole("button", { name: "Approve: make 2 tasks" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Read the plan again" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Write it myself" }));
+
+    expect(screen.getByLabelText("What it’s for")).toBeDefined();
+    expect(screen.getByText(/^Covers .+ \(7 days\)\./)).toBeDefined();
+  });
+
+  it("says an empty one has nothing to approve, and discards it without the server", async () => {
+    serve(null);
+    renderAt("/plan");
+    await startWriting();
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve: make 0 tasks" }));
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText("The plan has no steps to commit. Add one, or discard the plan.")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Discard plan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(await screen.findByText("Plan discarded. Nothing was written.")).toBeDefined();
+    const writes = fetchMock.mock.calls.filter(
+      ([input, init]) => input.includes("/plans") && (init?.method ?? "GET") !== "GET",
+    );
+    expect(writes).toEqual([]);
+  });
+
+  it("has nothing an automated accessibility check can find, with what it is for missing", async () => {
+    serve(null);
+    const container = renderAt("/plan");
+    const form = await startWriting();
+    fireEvent.click(within(form).getByRole("button", { name: "Add" }));
+
+    await expectNoViolations(container);
   });
 });
 

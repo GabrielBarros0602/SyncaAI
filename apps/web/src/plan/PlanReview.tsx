@@ -10,6 +10,9 @@
  *
  * Under review, a step opens on its verbs: give it a time or edit it, remove it. What did not
  * fit this week can be sent to the days after, and a step can be added by hand.
+ *
+ * A plan can also be written by hand from the start, next to asking for one and wherever asking
+ * did not work: the same review, empty, with what it is for in place of what was asked.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -25,13 +28,14 @@ import {
   horizonHelp,
   horizonOptions,
   retryText,
+  unwrittenPlan,
   waitLine,
   waitWord,
 } from "./asking";
 import { addedText, nextWeekText, sentText } from "./editing";
 import styles from "./Plan.module.css";
 import { StepRow } from "./StepRow";
-import { countText, coverText, impactLines, precheckText, shortDate, stepNumbers } from "./steps";
+import { countText, coverText, dayCount, impactLines, precheckText, shortDate, stepNumbers } from "./steps";
 import type { PlanState } from "./usePlan";
 
 /** A refusal shown above the steps. `reread` offers to read the plan again. */
@@ -116,11 +120,23 @@ export function PlanReview({
   const pending = plan?.status === "pending" ? plan : null;
   // The form, opened from a failure or a closed plan with what it asked written in again.
   const [asking, setAsking] = useState<string | null>(null);
+  // A plan being written by hand, for the days it will cover. It is drawn over what was on
+  // screen when it began, a closed plan or none, until the server has made it.
+  const [writing, setWriting] = useState<{ days: number; over: string | null } | null>(null);
+  const reviewed =
+    pending ??
+    (writing !== null && (plan?.id ?? null) === writing.over
+      ? unwrittenPlan(toLocalDate(todayIn(timezone)), writing.days)
+      : null);
+
+  function write(days: number): void {
+    setWriting({ days, over: plan?.id ?? null });
+  }
 
   const view: View =
     state.status !== "ready"
       ? "loading"
-      : pending !== null
+      : reviewed !== null
         ? "review"
         : job !== null && job.status !== "failed"
           ? "wait"
@@ -147,7 +163,7 @@ export function PlanReview({
   }, [view]);
 
   const title =
-    view !== "review" ? TITLES[view] : pending?.job_id === null ? "Your plan" : "Review the plan";
+    view !== "review" ? TITLES[view] : reviewed?.job_id === null ? "Your plan" : "Review the plan";
 
   return (
     <div className={wide ? styles.panel : styles.view}>
@@ -174,11 +190,14 @@ export function PlanReview({
             </button>
           )}
         </div>
-        {view === "review" && pending !== null && (
+        {view === "review" && reviewed !== null && (
           <Review
-            // Another plan is another review: nothing refused or confirmed carries over.
-            key={pending.id}
-            plan={pending}
+            // Another plan is another review: nothing refused or confirmed carries over. A plan
+            // written by hand stays one review as the server makes it, so a first step refused
+            // after the plan was made keeps what was typed. Only one is ever on screen: it
+            // closes on approve and discard, and a closed one is not a review.
+            key={reviewed.job_id ?? "by-hand"}
+            plan={reviewed}
             state={state}
             timezone={timezone}
             focusStep={focusStep}
@@ -203,6 +222,7 @@ export function PlanReview({
             onSent={() => {
               setAsking(null);
             }}
+            onWrite={write}
           />
         )}
         {view === "failed" && job !== null && (
@@ -218,6 +238,16 @@ export function PlanReview({
                 }}
               >
                 Ask for it again
+              </button>
+              {/* For the days that were asked for, as the plan would have covered. */}
+              <button
+                type="button"
+                className={styles.button}
+                onClick={() => {
+                  write(job.horizon_days);
+                }}
+              >
+                Write it myself
               </button>
             </div>
           </div>
@@ -241,6 +271,15 @@ export function PlanReview({
                 }}
               >
                 Ask for a new plan
+              </button>
+              <button
+                type="button"
+                className={styles.button}
+                onClick={() => {
+                  write(dayCount(plan));
+                }}
+              >
+                Write it myself
               </button>
             </div>
           </>
@@ -304,16 +343,21 @@ interface AskRefusal {
   retry: string | null;
   /** One plan at a time: the one there is can be opened from here. */
   open: boolean;
+  /** Refused to guard the model, which a plan written by hand never reaches. */
+  byHand: boolean;
 }
 
 function refusalOfAsk(problem: unknown, timezone: string): AskRefusal {
   if (!(problem instanceof ApiError)) {
-    return { detail: "Couldn’t reach the server.", retry: null, open: false };
+    return { detail: "Couldn’t reach the server.", retry: null, open: false, byHand: false };
   }
   return {
     detail: problem.detail,
     retry: problem.retryAfter === null ? null : retryText(problem.retryAfter, timezone),
     open: problem.status === 409,
+    // The rate limits and the month's allowance (429), the paused month and the breaker (503):
+    // none of them reads a plan written by hand (ADR-0047).
+    byHand: problem.status === 429 || problem.status === 503,
   };
 }
 
@@ -325,10 +369,12 @@ interface AskFormProps {
   initial: string;
   /** Queued: what was asked for again is asked, and a failure of it shows as one. */
   onSent: () => void;
+  /** Write the plan by hand instead, for the days chosen here. */
+  onWrite: (days: number) => void;
 }
 
 /** What to plan and for how many days. Sent, the server queues it or says why not. */
-function AskForm({ state, timezone, daysOff, initial, onSent }: AskFormProps): React.ReactNode {
+function AskForm({ state, timezone, daysOff, initial, onSent, onWrite }: AskFormProps): React.ReactNode {
   const id = useId();
   const field = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState(initial);
@@ -437,11 +483,31 @@ function AskForm({ state, timezone, daysOff, initial, onSent }: AskFormProps): R
               Open the plan you have
             </button>
           )}
+          {refusal.byHand && (
+            <button
+              type="button"
+              className={styles.button}
+              onClick={() => {
+                onWrite(days);
+              }}
+            >
+              Write it myself
+            </button>
+          )}
         </div>
       )}
       <div className={styles.actions}>
         <button type="submit" className={styles.primary} aria-busy={busy}>
           {busy ? "Sending…" : "Make a plan"}
+        </button>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => {
+            onWrite(days);
+          }}
+        >
+          Write it myself
         </button>
       </div>
     </form>
@@ -478,6 +544,12 @@ function Review({
   onDiscarded,
 }: ReviewProps): React.ReactNode {
   const discardedHeading = useId();
+  const purposeId = useId();
+  // Written by hand and not made yet: the server makes it with its first step.
+  const unwritten = plan.id === "";
+  const [purpose, setPurpose] = useState("");
+  const [purposeTried, setPurposeTried] = useState(false);
+  const purposeField = useRef<HTMLInputElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [busy, setBusy] = useState<"approve" | "discard" | "reread" | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -488,7 +560,12 @@ function Review({
   // One step open at a time, as one row is in the week; and in it, perhaps its form.
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  // A plan to write opens on what it is for, with the form for its first step under it. The
+  // form takes focus as it mounts, and the field above takes it back after.
+  const [adding, setAdding] = useState(unwritten);
+  useEffect(() => {
+    if (unwritten) purposeField.current?.focus();
+  }, [unwritten]);
   const [sending, setSending] = useState(false);
   const addButton = useRef<HTMLButtonElement>(null);
   // Where focus goes once the change it follows is on screen: a step's row by its id, or the
@@ -545,8 +622,20 @@ function Review({
     focusAfter.current = next === undefined ? "add" : `step-${next.id}`;
   }
 
+  const purposeBad = purposeTried && purpose.trim() === "";
+
+  /** The plan is named as it is made, and the API takes no name after (decided on 2026-11-22). */
+  function purposeReady(): boolean {
+    setPurposeTried(true);
+    if (purpose.trim() !== "") return true;
+    purposeField.current?.focus();
+    return false;
+  }
+
   async function add(step: NewPlanItem): Promise<void> {
-    const added = await state.add(step);
+    const added = unwritten
+      ? await state.write(purpose.trim(), dayCount(plan), step)
+      : await state.add(step);
     setAdding(false);
     onSay(addedText(added, timezone));
     focusAfter.current = `step-${added.id}`;
@@ -567,6 +656,16 @@ function Review({
 
   async function approve(): Promise<void> {
     if (busy !== null) return;
+    if (unwritten) {
+      // The server's sentence for a plan with no step (api/errors.py), with no plan to send.
+      setRefusal({
+        detail: "The plan has no steps to commit. Add one, or discard the plan.",
+        steps: new Map(),
+        order: [],
+        reread: false,
+      });
+      return;
+    }
     setBusy("approve");
     setRefusal(null);
     try {
@@ -583,7 +682,8 @@ function Review({
     if (busy !== null) return;
     setBusy("discard");
     try {
-      await state.discard();
+      // Not made yet, it is nowhere but here.
+      if (!unwritten) await state.discard();
       onDiscarded();
     } catch (problem) {
       setConfirming(false);
@@ -667,7 +767,28 @@ function Review({
   return (
     <>
       <div className={styles.asked}>
-        {plan.job_id === null ? (
+        {unwritten ? (
+          <div className={styles.field}>
+            <label htmlFor={purposeId} className={styles.label}>
+              What it’s for
+            </label>
+            <input
+              ref={purposeField}
+              id={purposeId}
+              className={cx(styles.input, purposeBad && styles.fieldBad)}
+              maxLength={MAX_REQUEST}
+              value={purpose}
+              aria-invalid={purposeBad}
+              aria-describedby={`${purposeId}-error`}
+              onChange={(event) => {
+                setPurpose(event.target.value);
+              }}
+            />
+            <span id={`${purposeId}-error`} className={styles.fieldError}>
+              {purposeBad ? "Write what the plan is for." : ""}
+            </span>
+          </div>
+        ) : plan.job_id === null ? (
           <>
             <span className={styles.label}>What it’s for</span>
             <p className={styles.request}>{plan.request}</p>
@@ -771,6 +892,7 @@ function Review({
       {adding ? (
         <AddStep
           blockMinutes={blockMinutes}
+          ready={unwritten ? purposeReady : undefined}
           onAdd={add}
           onCancel={() => {
             setAdding(false);

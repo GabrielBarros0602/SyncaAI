@@ -20,11 +20,16 @@ const MAX_DESCRIPTION = 500;
 interface Props {
   /** The person's preferred block, in minutes. */
   blockMinutes: number;
+  /**
+   * Whatever above the form the step needs first, checked when it is sent: false when it is
+   * missing, having said so and taken focus there, as the first field wrong on the page.
+   */
+  ready?: (() => boolean) | undefined;
   onAdd: (step: NewPlanItem) => Promise<void>;
   onCancel: () => void;
 }
 
-export function AddStep({ blockMinutes, onAdd, onCancel }: Props): React.ReactNode {
+export function AddStep({ blockMinutes, ready, onAdd, onCancel }: Props): React.ReactNode {
   const id = useId();
   const [fields, setFields] = useState({ title: "", duration: formatCompact(blockMinutes), description: "" });
   const [tried, setTried] = useState(false);
@@ -54,10 +59,12 @@ export function AddStep({ blockMinutes, onAdd, onCancel }: Props): React.ReactNo
     event.preventDefault();
     if (adding) return;
     setTried(true);
+    const above = ready?.() ?? true;
     if (problems.title !== null || duration === null) {
-      (problems.title !== null ? titleField : durationField).current?.focus();
+      if (above) (problems.title !== null ? titleField : durationField).current?.focus();
       return;
     }
+    if (!above) return;
     setAdding(true);
     onAdd({ title, minutes: duration, description: fields.description.trim() }).catch((problem: unknown) => {
       setRefusal(problem instanceof ApiError ? problem.detail : "Couldn’t reach the server.");
