@@ -539,8 +539,9 @@ O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 1. ✅ O que a tela lê e a API não dava (ADR-0058), e o pedido que nenhum worker vai pegar lido
    como falho (ADR-0057). Só servidor. A frase sob cada passo sem horário veio depois, numa
    PR só de servidor antes da 2 (ADR-0059).
-2. O botão Plan e a revisão, só leitura, com Approve e Discard: a vista inteira abaixo de
-   1100px, o painel de 440px a partir dali, os passos propostos tracejados na semana.
+2. ✅ O botão Plan e a revisão, só leitura, com Approve e Discard: a vista inteira abaixo de
+   1640px, o painel de 440px a partir dali, os passos propostos tracejados na semana. O desenho
+   abria o painel a partir de 1100px; a medida está abaixo.
 3. Pedir e esperar: o formulário, as recusas com a hora do `Retry-After`, o polling, as três
    falhas e o aviso de "ready" que fica até a pessoa agir ou fechá-lo.
 4. Editar na revisão: dar horário, editar, remover, mandar para a semana seguinte, acrescentar
@@ -588,8 +589,19 @@ para o que a pessoa escreve (ADR-0032, ADR-0037), e não de 15 ao bloco; um pass
 não tem "after step N", porque não tem pré-requisito (ADR-0047); e o "9 came back" sai, porque
 nenhuma linha guarda quantos passos a resposta trouxe.
 
-**A medir na PR 2:** o painel de 440px a 1100px deixa as colunas da semana com uns 90px,
-contra os 107px que o desenho mostra a 1280px.
+**Medido na PR 2 e decidido em 2026-11-22: o painel só abre onde a semana inteira cabe.**
+Com as colunas divididas como no desenho, cada uma fica com 101px a 1280px e 76px a 1100px. A
+1100px o cabeçalho do domingo já transborda com o texto a 100%; com o texto a 200%, o de
+qualquer dia transborda abaixo de uns 1640px. As sete colunas no piso de 155px, o vão e o
+painel pedem 1617px, mais a barra de rolagem (15px no Chrome do Windows), e o painel abre a
+partir de 1640px. Abaixo disso a revisão ocupa a tela, como abaixo de 1100px. As outras opções
+eram manter o piso com a semana rolando de lado ao lado do painel, e o desenho como está. A
+razão é do Gabriel: todos os dias sempre na tela, para que uma alteração da IA nunca fique num
+dia fora da vista. Daqui em diante, o princípio vale para a tela do plano.
+
+**Para o Gabriel decidir depois:** o mesmo princípio alcança a rolagem que já existe sem o
+painel. Entre 1100 e uns 1180px a semana rola de lado dentro de si, para manter o piso de
+155px (2026-11-01), e um dia pode ficar fora da vista. Ficou fora da PR 2.
 
 ---
 
