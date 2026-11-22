@@ -2,7 +2,9 @@
 
 **Status:** Accepted; decisions 1 and 5 amended by
 [ADR-0036](0036-a-job-s-answers-are-rows-of-their-own.md) — the raw answers are rows of their
-own table, up to two per job
+own table, up to two per job; decision 2 amended by
+[ADR-0057](0057-a-request-no-worker-will-take-reads-as-failed.md) — a job that can no longer
+run reads as failed before the sweep records it, and a person's request records their own
 **Date:** 2026-10-23
 **Deciders:** Gabriel Barros
 
