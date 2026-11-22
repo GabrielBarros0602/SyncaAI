@@ -17,6 +17,7 @@ import { useLayout, useReviewBesideWeek } from "../lib/useLayout";
 import type { NewTask, Task, TaskChanges } from "../api/types";
 import { PlanButton, planState } from "../plan/PlanButton";
 import { PlanReview } from "../plan/PlanReview";
+import { proposedByDay } from "../plan/steps";
 import { usePlan } from "../plan/usePlan";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
@@ -713,6 +714,7 @@ export function WeekScreen(): React.ReactNode {
   }
 
   const timezone = week.me.timezone;
+  const proposed = proposedByDay(plan.plan, timezone);
 
   async function saveTask(taskId: string, changes: TaskChanges, sentence?: string): Promise<void> {
     await week.update(taskId, changes);
@@ -809,6 +811,8 @@ export function WeekScreen(): React.ReactNode {
             timezone={timezone}
             onToggle={week.toggle}
             onChecklist={week.checklist}
+            proposed={proposed.get(capacity.day) ?? []}
+            onOpenStep={openPlan}
           />
         )}
         {newTask}
@@ -857,6 +861,8 @@ export function WeekScreen(): React.ReactNode {
             onOpenForm={setOpenDay}
             onToggle={week.toggle}
             onChecklist={week.checklist}
+            proposed={proposed.get(capacity.day) ?? []}
+            onOpenStep={openPlan}
           />
         ))}
       </div>

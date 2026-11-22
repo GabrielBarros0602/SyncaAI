@@ -32,6 +32,7 @@ import { heavyDayOffer } from "./move";
 import { occupancyOf } from "./occupancy";
 import type { Panel } from "./RowPanels";
 import type { ChecklistChange } from "./useWeek";
+import { type Proposed, ProposedItem } from "../plan/ProposedRow";
 import list from "./DayView.module.css";
 
 const MINUTE = 60_000;
@@ -59,6 +60,10 @@ interface Props {
   timezone: string;
   onToggle: (task: Task) => Promise<void>;
   onChecklist: (taskId: string, change: ChecklistChange) => Promise<void>;
+  /** The steps of the plan under review that would land on this day (plan.dc.html). */
+  proposed?: Proposed[];
+  /** Open the review on a step. */
+  onOpenStep?: (itemId: string) => void;
 }
 
 export function DayList({
@@ -79,8 +84,16 @@ export function DayList({
   timezone,
   onToggle,
   onChecklist,
+  proposed = [],
+  onOpenStep,
 }: Props): React.ReactNode {
   const heading = useId();
+  // The rows and the plan's proposed steps, in the order they start.
+  const rows = [
+    ...tasks.map((task) => ({ task, at: Date.parse(task.start_at) })),
+    ...proposed.map((step) => ({ step, at: Date.parse(step.item.start_at) })),
+  ].sort((a, b) => a.at - b.at);
+  const added = proposed.reduce((sum, step) => sum + step.item.minutes, 0);
   const weekday = weekdayLong(capacity.weekday);
   const previousWeekday = weekdayName(((capacity.weekday + 5) % 7) + 1);
   const nextWeekday = weekdayName((capacity.weekday % 7) + 1);
@@ -145,6 +158,9 @@ export function DayList({
             />
           )}
         </div>
+        {added > 0 && (
+          <p className={list.free}>+{formatCompact(added)} proposed by your plan, not booked yet</p>
+        )}
         {warning.message !== null && <p className={list.load}>{warning.message}</p>}
       </div>
 
@@ -170,7 +186,21 @@ export function DayList({
             onGoToOwner={onGoToOwner}
           />
         )}
-        {tasks.map((task) => {
+        {rows.map((row) => {
+          if ("step" in row) {
+            const { step } = row;
+            return (
+              <ProposedItem
+                key={step.item.id}
+                {...step}
+                timezone={timezone}
+                onOpen={() => {
+                  onOpenStep?.(step.item.id);
+                }}
+              />
+            );
+          }
+          const { task } = row;
           const split = splitText(task, timezone, weekdayName(capacity.weekday), nextWeekday);
           return (
             <DayRow
