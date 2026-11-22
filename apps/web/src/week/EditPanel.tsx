@@ -170,8 +170,17 @@ export function EditPanel({
     }
 
     setSaving(true);
-    // A tag that did not exist before is worth saying: a typo would otherwise pass unseen.
-    onSave(changes, isNew ? `Saved “${title}”, and created the tag “${newTag}”.` : undefined)
+    // A tag that did not exist before is worth saying: a typo would otherwise pass unseen. In
+    // a sheet, a start on another day is too: the row leaves the one day on screen, and the
+    // notice is what says where it went and leads there (day-phone.dc.html).
+    const tagSaid = isNew ? ` Created the tag “${newTag}”.` : "";
+    const sentence =
+      sheet && fields.day !== zonedDay(task.start_at, timezone)
+        ? `“${title}” now starts ${weekdayOf(fields.day)} ${String(Number(fields.day.slice(8, 10)))}, ${clock(start ?? 0)}.${tagSaid}`
+        : isNew
+          ? `Saved “${title}”, and created the tag “${newTag}”.`
+          : undefined;
+    onSave(changes, sentence)
       .catch((problem: unknown) => {
         // The panel stays open holding what was typed. Closing it here would throw away an
         // edit over a rule the person can still satisfy by moving the task an hour.

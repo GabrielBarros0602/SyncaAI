@@ -3,8 +3,9 @@
  *
  * What they hold the screen to: which layout a width chooses, that the day on screen can be
  * changed three ways and always says which day it is, that the week at a glance shows the
- * server's figures or none, and that the bar between days never goes under a notice. Whether
- * any of it fits the width it was chosen for is measured in a browser, not here.
+ * server's figures or none, that the bar between days never goes under a notice, and that a
+ * notice about a task on another day leads to its row. Whether any of it fits the width it
+ * was chosen for is measured in a browser, not here.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -83,15 +84,53 @@ interface Server {
   capacity?: () => Promise<Response>;
 }
 
-/** The routes the week needs, answering whichever window was asked for. */
+/**
+ * The routes the week needs, answering whichever window was asked for, and the writes to a
+ * task: a create under a new id, a change to its title or start, and a delete.
+ */
 function serve({ days = [], tasks = [], capacity }: Server = {}): void {
-  fetchMock.mockImplementation((input) => {
+  let held = tasks;
+  let created = 0;
+  fetchMock.mockImplementation((input, init) => {
+    const method = init?.method ?? "GET";
+    const body = typeof init?.body === "string" ? (JSON.parse(init.body) as Partial<Task>) : {};
     const [path = "", query = ""] = input.replace("/api/v1", "").split("?");
     if (path === "/auth/refresh") {
       return Promise.resolve(json(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 }));
     }
     if (path === "/me") return Promise.resolve(json(200, ME));
-    if (path === "/tasks") return Promise.resolve(json(200, { items: tasks, limit: 100, offset: 0 }));
+    if (path === "/tasks" && method === "POST") {
+      created += 1;
+      const start = body.start_at ?? "";
+      const minutes = body.duration_minutes ?? 60;
+      const task: Task = {
+        ...aTask(`created-${String(created)}`, "2026-08-26T00:00:00", "2026-08-26T01:00:00"),
+        title: body.title ?? "",
+        start_at: start,
+        end_at: new Date(Date.parse(start) + minutes * 60_000).toISOString(),
+        duration_minutes: minutes,
+      };
+      held = [...held, task];
+      return Promise.resolve(json(201, task));
+    }
+    if (path === "/tasks") return Promise.resolve(json(200, { items: held, limit: 100, offset: 0 }));
+    const one = /^\/tasks\/([^/]+)$/.exec(path);
+    const task = held.find((candidate) => candidate.id === one?.[1]);
+    if (task !== undefined && method === "PATCH") {
+      const start = body.start_at ?? task.start_at;
+      const next: Task = {
+        ...task,
+        title: body.title ?? task.title,
+        start_at: start,
+        end_at: new Date(Date.parse(start) + task.duration_minutes * 60_000).toISOString(),
+      };
+      held = held.map((candidate) => (candidate.id === task.id ? next : candidate));
+      return Promise.resolve(json(200, next));
+    }
+    if (task !== undefined && method === "DELETE") {
+      held = held.filter((candidate) => candidate.id !== task.id);
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
     if (path === "/tags") return Promise.resolve(json(200, { items: [], limit: 100, offset: 0 }));
     if (path === "/capacity") {
       if (capacity !== undefined) return capacity();
@@ -605,3 +644,166 @@ describe("the automated accessibility check", () => {
     await expectNoViolations(container);
   });
 });
+
+describe("a notice about a task on another day, below 1100px", () => {
+  const READ = (): Task => aTask("Read", "2026-08-26T14:00:00", "2026-08-26T15:00:00");
+  // A notice's own, not the header's "go to date".
+  const GO_TO_A_DAY = /^go to (Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/;
+
+  /**
+   * Hold back the week's next read of its tasks until released, so a notice can be pressed
+   * before the week it speaks of has arrived.
+   */
+  function holdTheReload(): () => void {
+    const answer = fetchMock.getMockImplementation() as FetchLike;
+    let release = (): void => undefined;
+    let holding = true;
+    fetchMock.mockImplementation((input, init) => {
+      if (!holding || !input.includes("/tasks?")) return answer(input, init);
+      holding = false;
+      return new Promise((resolve) => {
+        release = () => {
+          resolve(answer(input, init));
+        };
+      });
+    });
+    return () => {
+      act(() => {
+        release();
+      });
+    };
+  }
+
+  /** The row is a button in the list, and a cell of the grid from 1100px. */
+  async function moveReadTo(weekday: RegExp, row: "button" | "gridcell" = "button"): Promise<void> {
+    fireEvent.click(await screen.findByRole(row, { name: /Read/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^move/ }));
+    const panel = screen.getByRole("group", { name: "Move to another day" });
+    fireEvent.click(within(panel).getByRole("button", { name: weekday }));
+  }
+
+  it("leads to the day a task was moved to, which comes on with its row open and focused", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [READ()] });
+    renderWeek();
+    await showing("2026-08-26");
+    await moveReadTo(/^Fri,/);
+
+    await screen.findByText("Moved “Read” to Fri 28, 14:00.");
+    fireEvent.click(screen.getByRole("button", { name: "go to Fri" }));
+
+    await showing("2026-08-28");
+    const row = await screen.findByRole("button", { name: /Read/ });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(row);
+    });
+    expect(row.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.queryByText("Moved “Read” to Fri 28, 14:00.")).toBeNull();
+  });
+
+  it("waits for a moved task to arrive on its new day before focusing it", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [READ()] });
+    renderWeek();
+    await showing("2026-08-26");
+    const release = holdTheReload();
+    await moveReadTo(/^Fri,/);
+
+    // Still saving: the week that has it on Friday is on its way.
+    await screen.findByText("Moved “Read” to Fri 28, 14:00.");
+    fireEvent.click(screen.getByRole("button", { name: "go to Fri" }));
+    await showing("2026-08-28");
+    release();
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("task-Read");
+    });
+  });
+
+  it("says in the sheet's words where an edit moved the start, and leads there", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [READ()] });
+    renderWeek();
+    await showing("2026-08-26");
+    fireEvent.click(await screen.findByRole("button", { name: /Read/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^edit/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Edit task" });
+    fireEvent.change(within(sheet).getByLabelText("Start day"), { target: { value: "2026-08-27" } });
+
+    fireEvent.click(within(sheet).getByRole("button", { name: "save" }));
+
+    await screen.findByText("“Read” now starts Thu 27, 14:00.");
+    expect(screen.getByRole("button", { name: "go to Thu" })).toBeDefined();
+  });
+
+  it("leads back to the day a task was brought back to, from the day on screen now", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [aTask("Read", "2026-08-27T09:00:00", "2026-08-27T10:00:00")] });
+    renderWeek();
+    await showing("2026-08-26");
+    fireEvent.click(within(glance()).getByRole("button", { name: /^Thursday 27/ }));
+    await showing("2026-08-27");
+    fireEvent.click(await screen.findByRole("button", { name: /Read/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^delete/ }));
+    await screen.findByText("Deleted “Read” from Thu 27.");
+    fireEvent.click(within(glance()).getByRole("button", { name: /^Wednesday 26/ }));
+    await showing("2026-08-26");
+
+    const release = holdTheReload();
+    fireEvent.click(screen.getByRole("button", { name: "undo" }));
+
+    // Pressed before the week holding the task it brought back has arrived.
+    await screen.findByText("Restored “Read” on Thu 27.");
+    fireEvent.click(screen.getByRole("button", { name: "go to Thu" }));
+    await showing("2026-08-27");
+    release();
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("task-created-1");
+    });
+  });
+
+  it("offers nothing to go to for a task added to the day on screen", async () => {
+    setViewportWidth(PHONE);
+    serve();
+    renderWeek();
+    await showing("2026-08-26");
+    fireEvent.click(within(bar()).getByRole("button", { name: "+ new task" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Ler" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "save" }));
+
+    await screen.findByText(/^Added “Ler” to Wed 26/);
+    expect(screen.queryByRole("button", { name: GO_TO_A_DAY })).toBeNull();
+  });
+
+  it("offers nothing to go to from 1100px, where every day is in view", async () => {
+    serve({ tasks: [READ()] });
+    renderWeek();
+    await moveReadTo(/^Fri,/, "gridcell");
+
+    await screen.findByText("Moved “Read” to Fri 28, 14:00.");
+    expect(screen.queryByRole("button", { name: GO_TO_A_DAY })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+
+  it("is taken away by its ✕, with focus that was on it put on the day", async () => {
+    setViewportWidth(PHONE);
+    serve({ tasks: [READ()] });
+    const container = renderWeek();
+    await showing("2026-08-26");
+    await moveReadTo(/^Fri,/);
+    await screen.findByText("Moved “Read” to Fri 28, 14:00.");
+    await expectNoViolations(container);
+    const dismiss = screen.getByRole("button", { name: "Dismiss" });
+    act(() => {
+      dismiss.focus();
+    });
+
+    fireEvent.click(dismiss);
+
+    expect(screen.queryByText("Moved “Read” to Fri 28, 14:00.")).toBeNull();
+    expect(document.activeElement?.getAttribute("data-cell")).toBe("2:0");
+  });
+});
+

@@ -39,6 +39,12 @@ import styles from "./WeekScreen.module.css";
  */
 type FocusTarget = { task: string } | { newTaskOn: string } | { cell: string };
 
+/** The task a notice is about and the local date it is on now, which "go to" leads to. */
+interface About {
+  day: string;
+  task: string;
+}
+
 /** The keys the week answers to: the round's fifteen, in its order and words. */
 const SHORTCUTS: Shortcut[] = [
   { keys: ["←", "→", "↑", "↓"], label: "move between days and rows" },
@@ -111,13 +117,13 @@ export function WeekScreen(): React.ReactNode {
   const [trash, setTrash] = useState<Trash | null>(null);
   // What the region says when there is nothing to undo: a task added, moved or brought back,
   // or a tag created along the way. The newest notice replaces the last, whichever kind.
-  const [said, setSaid] = useState<{ id: number; text: string } | null>(null);
+  const [said, setSaid] = useState<{ id: number; text: string; about?: About } | null>(null);
   const notices = useRef(0);
 
-  function say(text: string): void {
+  function say(text: string, about?: About): void {
     notices.current += 1;
     setTrash(null);
-    setSaid({ id: notices.current, text });
+    setSaid({ id: notices.current, text, ...(about === undefined ? {} : { about }) });
   }
 
   useEffect(() => {
@@ -203,13 +209,14 @@ export function WeekScreen(): React.ReactNode {
   }
 
   /**
-   * The week holding a local date, with focus on that day's header.
+   * The week holding a local date, with focus on that day's header, or on a task of it.
    *
    * Counted from the Monday on screen, which is already the person's and not the browser's, so
    * the offset means what `[` and `]` mean. Rounded, because a week across a daylight saving
-   * change is an hour short or long.
+   * change is an hour short or long. A task comes on with its row open, as the drawing follows
+   * a notice to the day it names.
    */
-  function goToDate(localDate: string): void {
+  function goToDate(localDate: string, task?: string): void {
     const [year = 1970, month = 1, date = 1] = localDate.split("-").map(Number);
     const days = Math.round(
       (new Date(year, month - 1, date).getTime() - week.monday.getTime()) / 86_400_000,
@@ -218,17 +225,25 @@ export function WeekScreen(): React.ReactNode {
     const offset = week.offset + weeks;
     const day = days - weeks * 7;
     const cell = `${String(day)}:0`;
-    setOpenTask(null);
+    const target: FocusTarget = task === undefined ? { cell } : { task };
+    setOpenTask(task === undefined ? null : { id: task, panel: "open" });
     setFocus({ offset, day, cell: 0 });
     // The same week does not reload, so there is no arrival to wait for, unless the day itself
     // is not on screen yet.
     if (offset === week.offset) {
-      const header = document.querySelector<HTMLElement>(`[data-cell="${cell}"]`);
+      const header =
+        task === undefined ? document.querySelector<HTMLElement>(`[data-cell="${cell}"]`) : null;
+      // A notice can be pressed before the week it speaks of has arrived: a task still saving
+      // is on its old day, and one just brought back is not in the week at all. Its row is
+      // focused on the arrival that has it, not on the day's change.
+      const arriving =
+        task !== undefined &&
+        (week.saving.has(task) || !week.tasks.some((candidate) => candidate.id === task));
       if (header !== null) header.focus();
-      else pendingFocus.current = { target: { cell }, after: loaded - 1 };
+      else pendingFocus.current = { target, after: arriving ? loaded : loaded - 1 };
       return;
     }
-    focusOnceReloaded({ cell });
+    focusOnceReloaded(target);
     week.goTo(offset);
   }
 
@@ -243,7 +258,10 @@ export function WeekScreen(): React.ReactNode {
       const restored = await week.create(deleted.snapshot);
       // Only while nothing newer has been said: a delete or a move since would be the news.
       if (notices.current === deleted.id) {
-        say(`Restored “${deleted.title}” on ${dayLabel(deleted.day)}.`);
+        say(`Restored “${deleted.title}” on ${dayLabel(deleted.day)}.`, {
+          day: deleted.day,
+          task: restored.id,
+        });
       }
       focusOnceReloaded({ task: restored.id });
     } catch (problem) {
@@ -254,11 +272,32 @@ export function WeekScreen(): React.ReactNode {
     }
   }
 
+  // Where one day is on screen, a notice about a task on another day leads there
+  // (day-phone.dc.html): the row has left the screen, and the sentence alone would leave
+  // somebody to find the day by hand. From 1100px every day of the week is in view.
+  const away =
+    layout !== "week" && said?.about !== undefined && said.about.day !== dayKeys[current.day]
+      ? said.about
+      : null;
   const notice: Notice | null =
     trash === null
       ? said === null
         ? null
-        : { id: `${String(said.id)}:said`, text: said.text }
+        : {
+            id: `${String(said.id)}:said`,
+            text: said.text,
+            ...(away === null
+              ? {}
+              : {
+                  action: {
+                    label: `go to ${weekdayOf(away.day)}`,
+                    run: () => {
+                      setSaid(null);
+                      goToDate(away.day, away.task);
+                    },
+                  },
+                }),
+          }
       : trash.failure !== null
         ? {
             id: `${String(trash.id)}:refused`,
@@ -540,7 +579,14 @@ export function WeekScreen(): React.ReactNode {
 
   async function saveTask(taskId: string, changes: TaskChanges, sentence?: string): Promise<void> {
     await week.update(taskId, changes);
-    if (sentence !== undefined) say(sentence);
+    if (sentence !== undefined) {
+      say(
+        sentence,
+        changes.start_at === undefined
+          ? undefined
+          : { day: zonedDay(changes.start_at, timezone), task: taskId },
+      );
+    }
     // Back to the resting panel rather than shut. The row stays where the reader was, and the
     // change they just made is on it — on another day, after a move.
     setOpenTask({ id: taskId, panel: "open" });
@@ -579,7 +625,7 @@ export function WeekScreen(): React.ReactNode {
       onCreate={async (task, sentence) => {
         const created = await week.create(task);
         setOpenDay(null);
-        say(sentence);
+        say(sentence, { day: zonedDay(task.start_at, timezone), task: created.id });
         // On the row it made, which is where somebody looks next, rather than back on
         // the button that opened the dialog.
         focusOnceReloaded({ task: created.id });
