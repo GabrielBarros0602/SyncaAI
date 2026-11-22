@@ -10,6 +10,7 @@
  * screen in the moment between the write's answer and the reload's.
  */
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
@@ -137,9 +138,11 @@ function holdReads(server: Server): () => Promise<void> {
 
 function renderWeek(): void {
   render(
-    <SessionProvider>
-      <WeekScreen />
-    </SessionProvider>,
+    <MemoryRouter>
+      <SessionProvider>
+        <WeekScreen />
+      </SessionProvider>
+    </MemoryRouter>,
   );
 }
 

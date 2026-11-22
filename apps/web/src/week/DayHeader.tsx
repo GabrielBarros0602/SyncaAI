@@ -1,7 +1,7 @@
 /**
  * The top of the screen below 1100px, where one day is on screen (day-phone.dc.html).
  *
- * Below 640px it is three lines, as a phone is held: the name, Today and Menu; the week with
+ * Below 640px it is three lines, as a phone is held: the name, Today, Plan and Menu; the week with
  * its arrows; the week at a glance, passed in, and under it the zone every day is read in. From
  * 640px it is one line that wraps, with the zone shortened to its offset.
  *
@@ -44,6 +44,13 @@ interface Props {
   onBack: () => void;
   onGoToDate: (localDate: string) => void;
   onSignOut: () => void;
+  /** The Plan button, beside Menu at every width (plan.dc.html). */
+  plan?: React.ReactNode;
+  /**
+   * The plan is under review in place of the day: the top line alone, as the drawing has it,
+   * since the week's arrows and the day's date would move nothing on screen.
+   */
+  reviewing?: boolean;
   /** The week at a glance, drawn under the week below 640px. */
   children?: React.ReactNode;
 }
@@ -95,6 +102,8 @@ export function DayHeader({
   onBack,
   onGoToDate,
   onSignOut,
+  plan,
+  reviewing = false,
   children,
 }: Props): React.ReactNode {
   const zone = me === null ? null : zoneSentence(me.timezone, days, shown);
@@ -143,12 +152,25 @@ export function DayHeader({
   );
   const menu = me !== null && <Menu email={me.email} timezone={me.timezone} onSignOut={onSignOut} />;
 
+  if (reviewing) {
+    return (
+      <header className={styles.narrow}>
+        <div className={styles.top}>
+          <span className={styles.wordmark}>SyncaAI</span>
+          {plan}
+          {menu}
+        </div>
+      </header>
+    );
+  }
+
   if (layout === "day") {
     return (
       <header className={styles.narrow}>
         <div className={styles.top}>
           <span className={styles.wordmark}>SyncaAI</span>
           {todayButton}
+          {plan}
           {menu}
         </div>
         <nav aria-label="Weeks" className={styles.weeks}>
@@ -169,6 +191,7 @@ export function DayHeader({
       {todayButton}
       <DateSheet today={today} onGoToDate={onGoToDate} onBack={onBack} />
       <span className={styles.zoneShort}>{zone?.short}</span>
+      {plan}
       {menu}
     </header>
   );

@@ -5,8 +5,8 @@
  * access token in memory, a reload starts knowing nothing, and guessing "signed out" would
  * flash the login screen at somebody who is perfectly well signed in (ADR-0021).
  *
- * The routes are few on purpose, one per page that exists (ADR-0052). Settings, a plan and
- * the reset link join as their screens are built; an address that names nothing lands on
+ * The routes are few on purpose, one per page that exists (ADR-0052). Settings and the reset
+ * link join as their screens are built; an address that names nothing lands on
  * the week rather than on an empty page.
  */
 import { Navigate, Route, Routes } from "react-router";
@@ -40,6 +40,8 @@ export function App(): React.ReactNode {
         {/* The confirmation link. AuthScreen reads its token at load and takes it out of the
             address, so this path is only ever left holding the screen it opened. */}
         <Route path="/verify" element={<Home />} />
+        {/* The plan under review: beside the week from 1100px, in place of the day below. */}
+        <Route path="/plan" element={<Home />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

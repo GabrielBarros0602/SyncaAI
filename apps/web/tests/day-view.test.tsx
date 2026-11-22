@@ -8,6 +8,7 @@
  * fits the width it was chosen for is measured in a browser, not here.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
@@ -143,9 +144,11 @@ function serve({ days = [], tasks = [], capacity }: Server = {}): void {
 
 function renderWeek(): HTMLElement {
   const { container } = render(
-    <SessionProvider>
-      <WeekScreen />
-    </SessionProvider>,
+    <MemoryRouter>
+      <SessionProvider>
+        <WeekScreen />
+      </SessionProvider>
+    </MemoryRouter>,
   );
   return container;
 }

@@ -1,9 +1,9 @@
 /**
  * The top of the week: which week it is, the way to the others, and the Menu.
  *
- * As week-desktop.dc.html draws it, with two departures the base already made (ADR-0052): who
- * is signed in, the zone and signing out live in the Menu, and the Plan button arrives with
- * S8.
+ * As week-desktop.dc.html draws it, with the departure the base already made (ADR-0052): who
+ * is signed in, the zone and signing out live in the Menu. The Plan button sits beside it, as
+ * plan.dc.html draws it.
  *
  * The range is the page's heading. It is what changes when `[` or `]` is pressed, so it is
  * what a screen reader should be able to find, and the router puts focus on it on arrival.
@@ -32,6 +32,10 @@ interface Props {
   /** Open the week holding a local date, with focus on that day. */
   onGoToDate: (localDate: string) => void;
   onSignOut: () => void;
+  /** The Plan button, beside Menu. */
+  plan?: React.ReactNode;
+  /** The review has taken the page: the weeks are not on screen, so neither is their way. */
+  reviewing?: boolean;
 }
 
 export function WeekHeader({
@@ -43,6 +47,8 @@ export function WeekHeader({
   onBack,
   onGoToDate,
   onSignOut,
+  plan,
+  reviewing = false,
 }: Props): React.ReactNode {
   const form = useId();
   const toggle = useRef<HTMLButtonElement>(null);
@@ -74,6 +80,20 @@ export function WeekHeader({
     // Focus goes to the day, not back to the button: the date was asked for to act there.
     onGoToDate(date);
     setDateOpen(false);
+  }
+
+  const menu = me !== null && <Menu email={me.email} timezone={me.timezone} onSignOut={onSignOut} />;
+
+  if (reviewing) {
+    return (
+      <header className={styles.header}>
+        <span className={styles.wordmark}>SyncaAI</span>
+        <div className={styles.tools}>
+          {plan}
+          {menu}
+        </div>
+      </header>
+    );
   }
 
   return (
@@ -175,7 +195,10 @@ export function WeekHeader({
           </div>
         </nav>
       </div>
-      {me !== null && <Menu email={me.email} timezone={me.timezone} onSignOut={onSignOut} />}
+      <div className={styles.tools}>
+        {plan}
+        {menu}
+      </div>
     </header>
   );
 }

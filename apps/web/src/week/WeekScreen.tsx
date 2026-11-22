@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
@@ -12,8 +13,11 @@ import {
   weekdayOf,
   zonedDay,
 } from "../lib/time";
-import { useLayout } from "../lib/useLayout";
+import { useLayout, useReviewBesideWeek } from "../lib/useLayout";
 import type { NewTask, Task, TaskChanges } from "../api/types";
+import { PlanButton, planState } from "../plan/PlanButton";
+import { PlanReview } from "../plan/PlanReview";
+import { usePlan } from "../plan/usePlan";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayBar } from "./DayBar";
@@ -80,6 +84,18 @@ function dayLabel(localDate: string): string {
 export function WeekScreen(): React.ReactNode {
   const { signOut } = useSession();
   const week = useWeek();
+  const plan = usePlan(week.loaded);
+  // The plan under review is a page of its own, so a reload, Back and a link all find it. From
+  // 1640px it opens beside the week; below, in place of it, so the week is never on screen
+  // with days out of view.
+  const reviewing = useLocation().pathname === "/plan";
+  const beside = useReviewBesideWeek();
+  const inPlace = reviewing && !beside;
+  const navigate = useNavigate();
+  // The step a proposed row in the week asked for, which the review opens on.
+  const [focusStep, setFocusStep] = useState<string | null>(null);
+  // Below 1100px, where Approve and Discard go: the bar between days' place, under the region.
+  const [barSlot, setBarSlot] = useState<HTMLElement | null>(null);
   // Seven columns from 1100px, one day beside or under the week at a glance below (ADR-0052).
   const layout = useLayout();
   const [openDay, setOpenDay] = useState<string | null>(null);
@@ -140,6 +156,23 @@ export function WeekScreen(): React.ReactNode {
     notices.current += 1;
     setTrash(null);
     setSaid({ id: notices.current, text, ...(about === undefined ? {} : { about }) });
+  }
+
+  /** Open the review, on a step when one is named. */
+  function openPlan(step?: string): void {
+    if (reviewing) {
+      // Already open beside the week: the router has nothing to do, so the step is found here.
+      if (step !== undefined) document.getElementById(`step-${step}`)?.focus();
+      return;
+    }
+    setOpenTask(null);
+    setFocusStep(step ?? null);
+    void navigate("/plan");
+  }
+
+  function closePlan(): void {
+    setFocusStep(null);
+    void navigate("/");
   }
 
   useEffect(() => {
@@ -383,6 +416,8 @@ export function WeekScreen(): React.ReactNode {
       // Nor while a dialog is in front: its keys are its own. Esc on a sheet's select would
       // otherwise shut the row the sheet was opened from, and T move the week behind it.
       if (target instanceof Element && target.closest("dialog") !== null) return;
+      // Nor on a week the review has taken the place of: it is not on screen.
+      if (inPlace) return;
 
       if (event.key === "Escape") {
         setOpenDay(null);
@@ -423,6 +458,37 @@ export function WeekScreen(): React.ReactNode {
   // stays folded.
   const range = weekRange(week.monday, dates[6] as Date);
   const legend = <ShortcutLegend shortcuts={layout === "week" ? SHORTCUTS : LIST_SHORTCUTS} />;
+  const planButton = (
+    <PlanButton
+      state={planState(plan.plan)}
+      open={reviewing}
+      onToggle={() => {
+        if (reviewing) closePlan();
+        else openPlan();
+      }}
+    />
+  );
+  // Once the zone is known: the steps' times are read in it, and the review waits for it.
+  const review = week.me !== null && (
+    <PlanReview
+      wide={beside}
+      state={plan}
+      timezone={week.me.timezone}
+      focusStep={focusStep}
+      docked={layout !== "week"}
+      barSlot={barSlot}
+      onClose={closePlan}
+      onApproved={(made) => {
+        week.reload();
+        say(`${String(made)} ${made === 1 ? "task" : "tasks"} added to your week from the plan.`);
+        closePlan();
+      }}
+      onDiscarded={() => {
+        say("Plan discarded. Nothing was written.");
+        closePlan();
+      }}
+    />
+  );
   const top = (
     <>
       <WeekHeader
@@ -436,8 +502,10 @@ export function WeekScreen(): React.ReactNode {
         onSignOut={() => {
           void signOut();
         }}
+        plan={planButton}
+        reviewing={inPlace}
       />
-      {legend}
+      {!inPlace && legend}
     </>
   );
 
@@ -461,7 +529,15 @@ export function WeekScreen(): React.ReactNode {
         <>
           <main className={styles.page}>
             {top}
-            {content}
+            {inPlace ? (
+              review
+            ) : (
+              // Drawn either way, so opening the review beside the week leaves it mounted.
+              <div className={cx(styles.area, reviewing && styles.withPlan)}>
+                {content}
+                {reviewing && review}
+              </div>
+            )}
           </main>
           {region}
         </>
@@ -499,9 +575,14 @@ export function WeekScreen(): React.ReactNode {
             onSignOut={() => {
               void signOut();
             }}
+            plan={planButton}
+            reviewing={reviewing}
           >
             {layout === "day" && glance}
           </DayHeader>
+          {reviewing ? (
+            review
+          ) : (
           <div className={cx(styles.body, layout === "beside" && styles.beside)}>
             {layout === "beside" && glance}
             <div
@@ -538,20 +619,27 @@ export function WeekScreen(): React.ReactNode {
               {content}
             </div>
           </div>
+          )}
         </main>
+        {/* The region first and in the same place either way, so a notice said as the review
+            closes, "6 tasks added", is announced by the region that was already there. */}
         <div className={styles.dock}>
           {region}
-          <DayBar
-            previous={neighbour(-1)}
-            next={neighbour(1)}
-            onPrevious={() => {
-              stepDay(-1);
-            }}
-            onNext={() => {
-              stepDay(1);
-            }}
-            onNew={newTaskFromBar}
-          />
+          {reviewing ? (
+            <div ref={setBarSlot} />
+          ) : (
+            <DayBar
+              previous={neighbour(-1)}
+              next={neighbour(1)}
+              onPrevious={() => {
+                stepDay(-1);
+              }}
+              onNext={() => {
+                stepDay(1);
+              }}
+              onNew={newTaskFromBar}
+            />
+          )}
         </div>
       </div>
     );
