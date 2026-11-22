@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api, request } from "../api/client";
-import type { DayCapacity, Job, Page, Plan, PlanCommit } from "../api/types";
+import type {
+  DayCapacity,
+  Job,
+  NewPlanItem,
+  Page,
+  Plan,
+  PlanCommit,
+  PlanItem,
+  PlanItemChanges,
+} from "../api/types";
 
 /**
  * The request and the plan the screens follow, found on the server.
@@ -32,6 +41,23 @@ export interface PlanState {
   approve: () => Promise<PlanCommit>;
   /** Set the plan aside. Rejects with the server's `ApiError`. */
   discard: () => Promise<void>;
+  /** Rename, resize or move a step, then read the plan again. Rejects with the `ApiError`. */
+  change: (stepId: string, changes: PlanItemChanges) => Promise<void>;
+  /** Add a step where the plan would place it, then read the plan again. Answers the step. */
+  add: (step: NewPlanItem) => Promise<PlanItem>;
+  /** Send the steps that did not fit to the days after the plan's first week. Answers the plan. */
+  sendOn: () => Promise<Plan>;
+  /**
+   * Take a step out of the plan on screen at once, and out of the server later: when its notice
+   * ends, before Approve and Discard, or when the screen goes. The API cannot put a deleted
+   * step back, with its links, what it waits for and its time, so the undo is not sending it
+   * (decided on 2026-11-22). Another removal sends the one before.
+   */
+  remove: (stepId: string) => void;
+  /** Put back the step being removed, which the server never lost. */
+  keep: () => void;
+  /** Send the removal now. Resolves once the server has it, or at once with none. */
+  settle: () => Promise<void>;
 }
 
 // How often a request being made is read: 2s, half as long again each time, never past 30s,
@@ -79,6 +105,12 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
   // first one rather than make a second set of tasks (ADR-0030). A refused commit wrote
   // nothing, so the same key serves the next attempt too.
   const keys = useRef(new Map<string, string>());
+  // The step taken out of the screen and not yet out of the server, with its plan.
+  const [removing, setRemoving] = useState<{ plan: string; step: string } | null>(null);
+  const removingNow = useRef(removing);
+  useEffect(() => {
+    removingNow.current = removing;
+  });
   const ready = useRef(onReady);
   useEffect(() => {
     ready.current = onReady;
@@ -211,8 +243,83 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
     setJob(queued);
   }, []);
 
+  /** Delete one step, and read the plan it was in again. */
+  const send = useCallback(async (gone: { plan: string; step: string }) => {
+    await api.delete<undefined>(`/plans/${gone.plan}/items/${gone.step}`);
+    setPlan(await api.get<Plan>(`/plans/${gone.plan}`));
+  }, []);
+
+  const settle = useCallback(async () => {
+    const gone = removingNow.current;
+    if (gone === null) return;
+    removingNow.current = null;
+    setRemoving(null);
+    await send(gone);
+  }, [send]);
+
+  const remove = useCallback(
+    (stepId: string) => {
+      if (planId === null) return;
+      const before = removingNow.current;
+      // Only one removal can be undone at a time: the one before is no longer on offer.
+      if (before !== null) void send(before).catch(() => undefined);
+      const next = { plan: planId, step: stepId };
+      removingNow.current = next;
+      setRemoving(next);
+    },
+    [planId, send],
+  );
+
+  const keep = useCallback(() => {
+    removingNow.current = null;
+    setRemoving(null);
+  }, []);
+
+  // The screen goes with a removal still on offer: it is sent, as its notice ending would.
+  // Closing the tab first keeps the step, the safe side.
+  useEffect(
+    () => () => {
+      const gone = removingNow.current;
+      if (gone !== null) {
+        void request<undefined>(`/plans/${gone.plan}/items/${gone.step}`, {
+          method: "DELETE",
+          keepalive: true,
+        }).catch(() => undefined);
+      }
+    },
+    [],
+  );
+
+  const change = useCallback(
+    async (stepId: string, changes: PlanItemChanges) => {
+      if (planId === null) throw new Error("There is no plan to change.");
+      await api.patch<PlanItem>(`/plans/${planId}/items/${stepId}`, changes);
+      // Read whole: a step given a time changes what the steps waiting for it say.
+      setPlan(await api.get<Plan>(`/plans/${planId}`));
+    },
+    [planId],
+  );
+
+  const add = useCallback(
+    async (step: NewPlanItem) => {
+      if (planId === null) throw new Error("There is no plan to add to.");
+      const added = await api.post<PlanItem>(`/plans/${planId}/items`, step);
+      setPlan(await api.get<Plan>(`/plans/${planId}`));
+      return added;
+    },
+    [planId],
+  );
+
+  const sendOn = useCallback(async () => {
+    if (planId === null) throw new Error("There is no plan to send on.");
+    const placed = await api.post<Plan>(`/plans/${planId}/next-week`, {});
+    setPlan(placed);
+    return placed;
+  }, [planId]);
+
   const approve = useCallback(async () => {
     if (planId === null) throw new Error("There is no plan to approve.");
+    await settle();
     const key = keys.current.get(planId) ?? crypto.randomUUID();
     keys.current.set(planId, key);
     const made = await request<PlanCommit>(`/plans/${planId}/commit`, {
@@ -221,13 +328,35 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
     });
     setPlan(null);
     return made;
-  }, [planId]);
+  }, [planId, settle]);
 
   const discard = useCallback(async () => {
     if (planId === null) throw new Error("There is no plan to discard.");
+    await settle();
     await request<undefined>(`/plans/${planId}/discard`, { method: "POST" });
     setPlan(null);
-  }, [planId]);
+  }, [planId, settle]);
 
-  return { status, plan, job, capacity, reload, ask, approve, discard };
+  // The plan as the screen shows it: without the step being removed.
+  const shown =
+    plan === null || removing?.plan !== plan.id
+      ? plan
+      : { ...plan, items: plan.items.filter((item) => item.id !== removing.step) };
+
+  return {
+    status,
+    plan: shown,
+    job,
+    capacity,
+    reload,
+    ask,
+    approve,
+    discard,
+    change,
+    add,
+    sendOn,
+    remove,
+    keep,
+    settle,
+  };
 }
