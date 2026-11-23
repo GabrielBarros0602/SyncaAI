@@ -64,6 +64,7 @@ function aTask(id: string, startsAt: string, endsAt: string): Task {
     completed_at: null,
     tag: null,
     items: [],
+    plan_id: null,
   };
 }
 

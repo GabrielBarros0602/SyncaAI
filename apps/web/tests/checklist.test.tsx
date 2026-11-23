@@ -35,6 +35,7 @@ function aTask(items: ChecklistItem[]): Task {
     completed_at: null,
     tag: null,
     items,
+    plan_id: null,
   };
 }
 

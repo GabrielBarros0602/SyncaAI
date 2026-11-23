@@ -14,12 +14,16 @@ import styles from "./Plan.module.css";
  *
  * A request says where it is, and a failed one says so until something newer happens. A plan
  * the model made is "ready to review"; one written by hand is a "draft", since nobody but its
- * author made it and there is nothing to review but their own steps (ADR-0058).
+ * author made it and there is nothing to review but their own steps (ADR-0058). An approved
+ * plan counts its tasks done, `3 of 5`, while any is still to do (decided on 2026-10-28).
  */
 export function planState(plan: Plan | null, job: Job | null): string | null {
   if (job?.status === "queued") return "queued";
   if (job?.status === "running") return "making…";
   if (job?.status === "failed") return "didn’t work";
+  if (plan?.status === "approved" && plan.progress !== null && plan.progress.done < plan.progress.total) {
+    return `${String(plan.progress.done)} of ${String(plan.progress.total)}`;
+  }
   if (plan?.status !== "pending") return null;
   return plan.job_id === null ? "draft" : "ready to review";
 }

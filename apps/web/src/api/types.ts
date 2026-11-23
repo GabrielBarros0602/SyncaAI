@@ -53,6 +53,8 @@ export interface Task {
   completed_at: string | null;
   tag: Tag | null;
   items: ChecklistItem[];
+  /** The plan it was made from, when a plan made it (ADR-0050). */
+  plan_id: string | null;
 }
 
 export interface Page<T> {
