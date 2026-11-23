@@ -621,7 +621,9 @@ um tablet girando entre 768 e 1024px não cruza 1100. Ficou como está.
 
 **Achado na PR 5:** "Ask for it again" e "Ask for a new plan" abrem o formulário com 14 dias,
 e não com os dias do pedido que falhou ou do plano fechado; só o texto volta. O "Write it
-myself" ao lado deles usa os dias pedidos. Fica para decidir se o formulário também os traz.
+myself" ao lado deles usa os dias pedidos. ✅ Decidido em 2026-11-23, nas palavras do Gabriel,
+"devolve os dias do pedido também": o formulário volta com o texto e com os dias, que a
+leitura do pedido traz desde a PR 170. Feito numa PR pequena depois da 6.
 
 ---
 

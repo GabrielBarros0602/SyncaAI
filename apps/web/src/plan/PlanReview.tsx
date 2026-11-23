@@ -135,8 +135,9 @@ export function PlanReview({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { plan, job } = state;
   const pending = plan?.status === "pending" ? plan : null;
-  // The form, opened from a failure or a closed plan with what it asked written in again.
-  const [asking, setAsking] = useState<string | null>(null);
+  // The form, opened from a failure or a closed plan with what it asked written in again, for
+  // the days it asked for (decided on 2026-11-23).
+  const [asking, setAsking] = useState<{ text: string; days: number } | null>(null);
   // A plan being written by hand, for the days it will cover. It is drawn over what was on
   // screen when it began, a closed plan or none, until the server has made it.
   const [writing, setWriting] = useState<{ days: number; over: string | null } | null>(null);
@@ -244,7 +245,7 @@ export function PlanReview({
             onToggle={onToggle}
             onAsk={() => {
               onFollow();
-              setAsking("");
+              setAsking({ text: "", days: MAX_HORIZON });
             }}
             onWrite={(days) => {
               onFollow();
@@ -259,7 +260,7 @@ export function PlanReview({
             state={state}
             timezone={timezone}
             daysOff={daysOff}
-            initial={asking ?? ""}
+            initial={asking ?? { text: "", days: MAX_HORIZON }}
             onSent={() => {
               setAsking(null);
             }}
@@ -275,7 +276,7 @@ export function PlanReview({
                 type="button"
                 className={styles.primary}
                 onClick={() => {
-                  setAsking(job.request ?? "");
+                  setAsking({ text: job.request ?? "", days: job.horizon_days });
                 }}
               >
                 Ask for it again
@@ -308,7 +309,7 @@ export function PlanReview({
                 type="button"
                 className={styles.primary}
                 onClick={() => {
-                  setAsking(plan.request);
+                  setAsking({ text: plan.request, days: dayCount(plan) });
                 }}
               >
                 Ask for a new plan
@@ -406,8 +407,8 @@ interface AskFormProps {
   state: PlanState;
   timezone: string;
   daysOff: readonly number[];
-  /** What to write in the field: a failed or closed plan's request, asked for again. */
-  initial: string;
+  /** What to start from: a failed or closed plan's request and days, asked for again. */
+  initial: { text: string; days: number };
   /** Queued: what was asked for again is asked, and a failure of it shows as one. */
   onSent: () => void;
   /** Write the plan by hand instead, for the days chosen here. */
@@ -418,8 +419,8 @@ interface AskFormProps {
 function AskForm({ state, timezone, daysOff, initial, onSent, onWrite }: AskFormProps): React.ReactNode {
   const id = useId();
   const field = useRef<HTMLTextAreaElement>(null);
-  const [text, setText] = useState(initial);
-  const [days, setDays] = useState(MAX_HORIZON);
+  const [text, setText] = useState(initial.text);
+  const [days, setDays] = useState(initial.days);
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<AskRefusal | null>(null);
