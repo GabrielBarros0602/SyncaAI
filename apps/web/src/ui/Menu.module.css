@@ -4,7 +4,8 @@
  */
 
 .trigger,
-.action {
+.action,
+.settings {
   min-height: var(--target-touch);
   padding: 0 var(--space-4);
   border: 1px solid var(--line-strong);
@@ -16,17 +17,34 @@
 }
 
 .trigger:hover,
-.action:hover {
+.action:hover,
+.settings:hover {
   background: var(--hover);
 }
 
 .trigger:active,
-.action:active {
+.action:active,
+.settings:active {
   background: var(--pressed);
   transform: scale(var(--press-scale));
 }
 
 .action {
+  text-align: left;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Its › says it leads to a page, as drawn. */
+.settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   text-align: left;
 }
 

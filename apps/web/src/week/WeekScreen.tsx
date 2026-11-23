@@ -22,6 +22,7 @@ import { readyText } from "../plan/asking";
 import { removedText } from "../plan/editing";
 import { proposedByDay } from "../plan/steps";
 import { usePlan } from "../plan/usePlan";
+import { SettingsPage } from "../settings/SettingsPage";
 import { type Shortcut, ShortcutLegend } from "../ui/ShortcutLegend";
 import { type Notice, StatusRegion } from "../ui/StatusRegion";
 import { DayBar } from "./DayBar";
@@ -103,6 +104,10 @@ export function WeekScreen(): React.ReactNode {
   const shownPlan = matchPath("/plan/:planId", pathname)?.params.planId ?? null;
   const beside = useReviewBesideWeek();
   const inPlace = reviewing && !beside;
+  // Settings is a page in place of the week at every width, drawn here so the week keeps its
+  // week and its day underneath, and focus goes back to the day that was left (decided on
+  // 2026-11-23).
+  const settings = pathname === "/settings";
   const navigate = useNavigate();
   // The step a proposed row in the week asked for, which the review opens on.
   const [focusStep, setFocusStep] = useState<string | null>(null);
@@ -213,6 +218,21 @@ export function WeekScreen(): React.ReactNode {
     setFocusStep(null);
     void navigate(`/plan/${planId}`);
   }
+
+  function closeSettings(): void {
+    void navigate("/");
+  }
+
+  // Back from settings to the week, focus lands on the day that was left, as settings.dc.html
+  // has it, rather than on the week's heading where the router puts it. Not on the way to the
+  // plan, whose review has a heading of its own.
+  const leftFrom = useRef(pathname);
+  useEffect(() => {
+    if (leftFrom.current === "/settings" && pathname === "/") {
+      document.querySelector<HTMLElement>(`[data-cell="${String(current.day)}:0"]`)?.focus();
+    }
+    leftFrom.current = pathname;
+  }, [pathname, current.day]);
 
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -516,6 +536,12 @@ export function WeekScreen(): React.ReactNode {
       // Nor while a dialog is in front: its keys are its own. Esc on a sheet's select would
       // otherwise shut the row the sheet was opened from, and T move the week behind it.
       if (target instanceof Element && target.closest("dialog") !== null) return;
+      // Settings answers Esc alone, by going back. The week's keys would act on a week that is
+      // not on screen.
+      if (settings) {
+        if (event.key === "Escape") closeSettings();
+        return;
+      }
       // Nor on a week the review has taken the place of: it is not on screen.
       if (inPlace) return;
 
@@ -607,6 +633,11 @@ export function WeekScreen(): React.ReactNode {
       }}
     />
   );
+  // Once the account is known; until then the week's own loading or unreachable state stands in.
+  const settingsPage =
+    settings && week.me !== null ? (
+      <SettingsPage me={week.me} onBack={closeSettings} onSignOut={signOut} />
+    ) : null;
   const top = (
     <>
       <WeekHeader
@@ -617,13 +648,11 @@ export function WeekScreen(): React.ReactNode {
         onGoTo={goToWeek}
         onBack={goToToday}
         onGoToDate={goToDate}
-        onSignOut={() => {
-          void signOut();
-        }}
+        onSignOut={signOut}
         plan={planButton}
-        reviewing={inPlace}
+        reviewing={inPlace || settingsPage !== null}
       />
-      {!inPlace && legend}
+      {!inPlace && settingsPage === null && legend}
     </>
   );
 
@@ -649,6 +678,8 @@ export function WeekScreen(): React.ReactNode {
             {top}
             {inPlace ? (
               review
+            ) : settingsPage !== null ? (
+              settingsPage
             ) : (
               // Drawn either way, so opening the review beside the week leaves it mounted.
               <div className={cx(styles.area, reviewing && styles.withPlan)}>
@@ -690,16 +721,16 @@ export function WeekScreen(): React.ReactNode {
             onGoTo={goToWeek}
             onBack={goToToday}
             onGoToDate={goToDate}
-            onSignOut={() => {
-              void signOut();
-            }}
+            onSignOut={signOut}
             plan={planButton}
-            reviewing={reviewing}
+            reviewing={reviewing || settingsPage !== null}
           >
             {layout === "day" && glance}
           </DayHeader>
           {reviewing ? (
             review
+          ) : settingsPage !== null ? (
+            settingsPage
           ) : (
           <div className={cx(styles.body, layout === "beside" && styles.beside)}>
             {layout === "beside" && glance}
@@ -746,7 +777,7 @@ export function WeekScreen(): React.ReactNode {
           {reviewing ? (
             <div ref={setBarSlot} />
           ) : (
-            <DayBar
+            settingsPage === null && <DayBar
               previous={neighbour(-1)}
               next={neighbour(1)}
               onPrevious={() => {
