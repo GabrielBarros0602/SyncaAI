@@ -4,10 +4,12 @@
  * The claim under test is the one the third state exists for: a signed-in user reloading
  * the page never sees the signed-out interface, not even for a frame.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
+import { getAccessToken } from "../src/api/token";
 import { SessionProvider } from "../src/auth/session";
 import { useSession } from "../src/auth/useSession";
 
@@ -131,4 +133,80 @@ it("the signed-out interface is never shown to a user who is signed in", async (
   observer.disconnect();
 
   expect(seen.some((text) => text.includes("Signed out."))).toBe(false);
+});
+
+/** Signs out on a press, and says what came of it. */
+function SignOutProbe(): React.ReactNode {
+  const { status, signedOut, signOut } = useSession();
+  const [failed, setFailed] = useState(false);
+  return (
+    <>
+      <p>{`${status}${signedOut ? ", by the person" : ""}${failed ? ", refused" : ""}`}</p>
+      <button
+        type="button"
+        onClick={() => {
+          signOut().catch(() => {
+            setFailed(true);
+          });
+        }}
+      >
+        Sign out
+      </button>
+    </>
+  );
+}
+
+function answer(status: number, body?: unknown): Response {
+  return new Response(body === undefined ? null : JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+it("signs out only once the server has ended the session", async () => {
+  // The cookie that would sign the person back in is HttpOnly: only the server's answer ends
+  // it, so until that answer the person is still signed in (decided on 2026-11-23).
+  let endSession: (response: Response) => void = () => undefined;
+  fetchMock.mockImplementation((input?: unknown) =>
+    String(input).endsWith("/auth/logout")
+      ? new Promise<Response>((resolve) => {
+          endSession = resolve;
+        })
+      : Promise.resolve(answer(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 })),
+  );
+  render(
+    <SessionProvider>
+      <SignOutProbe />
+    </SessionProvider>,
+  );
+  await screen.findByText("authenticated");
+
+  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  await Promise.resolve();
+  expect(screen.getByText("authenticated")).toBeDefined();
+
+  endSession(answer(204));
+
+  expect(await screen.findByText("anonymous, by the person")).toBeDefined();
+  expect(getAccessToken()).toBeNull();
+});
+
+it("a sign-out the server never heard leaves the session as it was", async () => {
+  fetchMock.mockImplementation((input?: unknown) =>
+    String(input).endsWith("/auth/logout")
+      ? Promise.reject(new TypeError("Failed to fetch"))
+      : Promise.resolve(answer(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 })),
+  );
+  render(
+    <SessionProvider>
+      <SignOutProbe />
+    </SessionProvider>,
+  );
+  await screen.findByText("authenticated");
+
+  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+
+  expect(await screen.findByText("authenticated, refused")).toBeDefined();
+  // Kept, so the next request still carries it rather than a reload being what finds out.
+  expect(getAccessToken()).toBe("a.token");
 });

@@ -26,7 +26,13 @@ export type SessionStatus = "loading" | "authenticated" | "anonymous";
 
 export interface Session {
   status: SessionStatus;
+  /**
+   * Anonymous because the person signed out here, rather than because they never signed in or
+   * their session ended: the page that says so stands until they choose to sign in again.
+   */
+  signedOut: boolean;
   signIn: (credentials: Credentials) => Promise<void>;
+  /** Rejects when the server did not end the session, which then is still open. */
   signOut: () => Promise<void>;
 }
 
@@ -61,19 +67,27 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     };
   }, []);
 
+  const [signedOut, setSignedOut] = useState(false);
+
   const signIn = useCallback(async (credentials: Credentials) => {
     await auth.login(credentials);
+    setSignedOut(false);
     setStatus("authenticated");
   }, []);
 
   const signOut = useCallback(async () => {
-    // Optimistic on purpose: the interface should not stay signed in while a network call
-    // hangs. `logout` clears the local token whether or not the server answered.
-    setStatus("anonymous");
+    // Not optimistic: the screen says "You’re signed out of this browser", and only the
+    // server's answer makes that true, since only it can clear the HttpOnly cookie that would
+    // sign the person back in on the next reload (decided on 2026-11-23).
     await auth.logout();
+    setSignedOut(true);
+    setStatus("anonymous");
   }, []);
 
-  const value = useMemo(() => ({ status, signIn, signOut }), [status, signIn, signOut]);
+  const value = useMemo(
+    () => ({ status, signedOut, signIn, signOut }),
+    [status, signedOut, signIn, signOut],
+  );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

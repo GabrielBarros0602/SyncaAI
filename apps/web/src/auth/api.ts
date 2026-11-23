@@ -52,14 +52,11 @@ export async function verify(token: string): Promise<void> {
 
 
 export async function logout(): Promise<void> {
-  try {
-    // 204, so there is no body to type. `undefined` says that; `void` is a return
-    // type, not a value.
-    await api.post<undefined>("/auth/logout", {});
-  } finally {
-    // Local state is cleared even if the call failed. A user who pressed logout should not
-    // stay logged in because the network was down; the server-side session outliving it is
-    // the lesser problem, and it is bounded by the token's own expiry.
-    setAccessToken(null);
-  }
+  // 204, so there is no body to type. `undefined` says that; `void` is a return type, not a
+  // value.
+  await api.post<undefined>("/auth/logout", {});
+  // Forgotten only once the server has ended the session. The refresh cookie is HttpOnly, so
+  // only the server's answer clears it: forgetting the token after a request that never
+  // arrived left the cookie behind, and the next reload signed the person straight back in.
+  setAccessToken(null);
 }
