@@ -2,8 +2,31 @@
 
 import uuid
 from datetime import datetime, time
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+
+
+def _a_wall_clock_minute(value: time) -> time:
+    """Refuse what an end of a daily window cannot be.
+
+    An offset: a time with one names an instant, and a window that repeats every day is not
+    one. Seconds: the window is set and shown in minutes, and a stored 06:00:30 would make
+    every figure derived from it a fraction nobody can see.
+    """
+    if value.tzinfo is not None:
+        message = "is a time of day in the account's own zone, without an offset"
+        raise ValueError(message)
+    if value.second or value.microsecond:
+        message = "is a whole minute, like 06:00"
+        raise ValueError(message)
+    return value
+
+
+#: An end of the usable window, wherever one arrives: in a change to it, or in a read of the
+#: week measured against one not saved yet (ADR-0060). One rule, so the two cannot disagree
+#: about what a window is.
+WallClockMinute = Annotated[time, AfterValidator(_a_wall_clock_minute)]
 
 
 class MeRead(BaseModel):
@@ -44,39 +67,18 @@ class MeUpdate(BaseModel):
     before writing anything, so a request with one bad field changes nothing.
     """
 
-    day_starts_at: time | None = None
-    day_ends_at: time | None = None
+    day_starts_at: WallClockMinute | None = None
+    day_ends_at: WallClockMinute | None = None
     # At most seven entries: a longer list cannot be a set of weekdays, only a mistake.
     days_off: list[int] | None = Field(default=None, max_length=7)
     preferred_block_minutes: int | None = None
 
-    @field_validator("days_off", "preferred_block_minutes")
+    @field_validator("day_starts_at", "day_ends_at", "days_off", "preferred_block_minutes")
     @classmethod
     def refuse_a_null(cls, value: object) -> object:
-        """Absent already means "leave it". Null would mean no preference, which no account
-        has: an empty list is how a person says they plan every day."""
+        """Absent already means "leave it". Null would mean no window or no preference,
+        which no account has: an empty list is how a person says they plan every day."""
         if value is None:
             message = "cannot be null; omit the field to leave it unchanged"
-            raise ValueError(message)
-        return value
-
-    @field_validator("day_starts_at", "day_ends_at")
-    @classmethod
-    def a_wall_clock_minute(cls, value: time | None) -> time:
-        """Refuse what a daily window cannot be.
-
-        ``null``: neither end can be cleared, and absent already means "leave it". An offset:
-        a time with one names an instant, and a window that repeats every day is not one.
-        Seconds: the window is set and shown in minutes, and a stored 06:00:30 would make
-        every figure derived from it a fraction nobody can see.
-        """
-        if value is None:
-            message = "cannot be null; omit the field to leave it unchanged"
-            raise ValueError(message)
-        if value.tzinfo is not None:
-            message = "is a time of day in the account's own zone, without an offset"
-            raise ValueError(message)
-        if value.second or value.microsecond:
-            message = "is a whole minute, like 06:00"
             raise ValueError(message)
         return value

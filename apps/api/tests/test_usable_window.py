@@ -92,3 +92,32 @@ def test_capacity_is_measured_against_the_account_s_own_window() -> None:
         assert day.usable_minutes == 4 * 60
 
         session.rollback()
+
+
+def test_the_week_can_be_measured_against_a_window_not_saved() -> None:
+    """What the settings screen shows before Save (ADR-0060). One end alone is paired with
+    the stored other, as PATCH /me pairs it, and the row is left exactly as it was: a read
+    that wrote the window would be a Save nobody pressed."""
+    with get_session_factory()() as session:
+        user = User(
+            email=f"window-{uuid.uuid4()}@example.com",
+            password_hash="x",
+            timezone="America/Sao_Paulo",
+            day_starts_at=time(8),
+            day_ends_at=time(12),
+        )
+        session.add(user)
+        session.flush()
+
+        both = get_capacity_service(session, user, time(9), time(19))
+        one = get_capacity_service(session, user, None, time(20))
+
+        assert both.by_day(A_MONDAY, A_MONDAY)[0].usable_minutes == 10 * 60
+        assert one.by_day(A_MONDAY, A_MONDAY)[0].usable_minutes == 12 * 60
+        assert not session.dirty
+        stored = session.execute(
+            text("SELECT day_starts_at, day_ends_at FROM users WHERE id = :id"), {"id": user.id}
+        ).one()
+        assert (stored.day_starts_at, stored.day_ends_at) == (time(8), time(12))
+
+        session.rollback()
