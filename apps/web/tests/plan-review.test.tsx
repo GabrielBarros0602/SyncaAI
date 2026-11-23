@@ -10,7 +10,7 @@
  * nothing on the server until its first step, and is named then; a commit retried after a lost
  * answer sends the same key, every step a commit is refused for is shown at once, and a plan
  * read again after a refusal may turn out to be closed. Approved, the plan the button counts is
- * the newest with tasks still open.
+ * the newest with tasks still open, and its page counts what exists now.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetClientForTests } from "../src/api/client";
 import { setAccessToken } from "../src/api/token";
-import type { DayCapacity, Job, Plan, PlanItem } from "../src/api/types";
+import type { DayCapacity, Job, Plan, PlanItem, Task } from "../src/api/types";
 import { SessionProvider } from "../src/auth/session";
 import { daysFrom, mondayOf, toLocalDate, todayIn } from "../src/lib/time";
 import { shortDay } from "../src/plan/steps";
@@ -804,19 +804,31 @@ describe("removing a step", () => {
 });
 
 describe("approving", () => {
-  it("makes the tasks, says how many, and goes back to the week", async () => {
+  it("makes the tasks, says how many, and stays on the plan's page, with the way to the week", async () => {
+    let committed = false;
     serve(aPlan(), {
-      "POST /plans/p1/commit": () => json(200, { plan_id: "p1", task_ids: ["t1", "t2"] }),
+      "POST /plans/p1/commit": () => {
+        committed = true;
+        return json(200, { plan_id: "p1", task_ids: ["t1", "t2"] });
+      },
+      "GET /plans/p1": () => json(200, committed ? approved(0) : aPlan()),
+      "GET /tasks": () => json(200, page(committed ? theTasks(0) : [])),
     });
     renderAt("/plan");
 
     fireEvent.click(await screen.findByRole("button", { name: "Approve: make 2 tasks" }));
 
     expect(await screen.findByText("2 tasks added to your week from the plan.")).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "The plan, in your week" })).toBeDefined();
+    expect(await screen.findByText("0 of 2")).toBeDefined();
+    expect(calls("POST", "/plans/p1/commit")[0]?.get("Idempotency-Key")).toMatch(/^[0-9a-f-]{36}$/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show the week" }));
+
     await waitFor(() => {
       expect(path()).toBe("/");
     });
-    expect(calls("POST", "/plans/p1/commit")[0]?.get("Idempotency-Key")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(screen.getByRole("button", { name: "Plan, 0 of 2" })).toBeDefined();
   });
 
   it("sends the same key again after an answer that never came", async () => {
@@ -927,6 +939,36 @@ function approved(done: number, over: Partial<Plan> = {}): Plan {
   return aPlan({ status: "approved", progress: { done, total: 2 }, ...over });
 }
 
+function aTask(id: string, over: Partial<Task> = {}): Task {
+  return {
+    id,
+    title: id,
+    notes: null,
+    start_at: `${THURSDAY}T10:00:00Z`,
+    end_at: `${THURSDAY}T10:30:00Z`,
+    duration_minutes: 30,
+    completed_at: null,
+    tag: null,
+    items: [],
+    plan_id: "p1",
+    ...over,
+  };
+}
+
+/** The approved plan's two tasks, the first `done` of them completed. */
+function theTasks(done: number): Task[] {
+  return [
+    aTask("t1", { title: "Limits: the theory", completed_at: done > 0 ? `${THURSDAY}T10:30:00Z` : null }),
+    aTask("t2", {
+      title: "Limits: exercises 1 to 15",
+      start_at: `${THURSDAY}T15:00:00Z`,
+      end_at: `${THURSDAY}T16:00:00Z`,
+      duration_minutes: 60,
+      completed_at: done > 1 ? `${THURSDAY}T16:00:00Z` : null,
+    }),
+  ];
+}
+
 describe("an approved plan", () => {
   it("is counted on the Plan button while a task of it is still open", async () => {
     serve(approved(1), { "GET /plans/p1": () => json(200, approved(1)) });
@@ -944,6 +986,76 @@ describe("an approved plan", () => {
     });
     renderAt("/");
     expect(await screen.findByRole("button", { name: "Plan, 0 of 2" })).toBeDefined();
+  });
+
+  it("opens on the plan the button counts: how many are done, what it was for and its tasks", async () => {
+    serve(approved(1, { items: [...aPlan().items, aStep("mock", { title: "A mock exam" })] }), {
+      "GET /plans/p1": () =>
+        json(200, approved(1, { items: [...aPlan().items, aStep("mock", { title: "A mock exam" })] })),
+      "GET /tasks": () => json(200, page(theTasks(1))),
+    });
+    renderAt("/plan");
+
+    expect(await screen.findByRole("heading", { name: "The plan, in your week" })).toBeDefined();
+    expect(await screen.findByText("1 of 2")).toBeDefined();
+    expect(screen.getByText("preparations done")).toBeDefined();
+    // Three steps became three tasks; the count holds two, so one was deleted since.
+    expect(screen.getByText("1 task from this plan was deleted, so it left the count.")).toBeDefined();
+    const tasks = within(screen.getByRole("list", { name: "Tasks from this plan" }));
+    expect(tasks.getByRole("checkbox", { name: "Reopen Limits: the theory" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(tasks.getByText(`${shortDay(THURSDAY)} · 15:00 – 16:00`)).toBeDefined();
+    // Asked for by the plan, not by its days: a task moved out of them still counts.
+    expect(fetchMock.mock.calls.some(([input]) => input.includes("/tasks?plan_id=p1"))).toBe(true);
+  });
+
+  it("completes a task from its page, and counts it once the server has it", async () => {
+    let done = 1;
+    let sent: unknown = null;
+    serve(approved(1), {
+      "GET /plans/p1": () => json(200, approved(done)),
+      "GET /tasks": () => json(200, page(theTasks(done))),
+      "PATCH /tasks/t2": (init) => {
+        sent = bodyOf(init);
+        done = 2;
+        return json(200, theTasks(2)[1]);
+      },
+    });
+    renderAt("/plan");
+    const tasks = within(await screen.findByRole("list", { name: "Tasks from this plan" }));
+
+    fireEvent.click(tasks.getByRole("checkbox", { name: "Complete Limits: exercises 1 to 15" }));
+
+    expect(await screen.findByText("2 of 2")).toBeDefined();
+    expect(sent).toEqual({ completed: true });
+    expect(tasks.getByRole("checkbox", { name: "Reopen Limits: exercises 1 to 15" })).toBeDefined();
+  });
+
+  it("lets a new plan be asked for or written from its page", async () => {
+    serve(approved(0), {
+      "GET /plans/p1": () => json(200, approved(0)),
+      "GET /tasks": () => json(200, page(theTasks(0))),
+    });
+    renderAt("/plan");
+    await screen.findByText("0 of 2");
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask for a new plan" }));
+
+    expect(screen.getByRole("heading", { name: "Ask for a plan" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Write it myself" }));
+    expect(screen.getByLabelText("What it’s for")).toBeDefined();
+  });
+
+  it("has nothing an automated accessibility check can find", async () => {
+    serve(approved(1), {
+      "GET /plans/p1": () => json(200, approved(1)),
+      "GET /tasks": () => json(200, page(theTasks(1))),
+    });
+    const container = renderAt("/plan");
+    await screen.findByText("1 of 2");
+
+    await expectNoViolations(container);
   });
 });
 

@@ -42,6 +42,8 @@ export function App(): React.ReactNode {
         <Route path="/verify" element={<Home />} />
         {/* The plan under review: beside the week from 1100px, in place of the day below. */}
         <Route path="/plan" element={<Home />} />
+        {/* An approved plan's own page, which a task's "from your plan" leads to. */}
+        <Route path="/plan/:planId" element={<Home />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

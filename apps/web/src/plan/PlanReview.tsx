@@ -13,12 +13,15 @@
  *
  * A plan can also be written by hand from the start, next to asking for one and wherever asking
  * did not work: the same review, empty, with what it is for in place of what was asked.
+ *
+ * Approved, a plan has a page of its own: how many of its tasks are done, and the tasks. The
+ * screen opens on the one the Plan button counts, and a task's "from your plan" on its own.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ApiError } from "../api/client";
-import type { Job, NewPlanItem, Plan, PlanItem, PlanItemChanges } from "../api/types";
+import type { Job, NewPlanItem, Plan, PlanItem, PlanItemChanges, Task } from "../api/types";
 import { cx } from "../lib/cx";
 import { toLocalDate, todayIn } from "../lib/time";
 import { AddStep } from "./AddStep";
@@ -34,6 +37,7 @@ import {
 } from "./asking";
 import { addedText, nextWeekText, sentText } from "./editing";
 import styles from "./Plan.module.css";
+import { PlanProgress } from "./PlanProgress";
 import { StepRow } from "./StepRow";
 import { countText, coverText, dayCount, impactLines, precheckText, shortDate, stepNumbers } from "./steps";
 import type { PlanState } from "./usePlan";
@@ -83,19 +87,28 @@ interface Props {
   onSay: (text: string) => void;
   /** A step was taken out: the region offers to put it back until its notice ends. */
   onRemoved: (step: { id: string; number: number; title: string }) => void;
+  /** The approved plan whose page the address names, from a task's "from your plan". */
+  planId: string | null;
+  /** The week's load, which an approved plan's page is read again with. */
+  revision: number;
+  /** Complete or reopen a task of an approved plan, as the week does. */
+  onToggle: (task: Task) => Promise<void>;
+  /** Leave a plan's own page for the screen's: a plan asked for or written goes there. */
+  onFollow: () => void;
   onClose: () => void;
   onApproved: (tasks: number) => void;
   onDiscarded: () => void;
 }
 
 /** Which of the screen's views is showing, from what the server said and what was asked here. */
-type View = "loading" | "review" | "wait" | "ask" | "failed" | "expired";
+type View = "loading" | "review" | "wait" | "ask" | "failed" | "progress" | "expired";
 
 const TITLES: Record<Exclude<View, "review">, string> = {
   loading: "The plan",
   wait: "Your plan",
   ask: "Ask for a plan",
   failed: "The plan didn’t come",
+  progress: "The plan, in your week",
   expired: "The plan",
 };
 
@@ -110,6 +123,10 @@ export function PlanReview({
   blockMinutes,
   onSay,
   onRemoved,
+  planId,
+  revision,
+  onToggle,
+  onFollow,
   onClose,
   onApproved,
   onDiscarded,
@@ -133,20 +150,27 @@ export function PlanReview({
     setWriting({ days, over: plan?.id ?? null });
   }
 
+  // A plan's own page reads itself, so it does not wait for what the screen follows.
+  const progressOf = planId ?? (plan?.status === "approved" ? plan.id : null);
+
   const view: View =
-    state.status !== "ready"
-      ? "loading"
-      : reviewed !== null
-        ? "review"
-        : job !== null && job.status !== "failed"
-          ? "wait"
-          : asking !== null
-            ? "ask"
-            : job?.status === "failed"
-              ? "failed"
-              : plan?.status === "expired"
-                ? "expired"
-                : "ask";
+    planId !== null
+      ? "progress"
+      : state.status !== "ready"
+        ? "loading"
+        : reviewed !== null
+          ? "review"
+          : job !== null && job.status !== "failed"
+            ? "wait"
+            : asking !== null
+              ? "ask"
+              : job?.status === "failed"
+                ? "failed"
+                : plan?.status === "approved"
+                  ? "progress"
+                  : plan?.status === "expired"
+                    ? "expired"
+                    : "ask";
 
   // The view changed under whoever was in it: the form went once sent, the wait once the plan
   // came. Focus left on what went lands on the heading rather than on the page; arrival is the
@@ -209,6 +233,23 @@ export function PlanReview({
             onRemoved={onRemoved}
             onApproved={onApproved}
             onDiscarded={onDiscarded}
+          />
+        )}
+        {view === "progress" && progressOf !== null && (
+          <PlanProgress
+            key={progressOf}
+            planId={progressOf}
+            timezone={timezone}
+            revision={revision}
+            onToggle={onToggle}
+            onAsk={() => {
+              onFollow();
+              setAsking("");
+            }}
+            onWrite={(days) => {
+              onFollow();
+              write(days);
+            }}
           />
         )}
         {view === "loading" && <Unread state={state} />}
