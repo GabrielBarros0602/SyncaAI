@@ -43,7 +43,7 @@ trace. Thinning them out to save effort is the one way this arrangement fails.
 So:
 
 - A commit body says **why**, not what. The diff already says what.
-- A non-trivial decision gets an ADR, in the format the existing 25 use.
+- A non-trivial decision gets an ADR, in the format the existing ones use.
 - A comment in code explains the reason a line is surprising, not the mechanics of the line.
 - Anything discovered while working — a defect, an assumption that turned out false, a
   constraint nobody had noticed — belongs in the commit body or in `docs/backlog.md`, not only
