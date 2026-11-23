@@ -207,6 +207,12 @@ export function WeekScreen(): React.ReactNode {
     void navigate("/");
   }
 
+  /** The page of the plan a task came from. */
+  function openPlanPage(planId: string): void {
+    setOpenTask(null);
+    setFocusStep(null);
+    void navigate(`/plan/${planId}`);
+  }
 
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -925,6 +931,7 @@ export function WeekScreen(): React.ReactNode {
             onChecklist={week.checklist}
             proposed={proposed.get(capacity.day) ?? []}
             onOpenStep={openPlan}
+            onOpenPlan={openPlanPage}
           />
         )}
         {newTask}
@@ -975,6 +982,7 @@ export function WeekScreen(): React.ReactNode {
             onChecklist={week.checklist}
             proposed={proposed.get(capacity.day) ?? []}
             onOpenStep={openPlan}
+            onOpenPlan={openPlanPage}
           />
         ))}
       </div>

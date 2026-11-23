@@ -122,6 +122,8 @@ interface Props {
   proposed?: Proposed[];
   /** Open the review on a step. */
   onOpenStep?: (itemId: string) => void;
+  /** Open the page of the plan a task came from. */
+  onOpenPlan?: ((planId: string) => void) | undefined;
 }
 
 export function DayColumn({
@@ -148,6 +150,7 @@ export function DayColumn({
   onChecklist,
   proposed = [],
   onOpenStep,
+  onOpenPlan,
 }: Props): React.ReactNode {
   const over = capacity.over_capacity;
   // Against the budget, the same thing `over_capacity` is measured against. Against the
@@ -330,6 +333,7 @@ export function DayColumn({
             onToggle={onToggle}
             onDelete={(snapshot) => onDeleteTask(task, snapshot)}
             onChecklist={(change) => onChecklist(task.id, change)}
+            onOpenPlan={onOpenPlan}
           />
         );
       })}

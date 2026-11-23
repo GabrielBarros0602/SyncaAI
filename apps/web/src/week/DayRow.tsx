@@ -37,6 +37,8 @@ interface Props {
   onToggle: (task: Task) => Promise<void>;
   onDelete: (snapshot: NewTask | null) => Promise<void>;
   onChecklist: (change: ChecklistChange) => Promise<void>;
+  /** Open the page of the plan a task came from. */
+  onOpenPlan?: ((planId: string) => void) | undefined;
 }
 
 /** `1h10 of 3h so far`, for a task under way now; null for any other. */
@@ -62,8 +64,10 @@ export function DayRow({
   onToggle,
   onDelete,
   onChecklist,
+  onOpenPlan,
 }: Props): React.ReactNode {
   const done = task.completed_at !== null;
+  const planId = task.plan_id;
   const actions = useRowActions(task, onOpen, onToggle, onDelete);
   const self = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(open !== null);
@@ -143,6 +147,22 @@ export function DayRow({
           {running !== null && <span className={list.itemLine2}>{running}</span>}
         </button>
       </div>
+
+      {/* The way back to the count (plan.dc.html), past the box and under the row's button,
+          which cannot hold another. No step number: the task keeps only its plan. */}
+      {planId !== null && (
+        <div className={list.fromPlan}>
+          <button
+            type="button"
+            className={list.fromPlanLink}
+            onClick={() => {
+              onOpenPlan?.(planId);
+            }}
+          >
+            from your plan
+          </button>
+        </div>
+      )}
 
       {(actions.refusal !== null || open !== null) && (
         <div className={cx(list.itemBody, open !== null && list.itemPanels)}>

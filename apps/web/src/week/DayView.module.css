@@ -496,6 +496,30 @@
 }
 
 /* Under the row: the note and a refusal, and once open, the verbs and their panels. */
+/* Lined up with the title: past the box's margin and width and the button's own padding. */
+.fromPlan {
+  display: flex;
+  padding: 0 var(--space-3) var(--space-2) calc(var(--space-1) * 2 + var(--target-touch));
+}
+
+.fromPlanLink {
+  min-height: var(--target-touch);
+  margin: calc(var(--space-2) * -1) 0 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.fromPlanLink:active {
+  background: var(--pressed);
+}
+
 .itemBody {
   display: flex;
   flex-direction: column;

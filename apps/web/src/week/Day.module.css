@@ -415,6 +415,19 @@
   overflow-wrap: anywhere;
 }
 
+/* The way to the plan a task came from: a link's look, at the size of the line it sits in. */
+.fromPlan {
+  min-height: var(--target);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .titleDone {
   color: var(--ink-2);
   text-decoration: line-through;
