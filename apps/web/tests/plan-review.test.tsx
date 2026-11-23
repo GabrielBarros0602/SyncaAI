@@ -431,7 +431,8 @@ describe("waiting for the plan", () => {
   it("says why a request failed, keeps what was asked, and offers to ask again", async () => {
     const reason = "The plan could not be made in 3 tries. Ask for it again.";
     serve(null, {
-      "GET /ai/plans": () => json(200, page([aJob({ status: "failed", failure_reason: reason })])),
+      "GET /ai/plans": () =>
+        json(200, page([aJob({ status: "failed", failure_reason: reason, horizon_days: 4 })])),
     });
     renderAt("/plan");
 
@@ -445,6 +446,8 @@ describe("waiting for the plan", () => {
 
     expect(screen.getByRole("heading", { name: "Ask for a plan" })).toBeDefined();
     expect(screen.getByLabelText<HTMLTextAreaElement>("What do you want to plan?").value).toBe(REQUEST);
+    // For the days it asked for, not the form's fourteen (decided on 2026-11-23).
+    expect(screen.getByLabelText<HTMLSelectElement>("Days ahead").value).toBe("4");
   });
 
 });
@@ -891,6 +894,12 @@ describe("approving", () => {
     expect(await screen.findByText(/the last day passed before it was reviewed/)).toBeDefined();
     expect(screen.queryByRole("button", { name: /Approve/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Plan" })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask for a new plan" }));
+
+    // What the closed plan asked, for the seven days it covered.
+    expect(screen.getByLabelText<HTMLTextAreaElement>("What do you want to plan?").value).toBe(REQUEST);
+    expect(screen.getByLabelText<HTMLSelectElement>("Days ahead").value).toBe("7");
   });
 });
 
