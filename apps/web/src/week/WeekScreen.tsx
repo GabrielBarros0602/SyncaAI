@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { useLocation, useNavigate } from "react-router";
+import { matchPath, useLocation, useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
 import { useSession } from "../auth/useSession";
@@ -96,8 +96,11 @@ export function WeekScreen(): React.ReactNode {
   });
   // The plan under review is a page of its own, so a reload, Back and a link all find it. From
   // 1640px it opens beside the week; below, in place of it, so the week is never on screen
-  // with days out of view.
-  const reviewing = useLocation().pathname === "/plan";
+  // with days out of view. An approved plan's page is one too, under its id.
+  const { pathname } = useLocation();
+  const reviewing = pathname === "/plan" || pathname.startsWith("/plan/");
+  // Read from the path rather than the route, which this screen does not need to be under.
+  const shownPlan = matchPath("/plan/:planId", pathname)?.params.planId ?? null;
   const beside = useReviewBesideWeek();
   const inPlace = reviewing && !beside;
   const navigate = useNavigate();
@@ -158,7 +161,10 @@ export function WeekScreen(): React.ReactNode {
   const [trash, setTrash] = useState<Trash | null>(null);
   // What the region says when there is nothing to undo: a task added, moved or brought back,
   // or a tag created along the way. The newest notice replaces the last, whichever kind.
-  const [said, setSaid] = useState<{ id: number; text: string; about?: About } | null>(null);
+  // `toWeek`: said on the plan's page, with the way back to the week.
+  const [said, setSaid] = useState<{ id: number; text: string; about?: About; toWeek?: true } | null>(
+    null,
+  );
   const notices = useRef(0);
 
   // A step taken out of the plan, offered back until its notice ends; only then does the server
@@ -172,11 +178,16 @@ export function WeekScreen(): React.ReactNode {
     void plan.settle().catch(() => undefined);
   }
 
-  function say(text: string, about?: About): void {
+  function say(text: string, about?: About, toWeek?: true): void {
     letRemovalGo();
     notices.current += 1;
     setTrash(null);
-    setSaid({ id: notices.current, text, ...(about === undefined ? {} : { about }) });
+    setSaid({
+      id: notices.current,
+      text,
+      ...(about === undefined ? {} : { about }),
+      ...(toWeek === undefined ? {} : { toWeek }),
+    });
   }
 
   /** Open the review, on a step when one is named. */
@@ -195,6 +206,7 @@ export function WeekScreen(): React.ReactNode {
     setFocusStep(null);
     void navigate("/");
   }
+
 
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -404,9 +416,8 @@ export function WeekScreen(): React.ReactNode {
         : {
             id: `${String(said.id)}:said`,
             text: said.text,
-            ...(away === null
-              ? {}
-              : {
+            ...(away !== null
+              ? {
                   action: {
                     label: `go to ${weekdayOf(away.day)}`,
                     run: () => {
@@ -414,7 +425,18 @@ export function WeekScreen(): React.ReactNode {
                       goToDate(away.day, away.task);
                     },
                   },
-                }),
+                }
+              : said.toWeek === true && reviewing
+                ? {
+                    action: {
+                      label: "Show the week",
+                      run: () => {
+                        setSaid(null);
+                        closePlan();
+                      },
+                    },
+                  }
+                : {}),
           }
       : trash.failure !== null
         ? {
@@ -561,11 +583,17 @@ export function WeekScreen(): React.ReactNode {
         setSaid(null);
         setRemoved({ id: notices.current, step: step.id, text: removedText(step.number, step.title) });
       }}
+      planId={shownPlan}
+      revision={week.loaded}
+      onToggle={week.toggle}
+      onFollow={() => {
+        void navigate("/plan", { replace: true });
+      }}
       onClose={closePlan}
       onApproved={(made) => {
         week.reload();
-        say(`${String(made)} ${made === 1 ? "task" : "tasks"} added to your week from the plan.`);
-        closePlan();
+        // The plan's page stays, at none of them done, as the drawing has it.
+        say(`${String(made)} ${made === 1 ? "task" : "tasks"} added to your week from the plan.`, undefined, true);
       }}
       onDiscarded={() => {
         say("Plan discarded. Nothing was written.");
