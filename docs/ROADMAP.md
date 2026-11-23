@@ -22,8 +22,9 @@ O git mede só o que foi commitado. Decisão, leitura e revisão não produzem c
 janela de calendário abaixo não as enxerga — o S2 fechou em 1,1 dia de commits depois de
 dias de conversa que não aparecem em lugar nenhum.
 
-Horas passam a ser anotadas a partir do S3, com registro feito na hora e não reconstruído
-depois.
+Horas passariam a ser anotadas a partir do S3, com registro feito na hora e não reconstruído
+depois. Não foram, e reconstruí-las agora seria o que a própria regra proíbe; por isso a
+tabela para no S2.
 
 | Sprint | Calendário (git) | Horas |
 |---|---|---|
@@ -42,16 +43,13 @@ Fechar uma pendência é removê-la desta tabela no mesmo commit que a resolve.
 |---|---|
 | Domínio próprio com SPF, DKIM e DMARC, e conta no provedor. Sem isso o envio fica restrito ao próprio dono da conta, então ninguém mais completa o cadastro. O código está pronto e testado contra o dublê — falta a decisão | antes de demonstrar ou publicar |
 | Cliente real do provedor de email. Um arquivo e uma entrada no mapa de backends, quando houver domínio | junto com o item acima |
-| Quatro tabelas acumulam linhas expiradas que ninguém remove: `rate_limit_counters`, `refresh_tokens`, `verification_tokens` e `password_reset_tokens`. O expurgo precisa de um agendador, que nasce com o worker. Decidido no [ADR-0031](adr/0031-a-job-queue-in-postgresql-woken-by-notify.md): de hora em hora, no worker | S6 |
 | Rate limit usa `request.client.host`, que atrás de um proxy é o endereço do proxy — o limite viraria global. Exige uvicorn com proxy headers e lista de encaminhadores confiáveis; confiar em `X-Forwarded-For` sem isso seria pior que não limitar. **O [ADR-0021](adr/0021-browser-session-and-origin.md) tornou isso certo em vez de hipotético:** uma origem só em desenvolvimento significa um proxy em produção | S11, no deploy |
 | **Entrar com o Google.** É bom material de back-end — OAuth 2.0 / OpenID Connect e federação de identidade —, mas o vínculo entre contas exige ADR próprio: casar por email de forma ingênua é caminho de **sequestro de conta** (o atacante cadastra o seu endereço antes de você, e o vínculo entrega a conta dele para você). Só vincular com a conta existente já verificada, o `email_verified` do provedor confirmado, e ainda assim pedindo a senha uma vez. O segredo do cliente nunca chega ao navegador (mesma regra da chave de IA, [ADR-0001](adr/0001-backend-stack.md)) | mesmo gatilho do domínio: **antes de demonstrar ou publicar**. É quando "crie uma conta com senha" vira atrito para quem não é você |
 | **Recuperação de senha não tem tela.** Os dois endpoints existem e funcionam; nenhum tem interface, e link que não vai a lugar nenhum é pior que link ausente — por isso a tela de entrar não oferece "forgot your password". É também a primeira coisa que justifica um roteador de verdade, porque o link do email carrega token na URL | S8, ou antes de publicar, o que vier primeiro |
-| O caminho **logado** nunca foi exercitado de ponta a ponta: conta real, cookie real, token de 30 minutos que expirou de verdade. O que existe hoje prova o caminho **deslogado** — o `401` atravessando o proxy foi verificado com os dois processos no ar. Metade disso vira teste de CI permanente (cadastro → token do `RecordingMailer` → verificação → login `web` → `/refresh` **só com o cookie** → `/me`, tudo no `TestClient`, que guarda cookie). A outra metade exige navegador de verdade e fica manual: uma passada sua com `docker compose up -d db` | teste de CI **no PR das telas**; a passada manual, uma vez, no mesmo PR |
-| ✅ **Horário útil por usuário como preferência** — feito como janela no [ADR-0029](adr/0029-the-usable-day-is-a-window-each-person-sets.md); os dias de folga e o bloco vêm no [ADR-0032](adr/0032-days-off-and-a-preferred-block-length.md). A constante de 16h já existe ([ADR-0022](adr/0022-capacity-against-a-usable-day.md)); falta virar coluna e tela. O `GET /me` é a casa | A capacidade livre é medida contra o dia inteiro, então às 3 da manhã existem 60 minutos livres e nada impede o agendador de usá-los. Numa demo isso não parece arredondamento errado, parece produto quebrado. Exige ADR quando chegar: muda schema (preferências por usuário) e muda o que "capacidade livre" significa. O `GET /me` já é a casa disso, e o ADR-0004 já lista as três preferências que o planejador precisa — duração de bloco preferida, dias de folga, horário útil | **S6**, antes do agendador |
+| Um token de 30 minutos que **expira de verdade** num navegador, e a renovação silenciosa que o segue, nunca foram vistos. O resto do caminho logado está coberto: o teste de CI (cadastro → token do `RecordingMailer` → verificação → login `web` → `/refresh` **só com o cookie** → `/me`) é o item 1.3 do `backlog.md`, e as conferências no navegador de cada PR de tela entram com conta, cookie e proxy de verdade | a passada manual, uma vez, num PR de tela |
 | Serviço `web` no `docker-compose.yml`. Hoje a demo exige dois terminais. Adiado de propósito: Vite em container costuma quebrar o HMR por sincronia de arquivos, e a decisão pertence à mesma conversa de proxy reverso que o [ADR-0021](adr/0021-browser-session-and-origin.md) empurrou para lá | S11, no deploy |
 | Entidade de **período** para atividades multi-dia — o `Up next` do protótipo. Não é tarefa e não consome capacidade de dia ([ADR-0012](adr/0012-task-time-business-rules.md)) | S10 ou stretch |
 | Semântica do heatmap: como intensidade derivada e marca explícita se combinam numa cor só ([ADR-0010](adr/0010-day-as-a-table-for-day-level-state.md)) | S10 |
-| Eu não enxergo o CI de dentro das sessões de trabalho, então o resultado sempre precisa ser colado. O conector do GitHub resolveria; o `gh` já resolveu o atrito de abrir PR, que era a parte que incomodava você | quando incomodar |
 
 ---
 
