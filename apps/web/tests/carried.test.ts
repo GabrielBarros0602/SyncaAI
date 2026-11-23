@@ -23,6 +23,7 @@ function task(id: string, startAt: string, endAt: string): Task {
     completed_at: null,
     tag: null,
     items: [],
+    plan_id: null,
   };
 }
 

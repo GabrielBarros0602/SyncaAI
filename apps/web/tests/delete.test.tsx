@@ -46,6 +46,7 @@ function aTask(id: string, start: string, end: string, over: Partial<Task> = {})
     completed_at: null,
     tag: null,
     items: [],
+    plan_id: null,
     ...over,
   };
 }
@@ -127,6 +128,7 @@ function serve(server: Server): void {
         completed_at: null,
         tag: null,
         items: [],
+        plan_id: null,
       };
       server.tasks = [...server.tasks, task];
       return Promise.resolve(json(201, task));

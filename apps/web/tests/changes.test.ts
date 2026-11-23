@@ -24,6 +24,7 @@ function aTask(over: Partial<Task> = {}): Task {
     completed_at: null,
     tag: { id: "g1", name: "college" },
     items: [],
+    plan_id: null,
     ...over,
   };
 }

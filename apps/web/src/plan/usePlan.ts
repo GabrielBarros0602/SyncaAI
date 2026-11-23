@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api, request } from "../api/client";
+import { PAGE_SIZE } from "../api/pages";
 import type {
   DayCapacity,
   Job,
@@ -26,7 +27,9 @@ export interface PlanState {
   status: PlanLoad;
   /**
    * The plan waiting for review, or what it became while it was being reviewed: read again
-   * after a refusal, it may have expired. Null when there is none.
+   * after a refusal, it may have expired. With none waiting, the plan being followed: the
+   * newest approved one with tasks still open (decided on 2026-10-28), whose progress is read
+   * again with the week. Null when there is none.
    */
   plan: Plan | null;
   /** The request being made, or the latest one if it failed and nothing came after it. */
@@ -75,12 +78,34 @@ function inProgress(job: Job | null): job is Job & { status: "queued" | "running
   return job?.status === "queued" || job?.status === "running";
 }
 
+/** An approved plan with tasks still to do. */
+function stillOpen(plan: Plan): boolean {
+  return plan.status === "approved" && plan.progress !== null && plan.progress.done < plan.progress.total;
+}
+
+/**
+ * The newest approved plan with tasks still to do, which the Plan button counts (decided on
+ * 2026-10-28): the others are in the plans' list, and a sum of them would mix plans a person
+ * sees apart. Read page by page, newest first, until one is found.
+ */
+async function followed(): Promise<Plan | null> {
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const page = await api.get<Page<Plan>>(
+      `/plans?status=approved&limit=${String(PAGE_SIZE)}&offset=${String(offset)}`,
+    );
+    const open = page.items.find(stillOpen);
+    if (open !== undefined) return open;
+    if (page.items.length < PAGE_SIZE) return null;
+  }
+}
+
 /**
  * The newest request and the newest plan, and which of them the screens follow.
  *
  * One at a time (ADR-0033): a request being made and a plan waiting never both exist. A
  * failed request stays the news until something newer happens, a plan written or asked for
- * since, which the database's clock on both says (ADR-0058).
+ * since, which the database's clock on both says (ADR-0058). With none of those, an approved
+ * plan still under way is.
  */
 async function discover(): Promise<{ plan: Plan | null; job: Job | null }> {
   const [jobs, plans] = await Promise.all([
@@ -93,7 +118,8 @@ async function discover(): Promise<{ plan: Plan | null; job: Job | null }> {
   if (plan?.status === "pending") return { plan, job: null };
   const failedSince =
     job?.status === "failed" && (plan === null || Date.parse(job.created_at) > Date.parse(plan.created_at));
-  return { plan: null, job: failedSince ? job : null };
+  if (failedSince) return { plan: null, job };
+  return { plan: plan !== null && stillOpen(plan) ? plan : await followed(), job: null };
 }
 
 /**
@@ -225,6 +251,25 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
     };
   }, [span, revision]);
 
+  // An approved plan's count moves with its tasks, which the week writes: read it again with
+  // the week. Kept once all are done, so the page open on it says so; a reload lets it go.
+  const counting = plan?.status === "approved" ? plan.id : null;
+
+  useEffect(() => {
+    if (counting === null) return;
+    let cancelled = false;
+    api
+      .get<Plan>(`/plans/${counting}`)
+      .then((read) => {
+        if (!cancelled) setPlan(read);
+      })
+      // The count on screen stays as it was read, until the next week read brings another.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [counting, revision]);
+
   const planId = plan?.id ?? null;
 
   const reload = useCallback(async () => {
@@ -342,7 +387,9 @@ export function usePlan(revision: number, onReady: (plan: Plan) => void): PlanSt
       method: "POST",
       headers: { "Idempotency-Key": key },
     });
-    setPlan(null);
+    // Approved, it is the plan followed from here, with none of its tasks done yet. Unread, it
+    // is let go, and the next look for one finds it.
+    setPlan(await api.get<Plan>(`/plans/${planId}`).catch(() => null));
     return made;
   }, [planId, settle]);
 

@@ -9,7 +9,8 @@
  * hears of it only when the offer ends or before the plan is approved; a plan written by hand is
  * nothing on the server until its first step, and is named then; a commit retried after a lost
  * answer sends the same key, every step a commit is refused for is shown at once, and a plan
- * read again after a refusal may turn out to be closed.
+ * read again after a refusal may turn out to be closed. Approved, the plan the button counts is
+ * the newest with tasks still open.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
@@ -127,7 +128,8 @@ function aPlan(over: Partial<Plan> = {}): Plan {
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
-type Handler = (init: RequestInit | undefined) => Response | Promise<Response>;
+/** `url` is the whole address asked for, query included, for a route that reads it. */
+type Handler = (init: RequestInit | undefined, url: string) => Response | Promise<Response>;
 
 let fetchMock: ReturnType<typeof vi.fn<FetchLike>>;
 
@@ -144,7 +146,7 @@ function serve(plan: Plan | null, routes: Record<string, Handler> = {}): void {
     const [path = "", query = ""] = input.replace("/api/v1", "").split("?");
     const key = `${init?.method ?? "GET"} ${path}`;
     const handler = routes[key];
-    if (handler !== undefined) return Promise.resolve(handler(init));
+    if (handler !== undefined) return Promise.resolve(handler(init, input));
     if (path === "/me") return Promise.resolve(json(200, ME));
     if (path === "/tasks") return Promise.resolve(json(200, { items: [], limit: 100, offset: 0 }));
     if (path === "/capacity") {
@@ -917,6 +919,31 @@ describe("discarding", () => {
     });
     expect(screen.getByRole("button", { name: "Plan" })).toBeDefined();
     expect(screen.queryByText("10:00 – 10:30 · proposed")).toBeNull();
+  });
+});
+
+/** The plan approved, its two steps two tasks, `done` of them completed. */
+function approved(done: number, over: Partial<Plan> = {}): Plan {
+  return aPlan({ status: "approved", progress: { done, total: 2 }, ...over });
+}
+
+describe("an approved plan", () => {
+  it("is counted on the Plan button while a task of it is still open", async () => {
+    serve(approved(1), { "GET /plans/p1": () => json(200, approved(1)) });
+    renderAt("/");
+
+    expect(await screen.findByRole("button", { name: "Plan, 1 of 2" })).toBeDefined();
+  });
+
+  it("gives way on the button, once all are done, to an older plan still under way", async () => {
+    const older = approved(0, { id: "p0" });
+    serve(approved(2), {
+      "GET /plans/p0": () => json(200, older),
+      "GET /plans": (_init, url) =>
+        json(200, page(url.includes("status=approved") ? [approved(2), older] : [approved(2)])),
+    });
+    renderAt("/");
+    expect(await screen.findByRole("button", { name: "Plan, 0 of 2" })).toBeDefined();
   });
 });
 

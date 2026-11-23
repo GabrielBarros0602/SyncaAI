@@ -84,6 +84,7 @@ function aTask(id: string, startsAt: string, endsAt: string, over: Partial<Task>
     completed_at: null,
     tag: null,
     items: [],
+    plan_id: null,
     ...over,
   };
 }
