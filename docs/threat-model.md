@@ -15,7 +15,8 @@ document, with the rows it changed.
 
 1. **When item 2 of [`backlog.md`](backlog.md) is finished and the three screens exist.** The
    front end is the surface the old trigger was pointing at, and it is still being built:
-   delete, move, settings and address confirmation are not there yet. Reviewing halfway means
+   delete, move and the plan's screens are there; settings and signing in, the last two
+   steps of ADR-0052, are not yet (2026-11-23). Reviewing halfway means
    reviewing twice, and the second one is the only one that would have counted.
 2. ~~**Before a real provider is wired in S7.**~~ **Done on 2026-10-23,** at the end of S6:
    rows 12 to 15 read together, and rows 19 to 22 added for what S6 built. See *The AI surface,
@@ -90,7 +91,7 @@ otherwise would make the rest of this document less trustworthy.
 | 17 | Secrets committed to the repository | mitigated | `.env` ignored, `.env.example` carries no real value, verified in review |
 | 18 | Known-vulnerable dependency | mitigated | Dependabot alerts are enabled for the repository (checked through the API on 2026-10-23: none open, every past one fixed), and CI refuses a lockfile that does not match its `.in` file. Pins move with `uv pip compile --upgrade`, never through Dependabot pull requests (`.github/dependabot.yml`) |
 | 19 | Plan requests flood the queue or the worker | partial | one plan in progress per person, held by partial unique indexes on jobs and drafts (ADR-0033); a job waiting fifteen minutes fails rather than piling up (ADR-0031). Each account is held to the rate limit (ADR-0042), and a model that is down stops the worker claiming (ADR-0046); many accounts each asking within its limit are bounded only by verification |
-| 20 | A model's answer reaching a page as active content | mitigated in the API | links must be labelled `http` or `https` addresses, checked by validation and by a `CHECK` on the table, so `javascript:` and `data:` cannot be stored (ADR-0030, ADR-0037); a task's note is written by code from validated fields, never copied (ADR-0030). One field is the model's text unvalidated: the title of a discarded step, returned so the review can say what was dropped. The screens that will show plans do not exist yet; rendering every field as text, that one above all, is trigger 1's to check |
+| 20 | A model's answer reaching a page as active content | mitigated in the API | links must be labelled `http` or `https` addresses, checked by validation and by a `CHECK` on the table, so `javascript:` and `data:` cannot be stored (ADR-0030, ADR-0037); a task's note is written by code from validated fields, never copied (ADR-0030). One field is the model's text unvalidated: the title of a discarded step, returned so the review can say what was dropped. The plan's screens exist since 2026-11-23, and `apps/web/src` has no `dangerouslySetInnerHTML` and no `innerHTML`, so every field, that title too, is written as text; a link is an `<a>` whose address the `CHECK` holds to `http` or `https`. Nothing yet stops a later change from adding raw HTML, and trigger 1 still reads the front end whole |
 | 21 | AI content kept longer than promised | mitigated | requests and answers go thirty days after a job ends, and unapproved drafts thirty days after they end, by an hourly purge (ADR-0031, ADR-0036, ADR-0037), held by `tests/test_purge.py`, including a search of every column a request is written to |
 | 22 | The provider keeps or trains on what it is sent | **closed while the model is local** | nothing is sent: the worker asks a model on the developer's own machine, and any deployment answers with the sample ([ADR-0039](adr/0039-a-local-open-model-until-a-provider-is-paid-for.md)). The one way out found is closed: Ollama also runs models on its own servers, reached through the same local address (checked on 2026-10-24), and a model name whose tag ends in `cloud` is refused at boot, with `OLLAMA_NO_CLOUD=1` documented as the switch that makes Ollama refuse them all ([ADR-0040](adr/0040-what-the-local-model-is-held-to-measured.md)). Reopens with a paid provider: ADR-0039 chose Anthropic in theory for terms that rule out training on API data and delete it within thirty days, to be read again against that day's pages before the first paid call. Row 15 limits what is sent; it cannot limit what happens to it after |
 
@@ -182,8 +183,8 @@ the first real call.
 ## What this document does not cover
 
 The deployment environment — host hardening, TLS termination, security headers, network
-exposure — is S11 and has no decisions yet. The front end is S5 and will bring its own
-surface, which is why the next review is scheduled there rather than at a date.
+exposure — is S11 and has no decisions yet. The front end brings its own surface, which is
+why trigger 1 reviews it once its screens exist rather than at a date.
 
 ## What to do, in order
 
@@ -198,7 +199,7 @@ surface, which is why the next review is scheduled there rather than at a date.
    **Done:** the rate limit (ADR-0042), the monthly ceiling and the kill switch (ADR-0044),
    before any paid call.
 7. **Trigger 1 checks that the screens render a plan's text as text**, which is row 20's open
-   half.
+   half. The plan's screens did on 2026-11-23 (row 20).
 
 ---
 
@@ -220,10 +221,12 @@ provável do projeto.
 ataque de cadeia de suprimentos mirado neste projeto. Fingir que estão cobertos tornaria o
 resto menos confiável.
 
-**Brechas abertas agora são duas:** ausência de política de CORS, que o S5 precisa decidir em
+~~**Brechas abertas agora são duas:** ausência de política de CORS, que o S5 precisa decidir em
 ADR e não copiando trecho pronto; e a ameaça 7 — isolamento por dono — que está mitigada mas
 **não exercitada**, porque nenhum endpoint a usa até o S4. A enumeração de conta foi fechada
-no S3.
+no S3.~~ **As duas fecharam:** o CORS no ADR-0021, uma origem só e nenhum middleware; e o
+isolamento, exercitado por HTTP desde o S4. A tabela em inglês diz o que segue parcial ou
+aberto.
 
 **Aceito de propósito, com motivo:** não há bloqueio de conta, porque bloqueio é alavanca para
 travar a vítima; o token sobrevive à conta apagada por até 30 minutos, que é o preço de não
