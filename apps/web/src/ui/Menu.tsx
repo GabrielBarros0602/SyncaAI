@@ -4,18 +4,23 @@
  * The same at every width, as the round drew it: a panel under the button from 640px, a sheet
  * from the bottom of the screen below that. It is a native modal dialog, so the browser makes
  * the page behind it inert, keeps focus inside, and closes it on Esc; the code here only opens
- * it and puts focus back on the button once it closes, however it closed.
+ * it and puts focus back on the button once it closes, however it closed, unless it closed to
+ * go to Settings, whose heading the router focuses instead.
  *
- * Settings joins it when the settings page is built.
+ * Signing out keeps it open until the server has answered: "Signing out…" and a sign-out that
+ * did not happen need somewhere to be said, and the drawing closes it at once.
  */
 import { useId, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import styles from "./Menu.module.css";
+import { SignOutButton } from "./SignOutButton";
 
 interface Props {
   email: string;
   timezone: string;
-  onSignOut: () => void;
+  /** Resolves once the server has ended the session; rejects when it did not. */
+  onSignOut: () => Promise<void>;
 }
 
 export function Menu({ email, timezone, onSignOut }: Props): React.ReactNode {
@@ -23,6 +28,11 @@ export function Menu({ email, timezone, onSignOut }: Props): React.ReactNode {
   const button = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const heading = useId();
+  const navigate = useNavigate();
+  const here = useLocation().pathname === "/settings";
+  // Set when it closes to go to Settings: the close event comes after the page has changed,
+  // and putting focus back on the button then would take it off the page's heading.
+  const leaving = useRef(false);
 
   function close(): void {
     dialog.current?.close();
@@ -37,6 +47,7 @@ export function Menu({ email, timezone, onSignOut }: Props): React.ReactNode {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
+          leaving.current = false;
           dialog.current?.showModal();
           setOpen(true);
         }}
@@ -53,7 +64,7 @@ export function Menu({ email, timezone, onSignOut }: Props): React.ReactNode {
         aria-labelledby={heading}
         onClose={() => {
           setOpen(false);
-          button.current?.focus();
+          if (!leaving.current) button.current?.focus();
         }}
         onClick={(event) => {
           if (event.target === event.currentTarget) close();
@@ -78,16 +89,23 @@ export function Menu({ email, timezone, onSignOut }: Props): React.ReactNode {
               <dd>{timezone}</dd>
             </div>
           </dl>
-          <button
-            type="button"
-            className={styles.action}
-            onClick={() => {
-              close();
-              onSignOut();
-            }}
-          >
-            Sign out of this browser
-          </button>
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.settings}
+              aria-current={here ? "page" : undefined}
+              onClick={() => {
+                // Already there, it only closes, as Close does.
+                leaving.current = !here;
+                close();
+                if (!here) void navigate("/settings");
+              }}
+            >
+              <span>Settings</span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <SignOutButton className={styles.action} onSignOut={onSignOut} />
+          </div>
         </div>
       </dialog>
     </>

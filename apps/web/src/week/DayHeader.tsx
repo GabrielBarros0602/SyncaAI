@@ -43,12 +43,13 @@ interface Props {
   /** Today, in this week: what Today, T and "back to this week" mean here. */
   onBack: () => void;
   onGoToDate: (localDate: string) => void;
-  onSignOut: () => void;
+  /** Resolves once the server has ended the session; rejects when it did not. */
+  onSignOut: () => Promise<void>;
   /** The Plan button, beside Menu at every width (plan.dc.html). */
   plan?: React.ReactNode;
   /**
-   * The plan is under review in place of the day: the top line alone, as the drawing has it,
-   * since the week's arrows and the day's date would move nothing on screen.
+   * The plan or the settings page is in place of the day: the top line alone, as the drawings
+   * have it, since the week's arrows and the day's date would move nothing on screen.
    */
   reviewing?: boolean;
   /** The week at a glance, drawn under the week below 640px. */

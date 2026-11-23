@@ -1,0 +1,19 @@
+/* The button and, when the server did not end the session, the sentence under it. */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.failure {
+  margin: 0;
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--alert-ink);
+  text-wrap: pretty;
+}
+
+/* Empty until there is something to say, and then set off from the button. */
+.failure:not(:empty) {
+  margin-top: var(--space-2);
+}

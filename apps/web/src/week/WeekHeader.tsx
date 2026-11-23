@@ -31,10 +31,14 @@ interface Props {
   onBack: () => void;
   /** Open the week holding a local date, with focus on that day. */
   onGoToDate: (localDate: string) => void;
-  onSignOut: () => void;
+  /** Resolves once the server has ended the session; rejects when it did not. */
+  onSignOut: () => Promise<void>;
   /** The Plan button, beside Menu. */
   plan?: React.ReactNode;
-  /** The review has taken the page: the weeks are not on screen, so neither is their way. */
+  /**
+   * The review or the settings page has taken the page: the weeks are not on screen, so
+   * neither is their way.
+   */
   reviewing?: boolean;
 }
 

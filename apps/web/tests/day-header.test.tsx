@@ -6,6 +6,7 @@
  * puts focus where the person is going. Where it all sits is measured in a browser.
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Me } from "../src/api/types";
@@ -43,23 +44,26 @@ function header({
   onBack = () => undefined,
   onGoToDate = () => undefined,
 }: Options = {}): HTMLElement {
+  // In a router: the Menu inside leads to Settings.
   const { container } = render(
-    <DayHeader
-      layout={layout}
-      range="24 – 30 Aug 2026"
-      offset={0}
-      me={me}
-      days={days}
-      shown={shown}
-      today="2026-08-26"
-      onToday={onToday}
-      onGoTo={() => undefined}
-      onBack={onBack}
-      onGoToDate={onGoToDate}
-      onSignOut={() => undefined}
-    >
-      <ol aria-label="Week at a glance" />
-    </DayHeader>,
+    <MemoryRouter>
+      <DayHeader
+        layout={layout}
+        range="24 – 30 Aug 2026"
+        offset={0}
+        me={me}
+        days={days}
+        shown={shown}
+        today="2026-08-26"
+        onToday={onToday}
+        onGoTo={() => undefined}
+        onBack={onBack}
+        onGoToDate={onGoToDate}
+        onSignOut={() => Promise.resolve()}
+      >
+        <ol aria-label="Week at a glance" />
+      </DayHeader>
+    </MemoryRouter>,
   );
   return container;
 }

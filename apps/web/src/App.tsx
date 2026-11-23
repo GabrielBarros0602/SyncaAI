@@ -5,13 +5,14 @@
  * access token in memory, a reload starts knowing nothing, and guessing "signed out" would
  * flash the login screen at somebody who is perfectly well signed in (ADR-0021).
  *
- * The routes are few on purpose, one per page that exists (ADR-0052). Settings and the reset
- * link join as their screens are built; an address that names nothing lands on
- * the week rather than on an empty page.
+ * The routes are few on purpose, one per page that exists (ADR-0052). The reset link joins as
+ * its screen is built; an address that names nothing lands on the week rather than on an empty
+ * page.
  */
 import { Navigate, Route, Routes } from "react-router";
 
 import { AuthScreen } from "./auth/AuthScreen";
+import { SignedOut } from "./auth/SignedOut";
 import { useSession } from "./auth/useSession";
 import { RouteFocus } from "./ui/RouteFocus";
 import shell from "./ui/Shell.module.css";
@@ -19,13 +20,13 @@ import { WeekScreen } from "./week/WeekScreen";
 import { WeekSkeleton } from "./week/WeekSkeleton";
 
 function Home(): React.ReactNode {
-  const { status } = useSession();
+  const { status, signedOut } = useSession();
 
   return (
     // The loading week is padded like the week it turns into, so nothing moves when it does.
     <div className={status === "anonymous" ? shell.signedOut : shell.signedIn}>
       {status === "loading" && <WeekSkeleton />}
-      {status === "anonymous" && <AuthScreen />}
+      {status === "anonymous" && (signedOut ? <SignedOut /> : <AuthScreen />)}
       {status === "authenticated" && <WeekScreen />}
     </div>
   );
@@ -44,6 +45,8 @@ export function App(): React.ReactNode {
         <Route path="/plan" element={<Home />} />
         {/* An approved plan's own page, which a task's "from your plan" leads to. */}
         <Route path="/plan/:planId" element={<Home />} />
+        {/* In place of the week, which stays underneath with its week and its day. */}
+        <Route path="/settings" element={<Home />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

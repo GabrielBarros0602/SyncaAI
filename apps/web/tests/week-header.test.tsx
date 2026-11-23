@@ -21,7 +21,7 @@ function header(onGoToDate = vi.fn<(localDate: string) => void>()): HTMLElement 
       onGoTo={() => undefined}
       onBack={() => undefined}
       onGoToDate={onGoToDate}
-      onSignOut={() => undefined}
+      onSignOut={() => Promise.resolve()}
     />,
   );
   return container;

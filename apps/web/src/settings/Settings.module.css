@@ -1,0 +1,121 @@
+/*
+ * The settings page as settings.dc.html draws it: one column of at most 720px, each part of it
+ * a sheet of its own on the page's ground.
+ */
+
+.page {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-3) var(--space-3) var(--space-8);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Drawn without an edge, so its text lines up with the heading under it. */
+.back {
+  align-self: flex-start;
+  min-height: var(--target-touch);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+}
+
+.back:hover {
+  background: var(--hover);
+}
+
+.back:active {
+  background: var(--pressed);
+}
+
+.title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-6) / var(--leading-6) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  background: var(--surface);
+}
+
+.heading {
+  margin: 0;
+  font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
+}
+
+.facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.facts dt {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.lede {
+  margin: 0;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.button {
+  align-self: flex-start;
+  min-height: var(--target-touch);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.button:hover {
+  background: var(--hover);
+}
+
+.button:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}

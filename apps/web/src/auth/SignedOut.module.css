@@ -1,0 +1,46 @@
+/* One column of at most 560px, as settings.dc.html draws the page after signing out. */
+
+.page {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-6) / var(--leading-6) var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+.lede {
+  margin: 0;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.primary {
+  align-self: flex-start;
+  min-height: var(--target-touch);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-2);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.primary:hover {
+  background: var(--primary-hover);
+}
+
+.primary:active {
+  background: var(--primary-pressed);
+  transform: scale(var(--press-scale));
+}
