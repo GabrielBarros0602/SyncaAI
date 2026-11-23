@@ -637,11 +637,12 @@ leitura do pedido traz desde a PR 170. Feito numa PR pequena depois da 6.
 
 O `settings.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 
-0. O que a tela lê e a API não dava (ADR-0060): a recusa do `PATCH /me` nomeia os campos, e o
-   `GET /capacity` mede a semana contra uma janela ainda não salva. Só servidor.
-1. A página e sair: `/settings`, Settings no Menu, "‹ Back to the week" e Esc voltando ao dia
+0. ✅ O que a tela lê e a API não dava (ADR-0060): a recusa do `PATCH /me` nomeia os campos, e
+   o `GET /capacity` mede a semana contra uma janela ainda não salva. Só servidor.
+1. ✅ A página e sair: `/settings`, Settings no Menu, "‹ Back to the week" e Esc voltando ao dia
    de onde se saiu, a conta, e Sign out na página e no Menu, com a página "You’re signed out
-   of this browser".
+   of this browser". O Menu fica aberto enquanto sai, para "Signing out…" e a falha terem onde
+   ser ditos.
 2. O tema: System, Light e Dark, aplicado ao tocar. O `<html>` deixa de ser `dark` fixo e
    passa a seguir o sistema (decisão 8 de 2026-10-22).
 3. O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo.
@@ -687,7 +688,8 @@ com a PR que os faz:
 
 **Achados ao ler o código, corrigidos nas PRs que tocam neles:**
 - **Sair pode não sair.** Se o `POST /auth/logout` não chega ao servidor, o cliente esquece o
-  token, mas o cookie HttpOnly fica, e o próximo reload entra de novo. Vai na PR 1.
+  token, mas o cookie HttpOnly fica, e o próximo reload entra de novo. ✅ Corrigido na PR 1: o
+  token só é esquecido depois do 204.
 - **A troca de senha não renova a sessão.** O `client.ts` trata todo 401 sob `/auth/` como
   resposta e não renova a sessão, e o `/auth/change-password` exige o bearer. Com 30 minutos
   na página, a troca falha com "Not authenticated." em vez de renovar e repetir. A exceção
