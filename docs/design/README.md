@@ -189,6 +189,15 @@ the copy here only renders the screens.
 - **"Show the week", after Approve, opens the week where it was,** this week or today below
   1100px, rather than on the first task's day. A plan starts today, so its first task is in
   the week that opens.
+- **Signing out waits for the server, and says so when it did not happen.** "Signing out…"
+  stays until the server has ended the session. A sign-out that did not happen leaves the person
+  signed in, with "Couldn’t reach the server." or "The server didn’t sign this browser out.",
+  then "You’re still signed in here.", under the button that was pressed. The drawing has no
+  such state. Only the server can clear the cookie that
+  signs the browser back in on a reload, so a page saying "You’re signed out of this browser"
+  before it answered could be wrong (decided on 2026-11-23).
+- **The Menu stays open while it signs out.** The drawing closes it at once, which leaves
+  "Signing out…" and a sign-out that failed with nowhere to be said on the week.
 - **Two lines that ran past the edge at 200% text are held inside it:**
   - the late completion line on a phone, made to wrap;
   - the day field when a plan's step is edited at 320px, which a select cannot wrap: it
