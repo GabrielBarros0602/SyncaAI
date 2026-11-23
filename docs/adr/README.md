@@ -37,10 +37,10 @@ the old one and update the status of the old one — never rewrite history.
 | [0026](0026-adopt-the-papel-tokens-and-test-every-pair.md) | Adopt the Papel tokens, and test every pair they promise | Accepted |
 | [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
 | [0028](0028-the-checklist-is-its-own-resource.md) | The checklist is its own resource | Accepted |
-| [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted |
+| [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted; its API amended by 0060 |
 | [0030](0030-a-plan-is-placed-in-real-free-time-reviewed-and-committed-whole.md) | A plan is placed in real free time, reviewed item by item, and committed whole | Accepted; amended by 0033 and 0049 |
 | [0031](0031-a-job-queue-in-postgresql-woken-by-notify.md) | A job queue in PostgreSQL, woken by NOTIFY and swept for what it misses | Accepted; decisions 1 and 5 amended by 0036, decision 2 by 0057 |
-| [0032](0032-days-off-and-a-preferred-block-length.md) | Days off and a preferred block length, for the planner | Accepted |
+| [0032](0032-days-off-and-a-preferred-block-length.md) | Days off and a preferred block length, for the planner | Accepted; its refusals name their fields by 0060 |
 | [0033](0033-a-plan-fills-this-week-first-in-its-own-language-one-at-a-time.md) | A plan fills this week first, in the request's language, one at a time | Accepted |
 | [0034](0034-the-model-sees-the-room-each-day-has-and-nothing-it-cannot-use.md) | The model sees the room each day has, and nothing it cannot use | Accepted |
 | [0035](0035-repair-whenever-a-step-fails-and-keep-the-better-answer.md) | Repair whenever a step fails, and keep the better of the two answers | Accepted |
@@ -68,6 +68,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0057](0057-a-request-no-worker-will-take-reads-as-failed.md) | A request no worker will take reads as failed | Accepted |
 | [0058](0058-a-request-says-what-it-asked-and-a-plan-s-tasks-are-listed-by-the-plan.md) | A request says what it asked, and a plan's tasks are listed by the plan | Accepted; each step's reason by 0059 |
 | [0059](0059-a-step-s-reason-is-read-from-the-plan-as-it-is-now.md) | A step's reason is read from the plan as it is now | Accepted |
+| [0060](0060-a-refused-setting-names-its-fields-and-the-week-can-be-measured-against-a-window-not-saved.md) | A refused setting names its fields, and the week can be measured against a window not saved | Accepted |
 
 ## Template
 

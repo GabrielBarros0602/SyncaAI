@@ -633,6 +633,66 @@ myself" ao lado deles usa os dias pedidos. ✅ Decidido em 2026-11-23, nas palav
 "devolve os dias do pedido também": o formulário volta com o texto e com os dias, que a
 leitura do pedido traz desde a PR 170. Feito numa PR pequena depois da 6.
 
+### As configurações — começadas em 2026-11-23
+
+O `settings.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
+
+0. O que a tela lê e a API não dava (ADR-0060): a recusa do `PATCH /me` nomeia os campos, e o
+   `GET /capacity` mede a semana contra uma janela ainda não salva. Só servidor.
+1. A página e sair: `/settings`, Settings no Menu, "‹ Back to the week" e Esc voltando ao dia
+   de onde se saiu, a conta, e Sign out na página e no Menu, com a página "You’re signed out
+   of this browser".
+2. O tema: System, Light e Dark, aplicado ao tocar. O `<html>` deixa de ser `dark` fixo e
+   passa a seguir o sistema (decisão 8 de 2026-10-22).
+3. O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo.
+4. A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe.
+5. A senha. Fecha o ROADMAP, o `CLAUDE.md` e o README do design.
+
+**Sete perguntas abertas pela leitura do desenho — decididas em 2026-11-23**, todas como
+recomendado:
+
+- **Onde o tema fica guardado.** No `localStorage`, numa chave e num módulo só; a exceção do
+  lint vale só para esse arquivo, e um script curto no `index.html` aplica o tema antes da
+  primeira pintura. O tema não é credencial, e é o que o ADR-0021 protege. Entra com a PR 2,
+  num ADR que emenda a ação 5 do 0021. As alternativas: um cookie, que contorna a regra e vai
+  ao servidor em todo pedido; o servidor, contra o "This device" do desenho e piscando a cada
+  carga até o `/me` responder; só a memória, que volta a System a cada reload.
+- **A semana depois de uma mudança.** Medida pelo servidor contra a janela digitada
+  (ADR-0060). Calcular na tela quebraria a regra do `load.ts` e erraria uma hora no dia da
+  troca de horário. Sem o "depois", o efeito só apareceria depois de feito.
+- **A recusa no campo certo.** O servidor nomeia os campos (ADR-0060), em vez de a tela
+  reconhecer a frase.
+- **O texto da troca de senha.** "every other device is signed out within 30 minutes" e "an
+  email about it is on its way to …", em vez de "is signed out" e "went to". O access token
+  dos outros aparelhos vale até 30 minutos (ADR-0051), e o e-mail pode falhar sem desfazer a
+  troca (ADR-0018). O desenho prometia mais do que o servidor faz.
+- **Sair espera o servidor.** "Signing out…" até o 204; se o pedido falha, a pessoa continua
+  dentro e a tela diz que não conseguiu sair. Hoje sair é otimista, e o defeito abaixo faz a
+  página "You’re signed out of this browser" mentir.
+- **A página vive dentro do `WeekScreen`,** como a revisão do plano no lugar da semana. A
+  semana guarda a semana e o dia, e o foco volta ao dia de onde se saiu, como o desenho pede.
+  A alternativa era pôr a posição da semana na URL, uma decisão à parte.
+- **As horas são o campo de 24h da edição de tarefa,** e não o `type="time"` nativo. O nativo
+  mostra "07:00 AM" num navegador em inglês dos EUA, contra as 24h da tela inteira. Ele perde
+  a roda de seleção no toque.
+
+**Quatro desvios que não pediram decisão**, para "Where the code departs from the drawings"
+com a PR que os faz:
+- o `PATCH` leva só o que mudou;
+- o bloco aceita só algarismos, e vazio vai como 0, para que quem responda seja a frase do
+  servidor;
+- sair da página com mudanças não salvas as descarta, como no desenho, que não avisa;
+- "Type your current password." e "At least 8 characters." são conferidos no Save, como
+  desenhado, e o servidor continua conferindo.
+
+**Achados ao ler o código, corrigidos nas PRs que tocam neles:**
+- **Sair pode não sair.** Se o `POST /auth/logout` não chega ao servidor, o cliente esquece o
+  token, mas o cookie HttpOnly fica, e o próximo reload entra de novo. Vai na PR 1.
+- **A troca de senha não renova a sessão.** O `client.ts` trata todo 401 sob `/auth/` como
+  resposta e não renova a sessão, e o `/auth/change-password` exige o bearer. Com 30 minutos
+  na página, a troca falha com "Not authenticated." em vez de renovar e repetir. A exceção
+  passa a valer só para o `/auth/login`, na PR 5.
+
 ---
 
 ## Rodada 2 — os verbos que faltam
