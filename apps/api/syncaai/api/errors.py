@@ -61,6 +61,21 @@ def _hours(minutes: int) -> str:
     return f"{hours} hour" if hours == 1 else f"{hours} hours"
 
 
+# The request's own names for what a refused setting is about. Both ends for the window: it is
+# judged as a pair, so a refusal is about the pair even when one end was sent (ADR-0029).
+_WINDOW = ("day_starts_at", "day_ends_at")
+
+
+def _refused_setting(detail: str, fields: tuple[str, ...]) -> JSONResponse:
+    """A setting refused, naming the fields it is about, so a form puts the sentence under
+    them rather than recognising it by its words, which would move it to the wrong field the
+    day one is reworded (ADR-0060)."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": detail, "fields": list(fields)},
+    )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AccountNotVerifiedError)
     async def _not_verified(_: Request, __: AccountNotVerifiedError) -> JSONResponse:
@@ -160,49 +175,37 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(UsableWindowInvertedError)
     async def _window_inverted(_: Request, __: UsableWindowInvertedError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={"detail": "The usable day has to end after it starts, on the same day."},
+        return _refused_setting(
+            "The usable day has to end after it starts, on the same day.", _WINDOW
         )
 
     @app.exception_handler(UsableWindowTooShortError)
     async def _window_too_short(_: Request, __: UsableWindowTooShortError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={
-                "detail": f"The usable day has to be at least {_hours(MIN_USABLE_MINUTES)} long."
-            },
+        return _refused_setting(
+            f"The usable day has to be at least {_hours(MIN_USABLE_MINUTES)} long.", _WINDOW
         )
 
     @app.exception_handler(UsableWindowTooLongError)
     async def _window_too_long(_: Request, __: UsableWindowTooLongError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={"detail": f"The usable day can be at most {_hours(MAX_USABLE_MINUTES)} long."},
+        return _refused_setting(
+            f"The usable day can be at most {_hours(MAX_USABLE_MINUTES)} long.", _WINDOW
         )
 
     @app.exception_handler(WeekdayOutOfRangeError)
     async def _weekday_out_of_range(_: Request, __: WeekdayOutOfRangeError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={"detail": "A weekday is a number from 1 (Monday) to 7 (Sunday)."},
+        return _refused_setting(
+            "A weekday is a number from 1 (Monday) to 7 (Sunday).", ("days_off",)
         )
 
     @app.exception_handler(NoDayToPlanError)
     async def _no_day_to_plan(_: Request, __: NoDayToPlanError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={"detail": "There has to be at least one day to plan in."},
-        )
+        return _refused_setting("There has to be at least one day to plan in.", ("days_off",))
 
     @app.exception_handler(BlockLengthOutOfRangeError)
     async def _block_out_of_range(_: Request, __: BlockLengthOutOfRangeError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={
-                "detail": f"A block lasts from {MIN_ITEM_MINUTES} minutes "
-                f"to {_hours(MAX_ITEM_MINUTES)}."
-            },
+        return _refused_setting(
+            f"A block lasts from {MIN_ITEM_MINUTES} minutes to {_hours(MAX_ITEM_MINUTES)}.",
+            ("preferred_block_minutes",),
         )
 
     @app.exception_handler(InvertedWindowError)
