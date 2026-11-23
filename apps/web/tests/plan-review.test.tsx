@@ -10,7 +10,8 @@
  * nothing on the server until its first step, and is named then; a commit retried after a lost
  * answer sends the same key, every step a commit is refused for is shown at once, and a plan
  * read again after a refusal may turn out to be closed. Approved, the plan the button counts is
- * the newest with tasks still open, and its page counts what exists now.
+ * the newest with tasks still open, its page counts what exists now, and a task leads back to
+ * the plan it came from, not to whichever the button counts.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
@@ -1030,6 +1031,45 @@ describe("an approved plan", () => {
     expect(await screen.findByText("2 of 2")).toBeDefined();
     expect(sent).toEqual({ completed: true });
     expect(tasks.getByRole("checkbox", { name: "Reopen Limits: exercises 1 to 15" })).toBeDefined();
+  });
+
+  it("is reached from a task it made, which leads to its own plan and not the one counted", async () => {
+    const older = approved(0, { id: "p9", request: "Organizar a mudança" });
+    serve(approved(0), {
+      "GET /plans/p1": () => json(200, approved(0)),
+      "GET /plans/p9": () => json(200, older),
+      "GET /tasks": () => json(200, page([aTask("t9", { plan_id: "p9", title: "Pack the boxes" })])),
+    });
+    renderAt("/");
+    const link = await screen.findByRole("button", { name: "from your plan" });
+    // Out of the week's tab order while its row is shut, as the row's box is (ADR-0053).
+    expect(link.getAttribute("tabindex")).toBe("-1");
+
+    fireEvent.click(link);
+
+    await waitFor(() => {
+      expect(path()).toBe("/plan/p9");
+    });
+    expect(await screen.findByText("Organizar a mudança")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "The plan, in your week" })).toBeDefined();
+  });
+
+  it("leads below 1100px from the day's row, under its button", async () => {
+    setViewportWidth(375);
+    serve(null, {
+      "GET /plans/p1": () => json(200, approved(0)),
+      "GET /tasks": () => {
+        const today = toLocalDate(todayIn("UTC"));
+        return json(200, page([aTask("t1", { start_at: `${today}T10:00:00Z`, end_at: `${today}T10:30:00Z` })]));
+      },
+    });
+    renderAt("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "from your plan" }));
+
+    await waitFor(() => {
+      expect(path()).toBe("/plan/p1");
+    });
   });
 
   it("lets a new plan be asked for or written from its page", async () => {

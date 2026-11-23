@@ -64,6 +64,8 @@ interface Props {
   proposed?: Proposed[];
   /** Open the review on a step. */
   onOpenStep?: (itemId: string) => void;
+  /** Open the page of the plan a task came from. */
+  onOpenPlan?: ((planId: string) => void) | undefined;
 }
 
 export function DayList({
@@ -86,6 +88,7 @@ export function DayList({
   onChecklist,
   proposed = [],
   onOpenStep,
+  onOpenPlan,
 }: Props): React.ReactNode {
   const heading = useId();
   // The rows and the plan's proposed steps, in the order they start.
@@ -221,6 +224,7 @@ export function DayList({
               onToggle={onToggle}
               onDelete={(snapshot) => onDeleteTask(task, snapshot)}
               onChecklist={(change) => onChecklist(task.id, change)}
+              onOpenPlan={onOpenPlan}
             />
           );
         })}

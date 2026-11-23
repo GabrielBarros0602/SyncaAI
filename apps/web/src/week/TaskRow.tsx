@@ -44,6 +44,8 @@ interface Props {
   onDelete: (snapshot: NewTask | null) => Promise<void>;
   /** Change the checklist. Rejects with the server's `ApiError`. */
   onChecklist: (change: ChecklistChange) => Promise<void>;
+  /** Open the page of the plan a task came from. */
+  onOpenPlan?: ((planId: string) => void) | undefined;
 }
 
 /**
@@ -76,10 +78,12 @@ export function TaskRow({
   onToggle,
   onDelete,
   onChecklist,
+  onOpenPlan,
 }: Props): React.ReactNode {
   const done = task.completed_at !== null;
   const actions = useRowActions(task, onOpen, onToggle, onDelete);
   const { refusal, toggle } = actions;
+  const planId = task.plan_id;
   const self = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(open !== null);
 
@@ -160,9 +164,23 @@ export function TaskRow({
         <span className={cx(day.title, done && day.titleDone)}>{task.title}</span>
       </div>
 
-      {(task.tag !== null || hasNote || task.items.length > 0 || saving) && (
+      {(task.tag !== null || planId !== null || hasNote || task.items.length > 0 || saving) && (
         <div className={day.meta}>
           {task.tag !== null && <span className={day.tag}>{task.tag.name}</span>}
+          {/* The way back to the count, from anywhere a step of it shows (plan.dc.html). No
+              step number: the task keeps only its plan (decided on 2026-11-22). */}
+          {planId !== null && (
+            <button
+              type="button"
+              className={day.fromPlan}
+              tabIndex={open === null ? -1 : 0}
+              onClick={() => {
+                onOpenPlan?.(planId);
+              }}
+            >
+              from your plan
+            </button>
+          )}
           {/* Only while shut: open, the note itself is on the row. */}
           {hasNote && open === null && <span className={day.quiet}>note</span>}
           {task.items.length > 0 && (
