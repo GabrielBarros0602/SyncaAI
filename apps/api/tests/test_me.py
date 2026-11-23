@@ -309,3 +309,40 @@ def test_one_bad_field_changes_nothing_else(app: FastAPI, client: TestClient) ->
 
     assert response.status_code == 422
     assert (user.day_starts_at, user.days_off) == (time(6), [])
+
+
+@pytest.mark.parametrize(
+    ("change", "fields"),
+    [
+        ({"day_starts_at": "23:00"}, ["day_starts_at", "day_ends_at"]),
+        ({"day_starts_at": "09:00", "day_ends_at": "09:30"}, ["day_starts_at", "day_ends_at"]),
+        ({"day_starts_at": "04:00", "day_ends_at": "23:00"}, ["day_starts_at", "day_ends_at"]),
+        ({"days_off": [1, 2, 3, 4, 5, 6, 7]}, ["days_off"]),
+        ({"days_off": [8]}, ["days_off"]),
+        ({"preferred_block_minutes": 300}, ["preferred_block_minutes"]),
+    ],
+)
+def test_a_refusal_names_the_fields_it_is_about(
+    app: FastAPI, client: TestClient, change: dict[str, object], fields: list[str]
+) -> None:
+    """By the request's own names, so the settings screen puts the sentence under the field
+    and never has to recognise it by its words (ADR-0060). The window names both ends even
+    when one was sent: it is judged as a pair, and the stored end is half of the problem."""
+    _wire(app, _a_user())
+
+    response = client.patch(ME, json=change)
+
+    assert response.status_code == 422
+    assert response.json()["fields"] == fields
+
+
+def test_the_first_part_refused_is_the_one_named(app: FastAPI, client: TestClient) -> None:
+    """The window is judged before the days off and the block, and the first refusal ends the
+    check. A form showing one refusal at a time, as the settings drawing does, shows this one."""
+    _wire(app, _a_user())
+
+    response = client.patch(
+        ME, json={"day_starts_at": "23:00", "days_off": [8], "preferred_block_minutes": 300}
+    )
+
+    assert response.json()["fields"] == ["day_starts_at", "day_ends_at"]
