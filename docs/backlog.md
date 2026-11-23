@@ -173,6 +173,14 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
    checkout apagado deixa o seu banco para trás, e o `syncaai_test` antigo ficou órfão no
    PostgreSQL de desenvolvimento. Qualquer um deles pode ser apagado à mão: a suíte recria o
    seu.
+10. **Um teste da visão de um dia passou do tempo na `main`.** Achado em 2026-11-23, numa
+    revisão geral. O CI do merge da PR 170 (`f9de8cf`, 2026-11-22) falhou em
+    `tests/day-view.test.tsx`, "keeps the row's focus when pressed between the week's arrival
+    and its effects", que passou do limite de 15s. A PR 170 só mexia no servidor, e o run
+    seguinte passou sem nenhuma mudança no web entre os dois. O teste entrou no mesmo dia, em
+    `ded5710`, com a correção da falha de CI da PR 169. É a única falha nos últimos 100 runs da
+    `main`, e um teste que falha às vezes ensina a rodar o CI de novo em vez de ler a falha.
+    Falta achar o que ele espera e por que às vezes não chega.
 
 ---
 
