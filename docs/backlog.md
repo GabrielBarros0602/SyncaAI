@@ -554,8 +554,12 @@ O `plan.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
 5. ✅ Escrever à mão: o "Write it myself" ao lado de "Make a plan", nas recusas que poupam o
    modelo, na falha e no plano fechado. O plano existe só na tela até o primeiro Add, que o
    cria com o nome e o passo.
-6. O progresso: "Plan · 3 of 5", a página do plano e a etiqueta na linha da tarefa. Fecha o
+6. ✅ O progresso: "Plan · 3 of 5", a página do plano e a etiqueta na linha da tarefa. Fecha o
    ROADMAP, o `CLAUDE.md` e o README do design.
+
+**As telas do plano estão completas em 2026-11-23.** O que o `plan.dc.html` desenha está na
+tela, com os desvios registrados em "Where the code departs from the drawings". O S8 continua
+aberto: faltam as configurações e entrar.
 
 **Seis perguntas abertas pela leitura do desenho — decididas em 2026-11-22**, todas como
 recomendado:

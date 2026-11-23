@@ -179,6 +179,16 @@ the copy here only renders the screens.
   made with its first step (decided on 2026-11-22).
 - **A step written by hand waits for nothing:** it has no "after step N". The API adds a step
   without prerequisites (ADR-0047), and the drawing's second step by hand reads "after step 1".
+- **An approved plan's page offers "Ask for a new plan" and "Write it myself".** The drawing's
+  page has no way out to another plan, and the screen opens on the approved plan while any of
+  its tasks is open, so the form would be out of reach until every one was done. An approved
+  plan does not stand in the way of another (ADR-0033).
+- **A task made by a plan says "from your plan", with no step number,** and leads to the page
+  of the plan it came from, which need not be the one the Plan button counts. A task keeps
+  only its plan; the number would need a column and a migration (decided on 2026-11-22).
+- **"Show the week", after Approve, opens the week where it was,** this week or today below
+  1100px, rather than on the first task's day. A plan starts today, so its first task is in
+  the week that opens.
 - **Two lines that ran past the edge at 200% text are held inside it:**
   - the late completion line on a phone, made to wrap;
   - the day field when a plan's step is edited at 320px, which a select cannot wrap: it
