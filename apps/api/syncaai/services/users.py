@@ -1,5 +1,7 @@
 """Changes an account makes to itself."""
 
+from datetime import time
+
 from syncaai.errors import BlockLengthOutOfRangeError, NoDayToPlanError, WeekdayOutOfRangeError
 from syncaai.models import User
 from syncaai.planning.contract import MAX_ITEM_MINUTES, MIN_ITEM_MINUTES
@@ -15,7 +17,7 @@ def change_settings(user: User, payload: MeUpdate) -> None:
     A request that sets a valid window and an invalid block changes neither: half a settings
     change is a state the person never asked for and has no way to see.
     """
-    window = _window(user, payload)
+    window = usable_window(user, payload.day_starts_at, payload.day_ends_at)
     days_off = None if payload.days_off is None else _days_off(payload.days_off)
     block = (
         None if payload.preferred_block_minutes is None else _block(payload.preferred_block_minutes)
@@ -29,16 +31,17 @@ def change_settings(user: User, payload: MeUpdate) -> None:
         user.preferred_block_minutes = block
 
 
-def _window(user: User, payload: MeUpdate) -> UsableWindow:
-    """The usable day the request leaves behind (ADR-0029).
+def usable_window(user: User, starts_at: time | None, ends_at: time | None) -> UsableWindow:
+    """The usable day a request leaves behind (ADR-0029), whether it saves it or only
+    measures the week against it (ADR-0060).
 
     Either end may arrive alone, so the pair is assembled from the request and the stored row
     before anything is checked. Checking each end on its own could not tell that moving the
     start past the stored end produces a window that ends before it starts.
     """
     window = UsableWindow(
-        payload.day_starts_at if payload.day_starts_at is not None else user.day_starts_at,
-        payload.day_ends_at if payload.day_ends_at is not None else user.day_ends_at,
+        starts_at if starts_at is not None else user.day_starts_at,
+        ends_at if ends_at is not None else user.day_ends_at,
     )
     window.check()
     return window

@@ -393,6 +393,51 @@ def test_asking_for_too_long_a_horizon_answers_422(app: FastAPI, client: TestCli
     assert str(MAX_HORIZON_DAYS) in response.json()["detail"]
 
 
+class _FakeUserWithAWindow(_FakeUser):
+    day_starts_at = time(6)
+    day_ends_at = time(22)
+
+
+def _wire_the_real_service(app: FastAPI) -> None:
+    """The route's own dependency, so what it does with a window not saved is what is under
+    test. Every request here is refused before the repository is asked anything."""
+    app.dependency_overrides[get_current_user] = lambda: _FakeUserWithAWindow()
+    app.dependency_overrides[get_session] = lambda: _NoOpSession()
+
+
+A_DAY = {"first_day": "2030-06-03", "last_day": "2030-06-03"}
+
+
+def test_a_window_not_saved_is_refused_as_saving_it_would_be(
+    app: FastAPI, client: TestClient
+) -> None:
+    """Judged against the stored other end, with the sentence and the fields PATCH /me
+    answers with, so the screen measuring a change and the Save that makes it never disagree
+    about whether it may be made (ADR-0060)."""
+    _wire_the_real_service(app)
+
+    response = client.get(CAPACITY, params={**A_DAY, "day_starts_at": "23:00"})
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "The usable day has to end after it starts, on the same day.",
+        "fields": ["day_starts_at", "day_ends_at"],
+    }
+
+
+@pytest.mark.parametrize("end", ["06:00:30", "06:00+01:00"])
+def test_an_end_not_saved_is_a_wall_clock_minute(
+    app: FastAPI, client: TestClient, end: str
+) -> None:
+    """The same rule as a change to the window: no seconds, no offset."""
+    _wire_the_real_service(app)
+
+    response = client.get(CAPACITY, params={**A_DAY, "day_ends_at": end})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["query", "day_ends_at"]
+
+
 def test_the_endpoint_needs_a_token(app: FastAPI, client: TestClient) -> None:
     app.dependency_overrides[get_session] = lambda: _NoOpSession()
 
