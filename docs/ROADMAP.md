@@ -451,11 +451,21 @@ a autenticação continua no S8, que só fecha com as três, porque o marco é "
 publicar sem recuperar a senha não é (ver a pendência da recuperação de senha). As telas do
 plano entram em seis PRs, listadas em `docs/backlog.md`.
 
-- [ ] Botão Plan no cabeçalho, ao lado de Menu, com o estado do pedido no rótulo
-- [ ] Card de revisão do draft: itens, dia sugerido de cada um, edição, Approve e Discard
-- [ ] Polling do status do job com backoff
-- [ ] Draft aprovado renderizado como o componente `3 of 5 preparations done`
-- [ ] Estados de erro visíveis: job falhou, provedor fora, acima do teto, rate limit
+- [x] Botão Plan no cabeçalho, ao lado de Menu, com o estado do pedido no rótulo: "queued",
+      "making…", "ready to review", "draft", "didn’t work" e, depois de aprovado, "3 of 5"
+- [x] Card de revisão do draft: itens, dia sugerido de cada um, edição, Approve e Discard. Um
+      painel ao lado da semana a partir de 1640px, onde os sete dias ainda cabem, e no lugar
+      dela abaixo disso (decidido em 2026-11-22). O motivo de cada passo sem horário vem do
+      servidor ([ADR-0059](adr/0059-a-step-s-reason-is-read-from-the-plan-as-it-is-now.md)). O
+      plano também se escreve à mão, ao lado do pedido e onde o pedido falha
+- [x] Polling do status do job com backoff: 2s, vez e meia a cada leitura, no máximo 30s, parado
+      com a aba escondida
+- [x] Draft aprovado renderizado como o componente `3 of 5 preparations done`: a página do
+      plano, com as tarefas que ele fez, e "from your plan" em cada uma, que leva de volta a ela
+- [x] Estados de erro visíveis: job falhou, provedor fora, acima do teto, rate limit, cada um
+      com a hora do `Retry-After` quando há uma
+
+As telas do plano fecharam em 2026-11-23, nas seis PRs de `docs/backlog.md`.
 - [ ] Configurações, contra o `settings.dc.html`: endereço, fuso, tema, o dia útil, as folgas e
       o bloco, trocar a senha e sair. A troca mantém esta sessão e encerra as outras (ADR-0051)
 - [ ] Entrar e recuperar a senha, contra o `sign-in.dc.html`. Entrar, cadastrar e confirmar o

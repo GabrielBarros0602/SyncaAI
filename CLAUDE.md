@@ -201,20 +201,31 @@ behaviour, copy and appearance. Pages are routed with `react-router`; every scre
 browser on each pull request. `tokens.css` is direction Papel under its contrast test
 (ADR-0026); its legacy block goes once the last module has moved to the new names.
 
-**Done, in the order ADR-0052 sets, on 2026-11-22:** the base — the round's new token, the
+**Done, in the order ADR-0052 sets.** On 2026-11-22, the base — the round's new token, the
 router, the header with Menu, the shortcut legend, the status region and the breakpoints (640
 and 1100px) — and the week, as seven columns from 1100px and below it as one day, a list
 (ADR-0056), the way `day-phone.dc.html` draws it. The three server problems the round found
-are fixed. What only a real phone can confirm is in `docs/backlog.md`.
+are fixed. On 2026-11-23, the plan screens, `plan.dc.html`, in six pull requests:
+
+- the Plan button in the header, whose label carries the request's state and, once a plan is
+  approved, how many of its tasks are done;
+- asking and waiting, the request found on the server after a reload;
+- the review, beside the week only from 1640px, where all seven days still fit, and in place
+  of it below;
+- editing in the review, and writing a plan by hand;
+- an approved plan's page, which each task it made leads back to.
+
+A step's reason is read from the plan as it stands (ADR-0059). What only a real phone can
+confirm is in `docs/backlog.md`.
 
 **Open, in that order:**
 
-1. The plan screens: S8. The Plan button in the header arrives with them.
-2. Settings.
-3. Signing in and recovering a password.
+1. Settings.
+2. Signing in and recovering a password.
 
-S9 waits for S8 to be published (ADR-0002), and the paid client for a decision to pay
-(`docs/backlog.md`, "Quando um provedor for pago").
+S8 closes with both, since its milestone is "publishable". S9 waits for S8 to be published
+(ADR-0002), and the paid client for a decision to pay (`docs/backlog.md`, "Quando um provedor
+for pago").
 
 **Further out:** a Java 21 + Spring Boot port of the core (ADR-0001, phase 2). It is on the
 roadmap deliberately, so prefer designs that do not depend on something Python-specific when

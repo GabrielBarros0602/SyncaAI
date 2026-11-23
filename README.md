@@ -17,8 +17,10 @@ data in the product's own vocabulary, never a block of text to copy by hand.
 > it into tasks, all or nothing. Every call is metered, and every request is held to a rate
 > limit, monthly spend ceilings and a circuit breaker. When the model is down, a plan can be
 > written by hand in the same draft. No provider is paid for, so nothing costs money; the
-> paid client waits for a decision to pay. The screens for all of this wait for the third
-> design round. See the roadmap below.
+> paid client waits for a decision to pay. The screens for all of this are built, against
+> the third design round: a plan is asked for from the header, reviewed beside the week or in
+> place of it, edited or written by hand, approved, and followed as its tasks get done. See
+> the roadmap below.
 
 ## Why this is not CRUD
 
@@ -281,7 +283,7 @@ written.
 | S5 | First visible slice — login and the week's free capacity | mostly done; the remaining screens wait for the third design round |
 | S6 | AI pipeline against a test double, zero provider cost | done |
 | S7 | Real provider, guardrails, degradation | done, against a local model; the paid client waits for a decision to pay |
-| S8 | Front end wired to the API — plan generation complete | waits for the third design round |
+| S8 | Front end wired to the API — plan generation complete | under way: the plan screens are done; settings and signing in remain |
 | S9 | Task assistance, streamed | |
 | S10 | Remaining prototype surfaces | |
 | S11 | Tests, polish, publication | |
@@ -359,7 +361,9 @@ A camada de IA está completa e protegida (S6, S7):
 Toda chamada é medida, e todo pedido passa por rate limit, tetos de gasto mensais e um
 circuit breaker, todos lidos do PostgreSQL. Com o modelo fora do ar, o plano pode ser escrito
 à mão no mesmo rascunho. Nenhum provedor é pago; o cliente pago espera a decisão de pagar.
-As telas de tudo isso esperam a terceira rodada de design.
+As telas de tudo isso estão prontas, contra a terceira rodada de design: o plano é pedido no
+cabeçalho, revisado ao lado da semana ou no lugar dela, editado ou escrito à mão, aprovado e
+acompanhado à medida que suas tarefas são feitas.
 
 ### Rodando localmente
 
