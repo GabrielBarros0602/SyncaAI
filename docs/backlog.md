@@ -629,6 +629,11 @@ myself" ao lado deles usa os dias pedidos. Fica para decidir se o formulário ta
 
 A API sabe fazer oito coisas. A tela oferece três.
 
+**Conferido em 2026-11-23: a tela oferece as oito.** Editar, excluir, a nota e a checklist
+entraram na linha aberta entre 2026-10-21 e 2026-10-29, e a etiqueta sugere as existentes e
+avisa quando é nova desde 2026-10-28. A tabela abaixo é o retrato de antes. Das duas que
+pediam servidor, só o conflito com saídas segue aberto.
+
 | Ação | API | Tela | Precisa de back-end? |
 |---|---|---|---|
 | Criar tarefa | `POST /tasks` | sim | — |
@@ -666,15 +671,22 @@ Duas precisam de servidor e não dependem de tela nenhuma:
 - **Conflito com saídas.** O 409 de sobreposição não diz **qual** tarefa ocupa o horário. Sem
   esse dado a tela não consegue oferecer mover, encurtar ou substituir. Substituir tem que ser
   atômico no servidor — excluir e criar em duas chamadas deixa o horário livre no meio.
-- **Editar a checklist.** `TaskUpdate` não tem campo de itens e nenhuma rota toca em
+  Em 2026-10-28 a tela passou a nomear a tarefa que está no caminho ao mover, tirada da
+  semana que já leu, antes de pedir. O 409 continua sem nomeá-la, e substituir de forma
+  atômica não existe.
+- ~~**Editar a checklist.** `TaskUpdate` não tem campo de itens e nenhuma rota toca em
   `ChecklistItem`. **Decidido em 2026-10-22: recurso próprio em `/tasks/{id}/items`**
-  (decisão 6). Falta o ADR e as rotas.
+  (decisão 6). Falta o ADR e as rotas.~~ ✅ Feito em 2026-10-22: o ADR-0028 e as rotas.
 
 ---
 
 ## Rodada 3 — orientação
 
 Barato, visível, e tudo já resolvido em `docs/design/week.html`.
+
+**Conferido em 2026-11-23: os quatro estão na tela.** O hoje marcado, a tecla `T` que volta a
+ele e o reservado como número grande, desde 2026-09-02. A linha de conclusão, com a hora e o
+tempo real, no desenho da terceira rodada desde 2026-10-28.
 
 - **Hoje não está marcado.** Não existe a palavra `today` em `apps/web/src/week/`. Nada na
   tela diz qual dia é agora. Desenhado como um filete de 2px no topo da coluna, a palavra
@@ -736,10 +748,11 @@ fora dessa linha:
 - **O tema claro não liga pela interface.** ~~O `App.tsx` põe `data-theme` num `div`.~~ O
   atributo foi para o `<html>`, fixo em `dark`, e o claro renderiza certo quando ele muda
   (ADR-0026). Falta o seletor nas configurações, que é tela.
-- **O padding do shell mora em dois lugares.** O `App.tsx` escreve `56px 64px` inline e o
+- ~~**O padding do shell mora em dois lugares.** O `App.tsx` escreve `56px 64px` inline e o
   `tokens.css` sobrescreve com `!important` abaixo de 1100px. Quando o padding sair do inline,
   o override sai junto — o seletor casa com o próprio valor inline, então ele para de valer
-  sozinho, mas continua lá até alguém apagar.
+  sozinho, mas continua lá até alguém apagar.~~ ✅ Feito em 2026-10-27: o padding saiu do
+  inline, e o override saiu junto. Desde 2026-11-17 ele tem nome no `tokens.css`.
 - ~~**A faixa de 700–1099px começa na segunda-feira**, e numa sexta o dia de hoje fica fora da
   tela até alguém arrastar. Rolar até hoje precisa de script.~~ ✅ Feito em 2026-11-17: abaixo
   de 1100px a tela mostra um dia só, e abre em hoje (ADR-0052).
