@@ -364,8 +364,27 @@ describe("401 from an authentication endpoint", () => {
     expect(lost).not.toHaveBeenCalled();
   });
 
+  it("renews for changing the password, which sits under /auth/ but needs the session", async () => {
+    // It is under /auth/ for the refresh cookie (ADR-0051), and its bearer token expires like
+    // any other: read as an answer, a change after thirty minutes on the page failed outright.
+    setAccessToken(AN_EXPIRED_TOKEN);
+    let changeCalls = 0;
+    routeFetch({
+      "/auth/change-password": () => {
+        changeCalls += 1;
+        return changeCalls === 1 ? unauthorised() : new Response(null, { status: 204 });
+      },
+      "/auth/refresh": () => refreshed(),
+    });
+
+    await api.post("/auth/change-password", { current_password: "a", new_password: "b" });
+
+    expect(changeCalls).toBe(2);
+    expect(getAccessToken()).toBe(A_FRESH_TOKEN);
+  });
+
   it("still renews for an ordinary endpoint", async () => {
-    // Guarding the fix: the exemption is scoped to /auth/, and everything else keeps the
+    // Guarding the fix: the exemption is scoped to signing in, and everything else keeps the
     // retry the whole session model depends on.
     setAccessToken(AN_EXPIRED_TOKEN);
     let taskCalls = 0;

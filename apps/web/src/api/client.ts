@@ -66,14 +66,19 @@ export class SessionExpiredError extends Error {
 const BASE = "/api/v1";
 
 /**
- * The endpoints where a 401 is an answer rather than an expired session.
+ * The endpoint where a 401 is an answer rather than an expired session.
  *
  * Signing in with the wrong password answers 401. Without this, the client would read that
  * as "the session died", try to refresh, fail, and report a network problem for what was
  * actually a typo — while also telling the application the session was lost, on a screen
  * where there was never a session to lose.
+ *
+ * Only sign-in. The exemption covered all of /auth/ until changing the password, which sits
+ * there for its cookie (ADR-0051) and needs the bearer token like any signed-in call: after
+ * thirty minutes on the settings page its 401 was read as an answer, and the change failed
+ * with "Not authenticated." instead of renewing the session and trying again.
  */
-const AUTHENTICATION = /^\/auth\//;
+const AUTHENTICATION = /^\/auth\/login$/;
 
 // A refresh already in flight. Every caller that arrives while this is set awaits the same
 // promise instead of starting a second exchange.
