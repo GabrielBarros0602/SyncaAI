@@ -43,19 +43,44 @@ const ME = {
 
 const WEEK = daysFrom(mondayOf(todayIn("UTC"))).map(toLocalDate);
 
-function aDay(day: string, weekday: number): DayCapacity {
+/** A day measured against `usable` minutes, with `occupied` booked: heavy past the budget. */
+function aDay(day: string, weekday: number, usable = 960, occupied = 0): DayCapacity {
   return {
     day,
     weekday,
     total_minutes: 1440,
-    usable_minutes: 960,
-    occupied_minutes: 0,
-    free_minutes: 960,
-    unbooked_minutes: 1440,
-    task_count: 0,
-    over_capacity: false,
-    load: "fine",
+    usable_minutes: usable,
+    occupied_minutes: occupied,
+    free_minutes: Math.max(0, usable - occupied),
+    unbooked_minutes: 1440 - occupied,
+    task_count: occupied === 0 ? 0 : 1,
+    over_capacity: occupied > usable,
+    load: occupied > usable ? "heavy" : "fine",
   };
+}
+
+/** Thursday holds 15 hours: fine against the saved 16, heavy against 14. */
+const THURSDAY_BOOKED = 15 * 60;
+
+/**
+ * The week measured as the server measures it: against the stored 06:00–22:00, or against a
+ * window asked for, which it refuses past 18 hours or under one, as it would refuse saving it.
+ */
+function capacity(query: string): Response {
+  const params = new URLSearchParams(query);
+  const minutes = (time: string | null, fallback: number): number =>
+    time === null ? fallback : Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+  const usable = minutes(params.get("day_ends_at"), 22 * 60) - minutes(params.get("day_starts_at"), 6 * 60);
+  if (usable < 60 || usable > 18 * 60) {
+    return json(422, {
+      detail: "The usable day has to be at least 1 hour long.",
+      fields: ["day_starts_at", "day_ends_at"],
+    });
+  }
+  return json(
+    200,
+    WEEK.map((day, index) => aDay(day, index + 1, usable, index === 3 ? THURSDAY_BOOKED : 0)),
+  );
 }
 
 function json(status: number, body?: unknown): Response {
@@ -90,7 +115,7 @@ function serve({
       return patchMe(JSON.parse(init.body as string) as Record<string, unknown>);
     }
     if (path === "/me") return Promise.resolve(json(200, ME));
-    if (path === "/capacity") return Promise.resolve(json(200, WEEK.map((day, index) => aDay(day, index + 1))));
+    if (path === "/capacity") return Promise.resolve(capacity(input.split("?")[1] ?? ""));
     if (path === "/tasks") return Promise.resolve(json(200, { items: [], limit: 100, offset: 0 }));
     if (path === "/plans" || path === "/ai/plans") {
       return Promise.resolve(json(200, { items: [], limit: 1, offset: 0 }));
@@ -263,6 +288,17 @@ it("has nothing an automated accessibility check can find, nor does the signed-o
   await expectNoViolations(document.body);
 });
 
+function patches(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(([input, init]) => input.endsWith("/me") && init?.method === "PATCH")
+    .map(([, init]) => JSON.parse(init?.body as string) as unknown);
+}
+
+async function retype(field: HTMLElement, text: string): Promise<void> {
+  await userEvent.clear(field);
+  if (text !== "") await userEvent.type(field, text);
+}
+
 describe("the usable day, the days off and the block", () => {
   /** The page open on the form, with Save answered however the test says. */
   async function form(patchMe?: Answers["patchMe"]): Promise<BoundFunctions<typeof queries>> {
@@ -272,23 +308,13 @@ describe("the usable day, the days off and the block", () => {
     return within(screen.getByRole("region", { name: "Your day and your plans" }));
   }
 
-  function patches(): unknown[] {
-    return fetchMock.mock.calls
-      .filter(([input, init]) => input.endsWith("/me") && init?.method === "PATCH")
-      .map(([, init]) => JSON.parse(init?.body as string) as unknown);
-  }
-
-  async function retype(field: HTMLElement, text: string): Promise<void> {
-    await userEvent.clear(field);
-    if (text !== "") await userEvent.type(field, text);
-  }
-
   it("saves only what changed, says what each day now has, and reads the week again", async () => {
     const here = await form();
     await retype(here.getByLabelText("Ends"), "20:00");
     await userEvent.click(here.getByRole("button", { name: "15 minutes more" }));
     expect(here.getByText("Changed, not saved yet: usable day, block.")).toBeDefined();
-    const readsBefore = fetchMock.mock.calls.filter(([input]) => input.includes("/capacity")).length;
+    // By its tasks: the week under the hours reads capacity too, and only the week reads tasks.
+    const readsBefore = fetchMock.mock.calls.filter(([input]) => input.includes("/tasks")).length;
 
     await userEvent.click(here.getByRole("button", { name: "Save" }));
 
@@ -296,7 +322,7 @@ describe("the usable day, the days off and the block", () => {
     expect(patches()).toEqual([{ day_ends_at: "20:00", preferred_block_minutes: 75 }]);
     expect(here.getByText("Everything here is saved.")).toBeDefined();
     await waitFor(() => {
-      expect(fetchMock.mock.calls.filter(([input]) => input.includes("/capacity")).length).toBeGreaterThan(
+      expect(fetchMock.mock.calls.filter(([input]) => input.includes("/tasks")).length).toBeGreaterThan(
         readsBefore,
       );
     });
@@ -407,5 +433,55 @@ describe("the usable day, the days off and the block", () => {
     await here.findByText("The usable day has to be at least 1 hour long.");
 
     await expectNoViolations(document.body);
+  });
+});
+
+describe("the week under the usable day", () => {
+  async function region(): Promise<BoundFunctions<typeof queries>> {
+    serve();
+    renderAt("/settings");
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    return within(screen.getByRole("region", { name: "Your day and your plans" }));
+  }
+
+  function asked(): string[] {
+    return fetchMock.mock.calls.map(([input]) => input).filter((input) => input.includes("day_ends_at="));
+  }
+
+  it("shows each day as it stands while nothing is changed", async () => {
+    const here = await region();
+
+    expect(await here.findByText("This week, with 16h")).toBeDefined();
+    expect(here.getByText("1h free of 16h")).toBeDefined();
+    expect(here.getByText("15h booked")).toBeDefined();
+    expect(here.queryByText(/^Becomes/)).toBeNull();
+  });
+
+  it("shows what a change of the hours does to each day, from the server, before Save", async () => {
+    const here = await region();
+    await here.findByText("This week, with 16h");
+
+    await retype(here.getByLabelText("Ends"), "20:00");
+
+    expect(await here.findByText("This week, 16h → 14h (not saved yet)")).toBeDefined();
+    expect(here.getByText("1h free of 16h → 0m of 14h")).toBeDefined();
+    expect(here.getByText("Becomes heavy: No margin for anything running late.")).toBeDefined();
+    expect(asked().at(-1)).toMatch(/day_starts_at=06:00&day_ends_at=20:00$/);
+    expect(patches()).toEqual([]);
+  });
+
+  it("leaves the week as it stands for a window the server would refuse", async () => {
+    const here = await region();
+    await here.findByText("This week, with 16h");
+
+    await retype(here.getByLabelText("Ends"), "06:30");
+
+    await waitFor(() => {
+      expect(asked().at(-1)).toMatch(/day_ends_at=06:30$/);
+    });
+    expect(here.getByText("This week, with 16h")).toBeDefined();
+    expect(here.queryByText(/^Becomes/)).toBeNull();
+    // The refusal is Save's to say, in the server's words; the week does not say it first.
+    expect(here.queryByText("The usable day has to be at least 1 hour long.")).toBeNull();
   });
 });

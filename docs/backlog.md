@@ -652,7 +652,8 @@ O `settings.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    `<html>` deixa de ser `dark` fixo e passa a seguir o sistema (decisão 8 de 2026-10-22).
 3. ✅ O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo que o servidor
    nomeia (ADR-0060).
-4. A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe.
+4. ✅ A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe,
+   os dois lados medidos pelo servidor (ADR-0060).
 5. A senha. Fecha o ROADMAP, o `CLAUDE.md` e o README do design.
 
 **Sete perguntas abertas pela leitura do desenho — decididas em 2026-11-23**, todas como

@@ -28,6 +28,7 @@ import {
   windowMinutes,
 } from "./planning";
 import styles from "./Settings.module.css";
+import { WeekEffect } from "./WeekEffect";
 
 const WEEK = [1, 2, 3, 4, 5, 6, 7];
 
@@ -172,6 +173,7 @@ export function PlanningForm({ me, onSaved }: Props): React.ReactNode {
           <p id={`${id}-window`} role="alert" className={styles.error}>
             {windowError}
           </p>
+          <WeekEffect timezone={me.timezone} saved={saved} draft={draft} />
         </fieldset>
 
         <fieldset className={styles.fieldset} aria-describedby={`${id}-off-help ${id}-off`}>

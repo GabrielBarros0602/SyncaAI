@@ -145,6 +145,68 @@
   display: none;
 }
 
+/* The week under the hours: each day now, and after the change typed. */
+.effect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--sunken);
+}
+
+.effectHead {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.effectDays {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-1) var(--space-3);
+}
+
+.effectDay {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.effectTop {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-2);
+}
+
+.effectName {
+  font-weight: var(--weight-strong);
+}
+
+.effectBooked {
+  font-family: var(--font-mono);
+  color: var(--ink-2);
+}
+
+.effectCalm,
+.effectLoud {
+  font: var(--weight-strong) var(--text-1) / var(--leading-1) var(--font-sans);
+  text-wrap: pretty;
+}
+
+.effectCalm {
+  color: var(--ink-2);
+}
+
+/* A day the change takes up the ladder: the accent, which means trouble and only trouble. */
+.effectLoud {
+  color: var(--alert-ink);
+}
+
 /* Seven across when they fit, wrapping to four and three on a narrow phone or at 200% text. */
 .days {
   list-style: none;
