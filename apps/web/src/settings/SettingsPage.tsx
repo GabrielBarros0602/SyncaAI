@@ -14,17 +14,20 @@ import { useId } from "react";
 
 import type { Me } from "../api/types";
 import { SignOutButton } from "../ui/SignOutButton";
+import { PlanningForm } from "./PlanningForm";
 import styles from "./Settings.module.css";
 import { ThemeChoice } from "./ThemeChoice";
 
 interface Props {
   me: Me;
   onBack: () => void;
+  /** The usable day, the days off or the block were saved; the sentence says how. */
+  onSaved: (text: string) => void;
   /** Resolves once the server has ended the session; rejects when it did not. */
   onSignOut: () => Promise<void>;
 }
 
-export function SettingsPage({ me, onBack, onSignOut }: Props): React.ReactNode {
+export function SettingsPage({ me, onBack, onSaved, onSignOut }: Props): React.ReactNode {
   const account = useId();
   const out = useId();
 
@@ -58,6 +61,8 @@ export function SettingsPage({ me, onBack, onSignOut }: Props): React.ReactNode 
       </section>
 
       <ThemeChoice />
+
+      <PlanningForm me={me} onSaved={onSaved} />
 
       <section aria-labelledby={out} className={styles.section}>
         <h2 id={out} className={styles.heading}>

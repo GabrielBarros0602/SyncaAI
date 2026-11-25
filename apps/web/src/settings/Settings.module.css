@@ -63,6 +63,245 @@
   font: var(--weight-strong) var(--text-4) / var(--leading-4) var(--font-sans);
 }
 
+/* The section a refusal is in, edged with the accent, which means trouble and only trouble. */
+.sectionRefused {
+  border-color: var(--alert);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* Free to shrink, and the field with it: a field's own width is twenty characters, which at 200%
+   text held the page at 435px inside a 320px window. */
+.time {
+  flex: 1 1 120px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time .input {
+  width: 100%;
+}
+
+.label {
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
+.input {
+  min-width: 0;
+  min-height: var(--target-touch);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--field);
+  color: var(--ink);
+  font: var(--weight-regular) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.inputBad {
+  border: 2px solid var(--alert-ink);
+}
+
+.length {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.muted {
+  color: var(--ink-2);
+}
+
+.error {
+  margin: 0;
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--alert-ink);
+  text-wrap: pretty;
+}
+
+.error:empty {
+  display: none;
+}
+
+/* Seven across when they fit, wrapping to four and three on a narrow phone or at 200% text. */
+.days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(var(--target-touch), calc(var(--text-2) * 4.2)), 1fr)
+  );
+  gap: var(--space-1);
+}
+
+.days li {
+  display: flex;
+}
+
+/* Its state in a word as well as in its fill: "off" or "plans". */
+.day {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.day:hover {
+  background: var(--hover);
+}
+
+.day:active {
+  transform: scale(var(--press-scale));
+}
+
+/* Filled like today, so the accent stays for the refusal. */
+.dayOff,
+.dayOff:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.dayBad {
+  border: 2px solid var(--alert-ink);
+}
+
+.dayShort {
+  font: var(--weight-strong) var(--text-2) / var(--leading-2) var(--font-sans);
+}
+
+.dayWord {
+  font: var(--weight-regular) var(--text-1) / var(--leading-1) var(--font-sans);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step {
+  width: var(--target-touch);
+  height: var(--target-touch);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-strong) var(--text-4) / 1 var(--font-sans);
+  cursor: pointer;
+}
+
+.step:hover {
+  background: var(--hover);
+}
+
+.step:active {
+  background: var(--pressed);
+  transform: scale(var(--press-scale));
+}
+
+.blockInput {
+  width: 96px;
+  text-align: center;
+}
+
+.summary {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--alert);
+  border-radius: var(--radius-2);
+  background: var(--alert-surface);
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.actions > button {
+  flex: 1 1 auto;
+  align-self: auto;
+}
+
+/* At rest until something changed: then it is the one thing to press. */
+.save {
+  min-height: var(--target-touch);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.saveReady {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.saveReady:hover {
+  background: var(--primary-hover);
+}
+
+.saveReady:active {
+  background: var(--primary-pressed);
+  transform: scale(var(--press-scale));
+}
+
+.state {
+  flex: 1 1 100%;
+  font: var(--weight-regular) var(--text-2) / var(--leading-2) var(--font-sans);
+  color: var(--ink-2);
+}
+
 .facts {
   margin: 0;
   display: flex;
