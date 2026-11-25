@@ -196,6 +196,23 @@ the copy here only renders the screens.
   such state. Only the server can clear the cookie that
   signs the browser back in on a reload, so a page saying "You’re signed out of this browser"
   before it answered could be wrong (decided on 2026-11-23).
+- **The usable day's two times are a task's fields,** typed in 24-hour form and read the way a
+  task's start is, with "Use 24-hour time, like 14:30." for one that is not a time. The drawing
+  uses the platform's time field, which shows "07:00 AM" in a browser set to American English,
+  against the 24-hour times everywhere else on screen; it loses the wheel a phone would open
+  (decided on 2026-11-23).
+- **Save sends only the parts that changed,** so a part changed on another device meanwhile is
+  left as it is there. The server judges the window it leaves, with the stored other end, as it
+  does any change.
+- **The block takes only digits, and an empty one goes as 0,** so the sentence that answers it
+  is the server's, "A block lasts from 15 minutes to 4 hours.", and not one written for the
+  screen.
+- **A password change says the other devices go within 30 minutes, and the email is on its
+  way.** "every other device is signed out within 30 minutes;" before the button, and after it
+  "Every other device is signed out within 30 minutes, and an email about it is on its way to
+  …". The drawing says they "were signed out" and the email "went". An access token already
+  issued stays good until it expires (ADR-0051), and a mail that fails does not undo the change
+  (ADR-0018), so the drawing promised more than the server does (decided on 2026-11-23).
 - **The Menu stays open while it signs out.** The drawing closes it at once, which leaves
   "Signing out…" and a sign-out that failed with nowhere to be said on the week.
 - **Two lines that ran past the edge at 200% text are held inside it:**

@@ -3,8 +3,9 @@
  *
  * Theme. <html data-theme="light|dark"> chooses, and with no attribute the operating system
  * does. The attribute sits on <html> because the page background resolves against :root; on a
- * div further down it drew dark ink on a dark page (ADR-0024, "To revisit"). index.html fixes
- * it at "dark" until settings can write "light" or "dark", or remove it for "system".
+ * div further down it drew dark ink on a dark page (ADR-0024, "To revisit"). Settings writes
+ * "light" or "dark", or removes it for "system", and index.html restores the choice before the
+ * first paint (ADR-0061).
  *
  * Colour. Every colour is opaque, and every ground text can sit on is a token of its own —
  * including hover, pressed and the alert tints. Alpha over the ink made contrast depend on how

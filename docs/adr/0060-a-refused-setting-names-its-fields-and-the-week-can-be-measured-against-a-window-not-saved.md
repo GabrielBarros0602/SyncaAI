@@ -114,7 +114,7 @@ to the Spring port as they stand (ADR-0001).
 1. [x] `fields` on the six refusals, with a test that each names its own.
 2. [x] `day_starts_at` and `day_ends_at` on `GET /capacity`, judged as `PATCH /me` judges them,
        with a test against PostgreSQL that the row is left as it was.
-3. [ ] The settings screen reads both (S8).
+3. [x] The settings screen reads both (S8).
 
 ---
 

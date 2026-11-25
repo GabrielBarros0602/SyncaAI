@@ -38,6 +38,11 @@ export class ApiError extends Error {
      * every other refusal. Kept so the review can mark them all at once, not one per attempt.
      */
     readonly items: RefusedStep[] = [],
+    /**
+     * The request's fields a refused setting is about (ADR-0060), so a form puts the sentence
+     * under them rather than recognising it by its words. Empty for every other refusal.
+     */
+    readonly fields: string[] = [],
   ) {
     super(detail);
     this.name = "ApiError";
@@ -61,14 +66,19 @@ export class SessionExpiredError extends Error {
 const BASE = "/api/v1";
 
 /**
- * The endpoints where a 401 is an answer rather than an expired session.
+ * The endpoint where a 401 is an answer rather than an expired session.
  *
  * Signing in with the wrong password answers 401. Without this, the client would read that
  * as "the session died", try to refresh, fail, and report a network problem for what was
  * actually a typo — while also telling the application the session was lost, on a screen
  * where there was never a session to lose.
+ *
+ * Only sign-in. The exemption covered all of /auth/ until changing the password, which sits
+ * there for its cookie (ADR-0051) and needs the bearer token like any signed-in call: after
+ * thirty minutes on the settings page its 401 was read as an answer, and the change failed
+ * with "Not authenticated." instead of renewing the session and trying again.
  */
-const AUTHENTICATION = /^\/auth\//;
+const AUTHENTICATION = /^\/auth\/login$/;
 
 // A refresh already in flight. Every caller that arrives while this is set awaits the same
 // promise instead of starting a second exchange.
@@ -152,23 +162,35 @@ async function detailOf(response: Response): Promise<string> {
   return (await refusalOf(response)).detail;
 }
 
-/** The sentence, and the steps a plan's commit names, which only that refusal carries. */
-async function refusalOf(response: Response): Promise<{ detail: string; items: RefusedStep[] }> {
+interface Refusal {
+  detail: string;
+  items: RefusedStep[];
+  fields: string[];
+}
+
+/**
+ * The sentence, the steps a plan's commit names and the fields a refused setting is about,
+ * which only those refusals carry.
+ */
+async function refusalOf(response: Response): Promise<Refusal> {
   try {
-    const body = (await response.json()) as { detail?: unknown; items?: unknown };
+    const body = (await response.json()) as { detail?: unknown; items?: unknown; fields?: unknown };
     const { detail } = body;
     const items = Array.isArray(body.items) ? body.items.filter(isRefusedStep) : [];
+    const fields = Array.isArray(body.fields)
+      ? body.fields.filter((field): field is string => typeof field === "string")
+      : [];
 
-    if (typeof detail === "string") return { detail, items };
+    if (typeof detail === "string") return { detail, items, fields };
 
     if (Array.isArray(detail)) {
       const messages = detail.filter(isFieldProblem).map(describeProblem);
-      if (messages.length > 0) return { detail: messages.join(" "), items };
+      if (messages.length > 0) return { detail: messages.join(" "), items, fields };
     }
 
-    return { detail: response.statusText, items };
+    return { detail: response.statusText, items, fields };
   } catch {
-    return { detail: response.statusText, items: [] };
+    return { detail: response.statusText, items: [], fields: [] };
   }
 }
 
@@ -224,12 +246,13 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (!response.ok) {
     const header = response.headers.get("Retry-After");
     const retryAfter = header === null ? null : Number.parseInt(header, 10);
-    const { detail, items } = await refusalOf(response);
+    const { detail, items, fields } = await refusalOf(response);
     throw new ApiError(
       response.status,
       detail,
       Number.isFinite(retryAfter) ? retryAfter : null,
       items,
+      fields,
     );
   }
   if (response.status === 204) return undefined as T;

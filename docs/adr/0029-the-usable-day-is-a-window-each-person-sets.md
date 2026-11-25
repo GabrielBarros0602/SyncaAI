@@ -152,7 +152,7 @@ so the window is reachable through the API only, for now.
 3. [x] `GET /me` reports the window; `PATCH /me` changes it, with the three refusals.
 4. [x] Tests: the real-minute budget across both clock changes, the clamp, the window judged as
        a pair, and the CHECK against PostgreSQL.
-5. [ ] The settings screen sets it (third design round, step 4).
+5. [x] The settings screen sets it (third design round, step 4).
 
 ---
 

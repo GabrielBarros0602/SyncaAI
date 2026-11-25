@@ -464,8 +464,13 @@ plano entram em seis PRs, listadas em `docs/backlog.md`.
       com a hora do `Retry-After` quando há uma
 
 As telas do plano fecharam em 2026-11-23, nas seis PRs de `docs/backlog.md`.
-- [ ] Configurações, contra o `settings.dc.html`: endereço, fuso, tema, o dia útil, as folgas e
-      o bloco, trocar a senha e sair. A troca mantém esta sessão e encerra as outras (ADR-0051)
+- [x] Configurações, contra o `settings.dc.html`: endereço, fuso, tema, o dia útil, as folgas e
+      o bloco, trocar a senha e sair. A troca mantém esta sessão e encerra as outras (ADR-0051).
+      Fechadas em 2026-11-25, em seis PRs: a recusa que nomeia os campos e a semana medida contra
+      uma janela não salva ([ADR-0060](adr/0060-a-refused-setting-names-its-fields-and-the-week-can-be-measured-against-a-window-not-saved.md));
+      a página e sair, que espera o servidor; o tema, guardado no navegador
+      ([ADR-0061](adr/0061-the-theme-is-the-one-thing-kept-in-the-browser.md)); o dia útil, as
+      folgas e o bloco num só Save; a semana antes do Save; e a senha
 - [ ] Entrar e recuperar a senha, contra o `sign-in.dc.html`. Entrar, cadastrar e confirmar o
       endereço existem desde o S5; falta a tela de recuperar, cujo reset encerra todas as
       sessões (ADR-0051)

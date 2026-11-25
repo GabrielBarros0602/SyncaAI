@@ -15,7 +15,7 @@ documentation and UI copy are English (see Conventions).
 
 | File | What it holds |
 |---|---|
-| `docs/adr/README.md` | index of 60 architecture decision records — the reasoning behind every structural choice |
+| `docs/adr/README.md` | index of 61 architecture decision records — the reasoning behind every structural choice |
 | `docs/backlog.md` | what is open, in order, and the rule that orders it |
 | `docs/design/README.md` | the five screens of the third design round, the specification, and what was decided in them |
 | `docs/ROADMAP.md` | sprints S0–S11, what is done and what is next |
@@ -218,12 +218,17 @@ are fixed. On 2026-11-23, the plan screens, `plan.dc.html`, in six pull requests
 A step's reason is read from the plan as it stands (ADR-0059). What only a real phone can
 confirm is in `docs/backlog.md`.
 
-**Open, in that order:**
+On 2026-11-25, settings, `settings.dc.html`, in six pull requests:
 
-1. Settings.
-2. Signing in and recovering a password.
+- a refused setting names its fields, and the week can be measured against a window not saved
+  (ADR-0060);
+- the page, reached from the Menu, and signing out, which waits for the server;
+- the theme, the one thing kept in the browser (ADR-0061);
+- the usable day, the days off and the block, with one Save, and the week before it;
+- the password, whose change keeps this session and ends the others (ADR-0051).
 
-S8 closes with both, since its milestone is "publishable". S9 waits for S8 to be published
+**Open:** signing in and recovering a password. S8 closes with it, since its milestone is
+"publishable". S9 waits for S8 to be published
 (ADR-0002), and the paid client for a decision to pay (`docs/backlog.md`, "Quando um provedor
 for pago").
 
