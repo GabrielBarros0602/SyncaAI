@@ -650,7 +650,8 @@ O `settings.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    ser ditos.
 2. ✅ O tema: System, Light e Dark, aplicado ao tocar e guardado no navegador (ADR-0061). O
    `<html>` deixa de ser `dark` fixo e passa a seguir o sistema (decisão 8 de 2026-10-22).
-3. O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo.
+3. ✅ O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo que o servidor
+   nomeia (ADR-0060).
 4. A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe.
 5. A senha. Fecha o ROADMAP, o `CLAUDE.md` e o README do design.
 
