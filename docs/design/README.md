@@ -207,6 +207,12 @@ the copy here only renders the screens.
 - **The block takes only digits, and an empty one goes as 0,** so the sentence that answers it
   is the server's, "A block lasts from 15 minutes to 4 hours.", and not one written for the
   screen.
+- **A password change says the other devices go within 30 minutes, and the email is on its
+  way.** "every other device is signed out within 30 minutes;" before the button, and after it
+  "Every other device is signed out within 30 minutes, and an email about it is on its way to
+  …". The drawing says they "were signed out" and the email "went". An access token already
+  issued stays good until it expires (ADR-0051), and a mail that fails does not undo the change
+  (ADR-0018), so the drawing promised more than the server does (decided on 2026-11-23).
 - **The Menu stays open while it signs out.** The drawing closes it at once, which leaves
   "Signing out…" and a sign-out that failed with nowhere to be said on the week.
 - **Two lines that ran past the edge at 200% text are held inside it:**

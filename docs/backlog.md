@@ -187,6 +187,13 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
     Sozinho, o arquivo passou, e a suíte inteira, rodada de novo, também. Então a falha não é só
     do CI, e aparece com a suíte toda rodando junta.
 
+    **Um segundo, no mesmo dia, na branch da senha das configurações.** Em
+    `tests/plan-review.test.tsx`, "finds the plan waiting on the server, and says it is ready to
+    review" falhou uma vez em 2,2s, e não pelo limite de 15s: o tempo bate com uma espera de 1s
+    de um `findBy`. A branch não toca no plano. O teste passou sozinho, três vezes com o arquivo
+    inteiro e em duas suítes inteiras seguidas. São dois testes de tela que só falham com a
+    suíte toda junta, o que aponta para tempo sob carga, e não para um teste só.
+
 ---
 
 ## Rodada 1 — o que estava errado
@@ -654,7 +661,13 @@ O `settings.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    nomeia (ADR-0060).
 4. ✅ A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe,
    os dois lados medidos pelo servidor (ADR-0060).
-5. A senha. Fecha o ROADMAP, o `CLAUDE.md` e o README do design.
+5. ✅ A senha: o que a troca faz dito antes do botão, a senha atual errada sob o campo, o 429
+   com a hora do `Retry-After` e o botão preso até lá. Fecha o ROADMAP, o `CLAUDE.md` e o
+   README do design.
+
+**As configurações estão completas em 2026-11-25.** O que o `settings.dc.html` desenha está na
+tela, com os desvios registrados em "Where the code departs from the drawings". O S8 continua
+aberto: falta entrar e recuperar a senha.
 
 **Sete perguntas abertas pela leitura do desenho — decididas em 2026-11-23**, todas como
 recomendado:
@@ -699,8 +712,8 @@ com a PR que os faz:
   token só é esquecido depois do 204.
 - **A troca de senha não renova a sessão.** O `client.ts` trata todo 401 sob `/auth/` como
   resposta e não renova a sessão, e o `/auth/change-password` exige o bearer. Com 30 minutos
-  na página, a troca falha com "Not authenticated." em vez de renovar e repetir. A exceção
-  passa a valer só para o `/auth/login`, na PR 5.
+  na página, a troca falha com "Not authenticated." em vez de renovar e repetir. ✅ Corrigido
+  na PR 5: a exceção vale só para o `/auth/login`.
 
 ---
 
@@ -784,8 +797,9 @@ tempo real, no desenho da terceira rodada desde 2026-10-28.
 
 ## Rodada 4 — telas que não existem
 
-- **Configurações.** Desenhada em `docs/design/settings.dc.html`, na terceira rodada. O fuso
-  aparece e não pode ser mudado. ~~Carrega junto os itens 7–9 do ADR-0023: a coluna
+- ✅ **Configurações.** Feitas em 2026-11-25, em seis PRs (ver "As configurações", acima).
+  Desenhada em `docs/design/settings.dc.html`, na terceira rodada. O fuso aparece e não pode
+  ser mudado. ~~Carrega junto os itens 7–9 do ADR-0023: a coluna
   `users.usable_minutes`…~~ O ADR-0029 trocou esses itens por uma janela: o `PATCH /me` e o
   `GET /me` já existem para ela, e falta só a tela que a altera, desenhada no passo 5 da
   terceira rodada.

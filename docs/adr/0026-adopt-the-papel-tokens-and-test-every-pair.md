@@ -166,7 +166,7 @@ works.
 4. [x] `contrast-pairs.json` and the test; Vitest told to process `tokens.css`, which it would
        otherwise empty.
 5. [x] `::placeholder` held to the text minimum.
-6. [ ] The theme selector in settings, which writes or removes the attribute.
+6. [x] The theme selector in settings, which writes or removes the attribute (ADR-0061).
 7. [ ] Move each module to the new names; delete the legacy block; keycaps to 12px.
 
 ---
