@@ -142,10 +142,13 @@ describe("the trail", () => {
     return screen.getByRole("img");
   }
 
-  function segments(): string[][] {
+  // Where each segment sits, in percent to two places: how many digits a style keeps is the
+  // DOM's business (jsdom 31 keeps six, as browsers do), not the trail's.
+  function segments(): number[][] {
+    const percent = (value: string) => Math.round(parseFloat(value) * 100) / 100;
     return [...trail().querySelectorAll<HTMLElement>("span")]
       .filter((span) => span.parentElement !== trail())
-      .map((span) => [span.style.left, span.style.width]);
+      .map((span) => [percent(span.style.left), percent(span.style.width)]);
   }
 
   it("says how much is booked of how long a day", () => {
@@ -166,9 +169,9 @@ describe("the trail", () => {
     renderDay({ tasks: [late], allTasks: [night, READ, late] });
 
     expect(segments()).toEqual([
-      ["0%", "12.5%"],
-      ["37.5%", "6.25%"],
-      ["91.66666666666666%", "8.333333333333332%"],
+      [0, 12.5],
+      [37.5, 6.25],
+      [91.67, 8.33],
     ]);
   });
 
