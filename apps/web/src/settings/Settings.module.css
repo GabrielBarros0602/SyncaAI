@@ -92,6 +92,73 @@
   text-wrap: pretty;
 }
 
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font: var(--weight-strong) var(--text-3) / var(--leading-3) var(--font-sans);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A radio drawn as a button: the label is the target, the input stays for the keyboard. */
+.choice {
+  position: relative;
+  flex: 1 1 96px;
+  min-height: var(--target-touch);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-medium) var(--text-3) / var(--leading-3) var(--font-sans);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.choice:hover {
+  background: var(--hover);
+}
+
+.choice:active {
+  transform: scale(var(--press-scale));
+}
+
+.choice:has(:checked) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.choice:has(:focus-visible) {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
 .lede {
   margin: 0;
   color: var(--ink-2);

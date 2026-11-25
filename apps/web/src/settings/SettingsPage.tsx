@@ -7,13 +7,15 @@
  * underneath (decided on 2026-11-23).
  *
  * Each section saves where the server draws its line. The account is read only: the address
- * is the one signed up with, and the zone was set then too. Signing out is an action of its own.
+ * is the one signed up with, and the zone was set then too. The theme is not on the server and
+ * applies as it is tapped. Signing out is an action of its own.
  */
 import { useId } from "react";
 
 import type { Me } from "../api/types";
 import { SignOutButton } from "../ui/SignOutButton";
 import styles from "./Settings.module.css";
+import { ThemeChoice } from "./ThemeChoice";
 
 interface Props {
   me: Me;
@@ -54,6 +56,8 @@ export function SettingsPage({ me, onBack, onSignOut }: Props): React.ReactNode 
           </div>
         </dl>
       </section>
+
+      <ThemeChoice />
 
       <section aria-labelledby={out} className={styles.section}>
         <h2 id={out} className={styles.heading}>
