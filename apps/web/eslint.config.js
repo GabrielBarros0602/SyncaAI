@@ -8,7 +8,9 @@ import tseslint from "typescript-eslint";
  * enforce a decision that a reviewer reading a diff would have to remember to check.
  *
  * The storage ban comes from ADR-0021 — the access token lives in memory and nowhere else,
- * which is one convenient line away from being undone by anybody in a hurry.
+ * which is one convenient line away from being undone by anybody in a hurry. Its one exception
+ * is the theme, disabled at the single line in src/ui/theme.ts that reaches the storage
+ * (ADR-0061), so a second one is a line a review sees.
  *
  * The accessibility rules came later, and the gap they close was found the hard way. The week
  * screen's task row was rewritten from a `<button>` into a `role="group"` container, and
