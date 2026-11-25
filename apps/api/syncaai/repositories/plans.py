@@ -63,7 +63,7 @@ class AiJobRepository(OwnedRepository[AiJob]):
     def read(self, job_id: uuid.UUID) -> tuple[AiJob, str] | None:
         """The job, with its status as it reads now."""
         statement = self._scoped().add_columns(_status_read()).where(AiJob.id == job_id)
-        row = self._session.execute(statement).tuples().one_or_none()
+        row = self._session.execute(statement).one_or_none()
         return None if row is None else (row[0], row[1])
 
     def newest_first(
@@ -82,7 +82,7 @@ class AiJobRepository(OwnedRepository[AiJob]):
         )
         if statuses:
             statement = statement.where(status.in_(statuses))
-        return [(job, read) for job, read in self._session.execute(statement).tuples()]
+        return [(job, read) for job, read in self._session.execute(statement)]
 
     def holding_statement(self, *, window: timedelta, limit: int) -> Select[datetime]:
         """The job that keeps a moving window full: the ``limit``-th newest in it, or no row
