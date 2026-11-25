@@ -24,7 +24,7 @@ FAILURES_TO_OPEN = 3
 COOL_DOWN = timedelta(seconds=60)
 
 
-def latest_calls_statement(provider: str) -> Select[tuple[str, datetime]]:
+def latest_calls_statement(provider: str) -> Select[str, datetime]:
     return (
         select(AiUsage.outcome, AiUsage.created_at)
         .where(AiUsage.provider == provider)

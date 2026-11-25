@@ -84,7 +84,7 @@ class AiJobRepository(OwnedRepository[AiJob]):
             statement = statement.where(status.in_(statuses))
         return [(job, read) for job, read in self._session.execute(statement).tuples()]
 
-    def holding_statement(self, *, window: timedelta, limit: int) -> Select[tuple[datetime]]:
+    def holding_statement(self, *, window: timedelta, limit: int) -> Select[datetime]:
         """The job that keeps a moving window full: the ``limit``-th newest in it, or no row
         while the window has room (ADR-0042). Measured with the database's clock, the one
         ``created_at`` is written with."""

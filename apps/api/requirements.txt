@@ -25,8 +25,6 @@ email-validator==2.4.0
     # via pydantic
 fastapi==0.165.0
     # via -r requirements.in
-greenlet==3.5.6 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
-    # via sqlalchemy
 h11==0.16.0
     # via uvicorn
 httptools==0.9.0
@@ -64,7 +62,7 @@ python-dotenv==1.2.4
     #   uvicorn
 pyyaml==6.0.4
     # via uvicorn
-sqlalchemy==2.0.58
+sqlalchemy==2.1.9
     # via
     #   -r requirements.in
     #   alembic

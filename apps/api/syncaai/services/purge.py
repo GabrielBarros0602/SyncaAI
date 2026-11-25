@@ -87,7 +87,7 @@ def purge(session: Session) -> PurgeReport:
 
 def _deleted(session: Session, model: type[Base], *where: ColumnElement[bool]) -> int:
     """How many rows a delete removed, read from RETURNING rather than a driver row count."""
-    statement: ReturningDelete[tuple[int]] = (
+    statement: ReturningDelete[int] = (
         delete(model)
         .where(*where)
         .returning(literal_column("1", Integer))
