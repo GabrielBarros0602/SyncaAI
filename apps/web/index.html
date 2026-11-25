@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SyncaAI</title>
+    <script>
+      // The theme chosen on this device (ADR-0061), before the first paint, so a light choice
+      // never flashes dark. With none the system decides. The key is THEME_KEY in src/ui/theme.ts.
+      try {
+        var theme = localStorage.getItem("syncaai.theme");
+        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+      } catch (error) {}
+    </script>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"

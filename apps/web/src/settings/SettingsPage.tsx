@@ -7,22 +7,27 @@
  * underneath (decided on 2026-11-23).
  *
  * Each section saves where the server draws its line. The account is read only: the address
- * is the one signed up with, and the zone was set then too. Signing out is an action of its own.
+ * is the one signed up with, and the zone was set then too. The theme is not on the server and
+ * applies as it is tapped. Signing out is an action of its own.
  */
 import { useId } from "react";
 
 import type { Me } from "../api/types";
 import { SignOutButton } from "../ui/SignOutButton";
+import { PlanningForm } from "./PlanningForm";
 import styles from "./Settings.module.css";
+import { ThemeChoice } from "./ThemeChoice";
 
 interface Props {
   me: Me;
   onBack: () => void;
+  /** The usable day, the days off or the block were saved; the sentence says how. */
+  onSaved: (text: string) => void;
   /** Resolves once the server has ended the session; rejects when it did not. */
   onSignOut: () => Promise<void>;
 }
 
-export function SettingsPage({ me, onBack, onSignOut }: Props): React.ReactNode {
+export function SettingsPage({ me, onBack, onSaved, onSignOut }: Props): React.ReactNode {
   const account = useId();
   const out = useId();
 
@@ -54,6 +59,10 @@ export function SettingsPage({ me, onBack, onSignOut }: Props): React.ReactNode 
           </div>
         </dl>
       </section>
+
+      <ThemeChoice />
+
+      <PlanningForm me={me} onSaved={onSaved} />
 
       <section aria-labelledby={out} className={styles.section}>
         <h2 id={out} className={styles.heading}>

@@ -51,6 +51,7 @@
         "bg",
         "surface",
         "raised",
+        "sunken",
         "hover",
         "open",
         "field",

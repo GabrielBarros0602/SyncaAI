@@ -636,7 +636,17 @@ export function WeekScreen(): React.ReactNode {
   // Once the account is known; until then the week's own loading or unreachable state stands in.
   const settingsPage =
     settings && week.me !== null ? (
-      <SettingsPage me={week.me} onBack={closeSettings} onSignOut={signOut} />
+      <SettingsPage
+        me={week.me}
+        onBack={closeSettings}
+        onSaved={(text) => {
+          // The new budget is the server's to measure each day against, and the planner's new
+          // days off and block are read from the account the reload brings.
+          week.reload();
+          say(text);
+        }}
+        onSignOut={signOut}
+      />
     ) : null;
   const top = (
     <>

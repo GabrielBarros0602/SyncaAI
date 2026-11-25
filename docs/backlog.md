@@ -33,7 +33,7 @@ redesign.
 | 5 | Etiqueta digitada errado | **Sugerir as existentes enquanto digita e avisar quando a etiqueta é nova** | front (`GET /tags` já existe); entra no redesign | não |
 | 6 | Como editar a checklist | **Recurso próprio** (`/tasks/{id}/items`), mais organizado e mais seguro para a API | ✅ ADR-0028, rotas e testes | sim |
 | 7 | Conclusão tardia | **Voltar a mostrar o número, e o número é o tempo real decorrido** (`+53h52`). A fórmula do design era um atalho para preencher o protótipo; uma métrica de autoconhecimento sobre planejamento tem que refletir o relógio com exatidão, e um número plausível mas errado destrói a confiança na ferramenta | front; entra no redesign | não |
-| 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | ✅ tokens da direção Papel e o teste de contraste (ADR-0026); falta o seletor, que é tela | o teste, sim |
+| 8 | Tema claro e eixos de tema | **Seguir o sistema e ter seletor nas configurações.** Os tokens têm que passar no contraste nos dois temas — acessibilidade não é negociável | ✅ tokens da direção Papel e o teste de contraste (ADR-0026); o seletor nas configurações, guardado no navegador (ADR-0061) | o teste, sim |
 | 9 | Celular | **Visão de um dia**, numa rodada de design. O prazo não pesa contra | redesign | — |
 | 10 | Design | **Terceira rodada completa.** O inventário de problemas está no brief local | — | — |
 | 11 | Dependabot nos lockfiles do Python | **Um check no CI** que regenera o lockfile com o `uv` e falha se diferir | job de CI | sim |
@@ -181,6 +181,11 @@ Mexe num hook de dados com o front congelado: nenhuma tela, componente ou CSS.
     `ded5710`, com a correção da falha de CI da PR 169. É a única falha nos últimos 100 runs da
     `main`, e um teste que falha às vezes ensina a rodar o CI de novo em vez de ler a falha.
     Falta achar o que ele espera e por que às vezes não chega.
+
+    **Visto de novo em 2026-11-25, numa máquina local.** Foi na suíte inteira do web, na branch
+    do tema das configurações, que não toca na visão de um dia. O teste passou do limite de 15s.
+    Sozinho, o arquivo passou, e a suíte inteira, rodada de novo, também. Então a falha não é só
+    do CI, e aparece com a suíte toda rodando junta.
 
 ---
 
@@ -643,10 +648,12 @@ O `settings.dc.html` entra em seis PRs, cada uma deixando a tela de pé:
    de onde se saiu, a conta, e Sign out na página e no Menu, com a página "You’re signed out
    of this browser". O Menu fica aberto enquanto sai, para "Signing out…" e a falha terem onde
    ser ditos.
-2. O tema: System, Light e Dark, aplicado ao tocar. O `<html>` deixa de ser `dark` fixo e
-   passa a seguir o sistema (decisão 8 de 2026-10-22).
-3. O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo.
-4. A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe.
+2. ✅ O tema: System, Light e Dark, aplicado ao tocar e guardado no navegador (ADR-0061). O
+   `<html>` deixa de ser `dark` fixo e passa a seguir o sistema (decisão 8 de 2026-10-22).
+3. ✅ O dia útil, as folgas e o bloco num só Save, com a recusa sob o campo que o servidor
+   nomeia (ADR-0060).
+4. ✅ A semana com a janela nova, antes do Save: "16h → 14h" e "Becomes heavy" no dia que sobe,
+   os dois lados medidos pelo servidor (ADR-0060).
 5. A senha. Fecha o ROADMAP, o `CLAUDE.md` e o README do design.
 
 **Sete perguntas abertas pela leitura do desenho — decididas em 2026-11-23**, todas como
@@ -817,9 +824,10 @@ fora dessa linha:
 - ~~**O `--accent` do tema claro reprova sobre os próprios tons de alarme**: 4,35:1 no chip
   `over by`, 3,88:1 numa linha aberta de dia estourado.~~ ✅ Resolvido pelo ADR-0026: o texto
   de problema passou a ser `alert-ink`, a 6,29:1 sobre `alert-surface` no claro.
-- **O tema claro não liga pela interface.** ~~O `App.tsx` põe `data-theme` num `div`.~~ O
+- ~~**O tema claro não liga pela interface.** O `App.tsx` põe `data-theme` num `div`.~~ O
   atributo foi para o `<html>`, fixo em `dark`, e o claro renderiza certo quando ele muda
-  (ADR-0026). Falta o seletor nas configurações, que é tela.
+  (ADR-0026). ✅ O seletor está nas configurações desde a PR 2 delas, e sem escolha a página
+  segue o sistema (ADR-0061).
 - ~~**O padding do shell mora em dois lugares.** O `App.tsx` escreve `56px 64px` inline e o
   `tokens.css` sobrescreve com `!important` abaixo de 1100px. Quando o padding sair do inline,
   o override sai junto — o seletor casa com o próprio valor inline, então ele para de valer
