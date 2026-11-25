@@ -70,6 +70,9 @@ export interface Me {
    * this zone and not the browser's, and the two can differ. */
   timezone: string;
   verified_at: string | null;
+  /** The usable day, as wall-clock `HH:MM:SS` in `timezone` (ADR-0029). */
+  day_starts_at: string;
+  day_ends_at: string;
   /** ISO weekdays, Monday is 1, the planner proposes nothing on (ADR-0032). */
   days_off: number[];
   /** How long a step the planner proposes may be: what a step added by hand starts at. */

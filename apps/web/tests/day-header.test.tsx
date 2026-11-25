@@ -18,6 +18,8 @@ const ME: Me = {
   email: "gabriel@example.com",
   timezone: "America/Sao_Paulo",
   verified_at: "2026-08-01T12:00:00Z",
+  day_starts_at: "06:00:00",
+  day_ends_at: "22:00:00",
   days_off: [],
   preferred_block_minutes: 60,
 };
