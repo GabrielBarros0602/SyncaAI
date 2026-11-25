@@ -8,12 +8,14 @@
  *
  * Each section saves where the server draws its line. The account is read only: the address
  * is the one signed up with, and the zone was set then too. The theme is not on the server and
- * applies as it is tapped. Signing out is an action of its own.
+ * applies as it is tapped. The usable day, the days off and the block save together, the
+ * password is its own form, and signing out is an action of its own.
  */
 import { useId } from "react";
 
 import type { Me } from "../api/types";
 import { SignOutButton } from "../ui/SignOutButton";
+import { PasswordForm } from "./PasswordForm";
 import { PlanningForm } from "./PlanningForm";
 import styles from "./Settings.module.css";
 import { ThemeChoice } from "./ThemeChoice";
@@ -63,6 +65,8 @@ export function SettingsPage({ me, onBack, onSaved, onSignOut }: Props): React.R
       <ThemeChoice />
 
       <PlanningForm me={me} onSaved={onSaved} />
+
+      <PasswordForm email={me.email} timezone={me.timezone} />
 
       <section aria-labelledby={out} className={styles.section}>
         <h2 id={out} className={styles.heading}>

@@ -25,6 +25,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { resetClientForTests } from "../src/api/client";
 import type { DayCapacity } from "../src/api/types";
 import { App } from "../src/App";
+import { tryAgainText } from "../src/settings/PasswordForm";
 import { SessionProvider } from "../src/auth/session";
 import { daysFrom, mondayOf, toLocalDate, todayIn } from "../src/lib/time";
 import { expectNoViolations } from "./a11y";
@@ -98,12 +99,15 @@ interface Answers {
   logout?: () => Promise<Response>;
   /** `PATCH /me`, given the body sent. */
   patchMe?: (body: Record<string, unknown>) => Promise<Response>;
+  /** `POST /auth/change-password`. */
+  changePassword?: () => Promise<Response>;
 }
 
 /** A signed-in person with an empty week; signing out and saving answer however a test says. */
 function serve({
   logout = () => Promise.resolve(json(204)),
   patchMe = (body) => Promise.resolve(json(200, { ...ME, ...body })),
+  changePassword = () => Promise.resolve(new Response(null, { status: 204 })),
 }: Answers = {}): void {
   fetchMock.mockImplementation((input, init) => {
     const path = input.replace("/api/v1", "").split("?")[0] ?? "";
@@ -111,6 +115,7 @@ function serve({
       return Promise.resolve(json(200, { access_token: "a.token", token_type: "bearer", expires_in: 1800 }));
     }
     if (path === "/auth/logout") return logout();
+    if (path === "/auth/change-password") return changePassword();
     if (path === "/me" && init?.method === "PATCH") {
       return patchMe(JSON.parse(init.body as string) as Record<string, unknown>);
     }
@@ -484,4 +489,134 @@ describe("the week under the usable day", () => {
     // The refusal is Save's to say, in the server's words; the week does not say it first.
     expect(here.queryByText("The usable day has to be at least 1 hour long.")).toBeNull();
   });
+});
+
+describe("the password", () => {
+  async function region(changePassword?: Answers["changePassword"]): Promise<BoundFunctions<typeof queries>> {
+    serve(changePassword === undefined ? {} : { changePassword });
+    renderAt("/settings");
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    return within(screen.getByRole("region", { name: "Password" }));
+  }
+
+  function changes(): unknown[] {
+    return fetchMock.mock.calls
+      .filter(([input]) => input.endsWith("/auth/change-password"))
+      .map(([, init]) => JSON.parse(init?.body as string) as unknown);
+  }
+
+  async function fill(here: BoundFunctions<typeof queries>, current: string, next: string): Promise<void> {
+    if (current !== "") await userEvent.type(here.getByLabelText("Current password"), current);
+    if (next !== "") await userEvent.type(here.getByLabelText("New password"), next);
+  }
+
+  it("says what a change does before the button, as the server does it", async () => {
+    const here = await region();
+
+    expect(here.getByText("this device stays signed in;")).toBeDefined();
+    expect(here.getByText("every other device is signed out within 30 minutes;")).toBeDefined();
+    expect(here.getByText("an email tells design-check@example.com it changed.")).toBeDefined();
+  });
+
+  it("asks for the current password and eight characters before sending anything", async () => {
+    const here = await region();
+    await fill(here, "", "short");
+
+    await userEvent.click(here.getByRole("button", { name: "Change password" }));
+
+    expect(here.getByText("Type your current password.")).toBeDefined();
+    expect(here.getByText("At least 8 characters.")).toBeDefined();
+    expect(document.activeElement).toBe(here.getByLabelText("Current password"));
+    expect(changes()).toEqual([]);
+  });
+
+  it("puts the server's sentence for a wrong current password under that field", async () => {
+    const here = await region(() => Promise.resolve(json(422, { detail: "That is not your current password." })));
+    await fill(here, "a wrong guess", "a new long one");
+
+    await userEvent.click(here.getByRole("button", { name: "Change password" }));
+
+    expect(await here.findByText("That is not your current password.")).toBeDefined();
+    const current = here.getByLabelText<HTMLInputElement>("Current password");
+    expect(current.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(current);
+    expect(here.getByLabelText<HTMLInputElement>("New password").value).toBe("a new long one");
+  });
+
+  it("changes it, and says this device stays and the others go within 30 minutes", async () => {
+    const here = await region();
+    await fill(here, "correct horse", "a new long one");
+
+    await userEvent.click(here.getByRole("button", { name: "Change password" }));
+
+    expect(await here.findByText("Password changed.")).toBeDefined();
+    expect(
+      here.getByText(
+        "You’re still signed in here. Every other device is signed out within 30 minutes, and an email about it is on its way to design-check@example.com.",
+      ),
+    ).toBeDefined();
+    expect(changes()).toEqual([{ current_password: "correct horse", new_password: "a new long one" }]);
+    const again = here.getByRole("button", { name: "Change it again" });
+    expect(document.activeElement).toBe(again);
+
+    await userEvent.click(again);
+
+    expect(here.getByLabelText<HTMLInputElement>("Current password").value).toBe("");
+  });
+
+  it("says when to try again after too many attempts, and holds the button until then", async () => {
+    const here = await region(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ detail: "Too many attempts. Try again later." }), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": "900" },
+        }),
+      ),
+    );
+    await fill(here, "another guess", "a new long one");
+
+    await userEvent.click(here.getByRole("button", { name: "Change password" }));
+
+    expect(await here.findByText("Too many attempts. Try again later.")).toBeDefined();
+    expect(here.getByText(/^You can try again at \d{2}:\d{2}, in 15 minutes\.$/)).toBeDefined();
+    const button = here.getByRole("button", { name: "Change password" });
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+
+    await userEvent.click(button);
+
+    expect(changes()).toHaveLength(1);
+  });
+
+  it("shows both passwords when asked, and hides them again", async () => {
+    const here = await region();
+    const toggle = here.getByRole("button", { name: "Show passwords" });
+
+    await userEvent.click(toggle);
+
+    expect(here.getByLabelText<HTMLInputElement>("Current password").type).toBe("text");
+    expect(here.getByRole("button", { name: "Hide passwords" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("has nothing an automated accessibility check can find, held or changed", async () => {
+    const here = await region(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ detail: "Too many attempts. Try again later." }), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": "60" },
+        }),
+      ),
+    );
+    await fill(here, "another guess", "a new long one");
+    await userEvent.click(here.getByRole("button", { name: "Change password" }));
+    await here.findByText("Too many attempts. Try again later.");
+
+    await expectNoViolations(document.body);
+  });
+});
+
+it("says the time to try again in the account's zone, and the minutes left", () => {
+  const now = new Date("2026-11-25T17:20:00Z");
+
+  expect(tryAgainText(900, "America/Sao_Paulo", now)).toBe("You can try again at 14:35, in 15 minutes.");
+  expect(tryAgainText(30, "UTC", now)).toBe("You can try again at 17:21, in 1 minute.");
 });
