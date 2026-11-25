@@ -66,10 +66,10 @@ class OwnedRepository(Generic[ModelT]):
         """Send pending changes so the database can refuse them now rather than at commit."""
         self._session.flush()
 
-    def _scoped(self) -> Select[tuple[ModelT]]:
+    def _scoped(self) -> Select[ModelT]:
         """Every read starts here. There is no variant of this without the filter."""
         declared = type(self)
-        statement: Select[tuple[ModelT]] = select(declared.model)
+        statement: Select[ModelT] = select(declared.model)
         if declared.owner_join is not None:
             statement = statement.join(declared.owner_join)
         return statement.where(self._owner_clause())

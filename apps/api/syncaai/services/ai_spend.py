@@ -42,7 +42,7 @@ def _utc_month(months_ahead: int = 0) -> ColumnElement[object]:
     return func.timezone("UTC", start)
 
 
-def spend_statement(user_id: uuid.UUID | None = None) -> Select[tuple[Decimal | None]]:
+def spend_statement(user_id: uuid.UUID | None = None) -> Select[Decimal | None]:
     """This month's spend: one person's, or everyone's, deleted accounts included."""
     statement = select(func.coalesce(func.sum(AiUsage.cost_usd), 0)).where(
         AiUsage.created_at >= _utc_month()

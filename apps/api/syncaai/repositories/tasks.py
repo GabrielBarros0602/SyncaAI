@@ -116,13 +116,13 @@ class TaskRepository(OwnedRepository[Task]):
 
     def occupied_minutes_by_day(
         self, *, windows: Sequence[tuple[date, datetime, datetime]]
-    ) -> Sequence[Row[tuple[date, int, int]]]:
+    ) -> Sequence[Row[date, int, int]]:
         """Run :meth:`capacity_statement` and return its rows."""
         return self._session.execute(self.capacity_statement(windows=windows)).all()
 
     def capacity_statement(
         self, *, windows: Sequence[tuple[date, datetime, datetime]]
-    ) -> Select[tuple[date, int, int]]:
+    ) -> Select[date, int, int]:
         """Minutes occupied and task count, per local day.
 
         A sum of each task's overlap with each day's window, rather than a ``GROUP BY`` over
@@ -180,7 +180,7 @@ class TaskRepository(OwnedRepository[Task]):
         # is the whole of "owns the row on screen".
         begins_here = Task.start_at >= day_windows.c.window_start
 
-        statement: Select[tuple[date, int, int]] = (
+        statement: Select[date, int, int] = (
             select(
                 day_windows.c.day,
                 func.coalesce(func.sum(minutes), 0).label("occupied_minutes"),
@@ -225,9 +225,7 @@ class TaskRepository(OwnedRepository[Task]):
         rows = self._session.execute(self.ranges_statement(starts=starts, ends=ends))
         return [(start_at, end_at) for start_at, end_at in rows]
 
-    def ranges_statement(
-        self, *, starts: datetime, ends: datetime
-    ) -> Select[tuple[datetime, datetime]]:
+    def ranges_statement(self, *, starts: datetime, ends: datetime) -> Select[datetime, datetime]:
         """Every booking that touches ``[starts, ends)``, as its range and nothing else.
 
         A plan's free gaps are built from these (ADR-0030). The two columns are a privacy
