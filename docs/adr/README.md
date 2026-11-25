@@ -29,12 +29,12 @@ the old one and update the status of the old one — never rewrite history.
 | [0018](0018-email-delivery.md) | Send mail through a transactional provider, behind an abstraction | Accepted |
 | [0019](0019-account-verification.md) | Verify addresses, and make every authentication response generic | Accepted |
 | [0020](0020-domain-surface-choices.md) | Tags, checklist ordering and pagination | Accepted |
-| [0021](0021-browser-session-and-origin.md) | Browser session handling and origin strategy | Accepted |
+| [0021](0021-browser-session-and-origin.md) | Browser session handling and origin strategy | Accepted; its storage ban amended by 0061 |
 | [0022](0022-capacity-against-a-usable-day.md) | Capacity is real occupancy, measured against a usable day | Accepted; decision 3 superseded by 0029; decision 4's offer amended by 0054 |
 | [0023](0023-a-budget-you-choose-under-a-ceiling-you-do-not.md) | A budget you choose, under a ceiling you do not | Accepted; items 7–9 redefined by 0029 |
 | [0024](0024-soften-the-visual-language-in-stylesheets-only.md) | Soften the visual language, in stylesheets only | Superseded by [0052](0052-the-third-design-round-is-the-specification-and-the-front-end-opens.md) |
 | [0025](0025-undo-is-a-recreate.md) | Undo is a recreate, so it is offered only where recreating is faithful | Accepted |
-| [0026](0026-adopt-the-papel-tokens-and-test-every-pair.md) | Adopt the Papel tokens, and test every pair they promise | Accepted |
+| [0026](0026-adopt-the-papel-tokens-and-test-every-pair.md) | Adopt the Papel tokens, and test every pair they promise | Accepted; its theme selector built by 0061 |
 | [0027](0027-correct-a-started-task-up-to-a-day-back.md) | A started task's start can be corrected, up to a day back | Accepted |
 | [0028](0028-the-checklist-is-its-own-resource.md) | The checklist is its own resource | Accepted |
 | [0029](0029-the-usable-day-is-a-window-each-person-sets.md) | The usable day is a window each person sets | Accepted; its API amended by 0060 |
@@ -69,6 +69,7 @@ the old one and update the status of the old one — never rewrite history.
 | [0058](0058-a-request-says-what-it-asked-and-a-plan-s-tasks-are-listed-by-the-plan.md) | A request says what it asked, and a plan's tasks are listed by the plan | Accepted; each step's reason by 0059 |
 | [0059](0059-a-step-s-reason-is-read-from-the-plan-as-it-is-now.md) | A step's reason is read from the plan as it is now | Accepted |
 | [0060](0060-a-refused-setting-names-its-fields-and-the-week-can-be-measured-against-a-window-not-saved.md) | A refused setting names its fields, and the week can be measured against a window not saved | Accepted |
+| [0061](0061-the-theme-is-the-one-thing-kept-in-the-browser.md) | The theme is the one thing kept in the browser | Accepted |
 
 ## Template
 
